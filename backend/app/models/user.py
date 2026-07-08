@@ -11,8 +11,10 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
 
-    role = Column(String(50), default="user")  # e.g. admin, procurement_officer, viewer
-    is_active = Column(Boolean, default=True)
+    # Allowed values: Administrator, Procurement Manager, Supply Chain Manager,
+    # Vendor, Finance Officer, Auditor
+    role = Column(String(50), default="Vendor")
 
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -12,10 +12,10 @@ from app.api import (
 )
 from app.core.config import settings
 
-
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.API_VERSION,
+    description="Vendor Reliability Intelligence Platform API",
 )
 
 app.add_middleware(
@@ -26,14 +26,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(vendors.router)
-app.include_router(procurement.router)
-app.include_router(performance.router)
-app.include_router(contracts.router)
-app.include_router(notifications.router)
-app.include_router(reports.router)
-
+app.include_router(auth.router, tags=["Authentication"])
+app.include_router(vendors.router, tags=["Vendors"])
+app.include_router(procurement.router, tags=["Procurement"])
+app.include_router(performance.router, tags=["Performance"])
+app.include_router(contracts.router, tags=["Contracts"])
+app.include_router(notifications.router, tags=["Notifications"])
+app.include_router(reports.router, tags=["Reports"])
 
 @app.get("/")
 def read_root():
@@ -41,7 +40,6 @@ def read_root():
         "message": "Vendor Reliability Intelligence Platform API",
         "status": "running",
     }
-
 
 @app.get("/health")
 def health_check():

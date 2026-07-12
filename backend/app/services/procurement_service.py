@@ -1,4 +1,4 @@
-from backend.app.utils.constants import (
+from app.utils.constants import (
     PROCUREMENT_STATUS_PENDING,
     PROCUREMENT_STATUS_APPROVED,
     PROCUREMENT_STATUS_ORDERED,
@@ -6,7 +6,7 @@ from backend.app.utils.constants import (
     PROCUREMENT_STATUS_COMPLETED,
     PROCUREMENT_STATUS_CANCELLED
 )
-from backend.app.services.vendor_service import can_vendor_participate
+from app.services.vendor_service import can_vendor_participate
 
 
 def can_create_procurement_request(vendor_status: str) -> bool:

@@ -1,4 +1,4 @@
-from backend.app.utils.constants import (
+from app.utils.constants import (
     VENDOR_STATUS_PENDING,
     VENDOR_STATUS_APPROVED,
     VENDOR_STATUS_REJECTED,

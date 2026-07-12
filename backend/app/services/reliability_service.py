@@ -1,4 +1,4 @@
-from backend.app.utils.constants import RISK_LOW, RISK_MEDIUM, RISK_HIGH
+from app.utils.constants import RISK_LOW, RISK_MEDIUM, RISK_HIGH
 
 
 def calculate_reliability_score(

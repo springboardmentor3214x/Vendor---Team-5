@@ -1,4 +1,4 @@
-from backend.app.services.reliability_service import (
+from app.services.reliability_service import (
     calculate_reliability_score,
     get_risk_level,
     generate_vendor_recommendation

@@ -5,6 +5,7 @@ class UserCreate(BaseModel):
     full_name: str
     email: EmailStr
     password: str
+    role: str
 
 
 class UserLogin(BaseModel):
@@ -18,6 +19,9 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: str
     is_active: bool = True
+
+    class Config:
+        from_attributes = True
 
 
 class Token(BaseModel):

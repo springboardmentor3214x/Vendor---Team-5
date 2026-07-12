@@ -1,0 +1,126 @@
+<div class="dashboard-container">
+
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="VendorIQ">
+    </div>
+
+    <ul class="menu">
+      <li routerLink="/dashboard" class="active">
+        <i class="ti ti-home"></i> DashBoard
+      </li>
+
+      <li routerLink="/procurement">
+        <i class="ti ti-shopping-cart"></i> Procurement
+      </li>
+
+      <li routerLink="/vendor-management">
+        <i class="ti ti-building-store"></i> Vendor Management
+      </li>
+
+      <li routerLink="/purchase-orders">
+        <i class="ti ti-file-invoice"></i> Purchqase Orders
+      </li>
+
+      <li routerLink="/contracts">
+        <i class="ti ti-file-certificate"></i> Contracts
+      </li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+
+    <header class="topbar">
+      <div class="left">
+        <h2>Procurement Mangement</h2>
+        <p class="breadcrumb">
+          <span routerLink="/dashboard">Dashboard</span> <i class="ti ti-chevron-right"></i>
+          <span class="current">Procurement Mangement</span>
+        </p>
+        <p class="subtitle">Here's what's happening with your platform today</p>
+      </div>
+
+      <div class="right">
+        <i class="ti ti-bell"></i>
+        <i class="ti ti-user-circle"></i>
+        <span class="username">Administrer</span>
+      </div>
+    </header>
+
+    <section class="cards procurement-cards">
+      <div class="card purple">
+        <div class="icon"><i class="ti ti-users"></i></div>
+        <div>
+          <h4>Total Vendors</h4>
+          <h2>128</h2>
+          <p class="success"><i class="ti ti-arrow-up"></i> 12% from last month</p>
+        </div>
+      </div>
+
+      <div class="card green">
+        <div class="icon"><i class="ti ti-clipboard-list"></i></div>
+        <div>
+          <h4>Total Purchase Orders</h4>
+          <h2>245</h2>
+          <p class="success"><i class="ti ti-arrow-up"></i> 8% from last month</p>
+        </div>
+      </div>
+
+      <div class="card orange">
+        <div class="icon"><i class="ti ti-file-certificate"></i></div>
+        <div>
+          <h4>Active Contracts</h4>
+          <h2>20</h2>
+          <p class="success"><i class="ti ti-arrow-up"></i> 15% from last month</p>
+        </div>
+      </div>
+
+      <div class="card indigo">
+        <div class="icon"><i class="ti ti-currency-rupee"></i></div>
+        <div>
+          <h4>Total Spending (YTD)</h4>
+          <h2>24.58 Cr</h2>
+          <p class="success"><i class="ti ti-arrow-up"></i> 10% from last month</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="procurement-grid">
+      <div class="chart-card">
+        <div class="card-header">
+          <h3>Purchase Orders Overview</h3>
+          <select><option>This Month</option></select>
+        </div>
+        <canvas id="procurementChart"></canvas>
+      </div>
+
+      <div class="chart-card recent-po">
+        <div class="card-header">
+          <h3>Recent Purchase Orders</h3>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>PO Number</th>
+              <th>Vendor Name</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let po of recentPOs">
+              <td>{{ po.poNumber }}</td>
+              <td>{{ po.vendorName }}</td>
+              <td>{{ po.date }}</td>
+              <td>{{ po.amount }}</td>
+              <td [ngClass]="statusClass(po.status)">{{ po.status }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+</div>

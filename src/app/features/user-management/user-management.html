@@ -1,0 +1,230 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar (same as dashboard) -->
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="VendorIQ">
+    </div>
+
+    <ul class="menu">
+      <li routerLink="/dashboard">
+        <i class="ti ti-home"></i> Dashboard
+      </li>
+
+
+      <li routerLink="/user-management">
+        <i class="ti ti-users"></i> User Management
+      </li>
+
+      <li routerLink="/vendor-management">
+        <i class="ti ti-building-store"></i> Vendor Management
+      </li>
+
+      <li routerLink="/procurement">
+        <i class="ti ti-shopping-cart"></i> Procurement
+      </li>
+      <li routerLink="/purchase-orders"
+       <i class="ti ti-shop"></i> Purchase-Order
+    </li>
+      <li routerLink="/purchase-orders">
+        <i class="ti ti-file-invoice"></i> Purchase Orders
+      </li>
+
+      <li routerLink="/reports">
+        <i class="ti ti-file-text"></i> Reports
+      </li>
+
+      <li routerLink="/analytics">
+        <i class="ti ti-chart-bar"></i> Analytics
+      </li>
+
+      <li routerLink="/notifications">
+        <i class="ti ti-bell"></i> Notification
+      </li>
+
+
+      <li routerLink="/settings">
+        <i class="ti ti-settings"></i> Settings
+      </li>
+      <li class="logout" (click)="logout()">
+        <i class="ti ti-logout"></i> Logout
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="topbar">
+      <div class="left">
+        <h2>User Management</h2>
+        <p class="breadcrumb">
+          <span routerLink="/dashboard">Dashboard</span> <i class="ti ti-chevron-right"></i> <span class="current">User Management</span>
+        </p>
+        <p class="subtitle">Here's what's happening with your platform today</p>
+      </div>
+
+      <div class="right">
+        <i class="ti ti-bell"></i>
+        <i class="ti ti-user-circle"></i>
+        <span class="username">Administrator</span>
+      </div>
+    </header>
+
+    <!-- Stat Cards -->
+    <section class="cards user-cards">
+
+      <div class="card purple">
+        <div class="icon"><i class="ti ti-users"></i></div>
+        <div>
+          <h4>Total Users</h4>
+          <h2>156</h2>
+          <p class="muted">All Users</p>
+        </div>
+      </div>
+
+      <div class="card green">
+        <div class="icon"><i class="ti ti-user-check"></i></div>
+        <div>
+          <h4>Active Users</h4>
+          <h2>126</h2>
+          <p class="muted">Currently Active</p>
+        </div>
+      </div>
+
+      <div class="card orange">
+        <div class="icon"><i class="ti ti-user-off"></i></div>
+        <div>
+          <h4>Inactive Users</h4>
+          <h2>20</h2>
+          <p class="muted">Not Active</p>
+        </div>
+      </div>
+
+      <div class="card blue">
+        <div class="icon"><i class="ti ti-lock"></i></div>
+        <div>
+          <h4>Locked Users</h4>
+          <h2>10</h2>
+          <p class="muted">Locked accounts</p>
+        </div>
+      </div>
+
+      <div class="card red">
+        <div class="icon"><i class="ti ti-shield-lock"></i></div>
+        <div>
+          <h4>Administrators</h4>
+          <h2>12</h2>
+          <p class="muted">Admin Users</p>
+        </div>
+      </div>
+
+      <div class="card teal">
+        <div class="icon"><i class="ti ti-user-plus"></i></div>
+        <div>
+          <h4>New This Month</h4>
+          <h2>8</h2>
+          <p class="muted">Joined This Month</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Filters -->
+    <section class="filters">
+      <div class="search-box">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="Search anything">
+      </div>
+
+      <select>
+        <option>All Roles</option>
+      </select>
+
+      <select>
+        <option>All Status</option>
+      </select>
+
+      <select>
+        <option>All Department</option>
+      </select>
+
+      <button class="more-filters">
+        <i class="ti ti-adjustments-horizontal"></i> More Filters
+      </button>
+
+      <button class="export-btn">
+        <i class="ti ti-download"></i> Export
+      </button>
+
+      <button class="add-user-btn">
+        <i class="ti ti-plus"></i> Add User
+      </button>
+    </section>
+
+    <!-- User Table -->
+    <section class="activity">
+      <table>
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Name</th>
+            <th>Email ID</th>
+            <th>Role</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Last Login</th>
+            <th>Joined On</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let user of users">
+            <td>{{ user.userId }}</td>
+            <td>{{ user.name }}</td>
+            <td>{{ user.email }}</td>
+            <td [ngClass]="'role-' + user.roleClass">{{ user.role }}</td>
+            <td>{{ user.department }}</td>
+            <td>
+              <span [ngClass]="user.status === 'Active' ? 'completed' : 'pending'">
+                {{ user.status }}
+              </span>
+            </td>
+            <td>{{ user.lastLogin }}</td>
+            <td>{{ user.joinedOn }}</td>
+            <td class="actions">
+              <i class="ti ti-eye" title="View"></i>
+              <i class="ti ti-edit" title="Edit"></i>
+              <i class="ti ti-trash" title="Delete"></i>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="prevPage()">
+          <i class="ti ti-chevron-left"></i> Previous
+        </button>
+
+        <button
+          *ngFor="let page of totalPagesArray"
+          [class.active]="page === currentPage"
+          (click)="goToPage(page)">
+          {{ page }}
+        </button>
+
+        <span *ngIf="totalPagesArray.length > 4">...</span>
+        <button (click)="goToPage(totalPages)">{{ totalPages }}</button>
+
+        <button [disabled]="currentPage === totalPages" (click)="nextPage()">
+          Next <i class="ti ti-chevron-right"></i>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+</div>

@@ -1,0 +1,253 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ===== Topbar ===== */
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.topbar .left h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.breadcrumb {
+  font-size: 13px;
+  color: #6366f1;
+  margin-bottom: 4px;
+}
+
+.breadcrumb .current {
+  color: #6b7280;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.topbar .right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar .right i {
+  font-size: 18px;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.topbar .right .username {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* ===== Section header ===== */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0;
+}
+
+.section-header h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.section-header i {
+  color: #6b7280;
+  cursor: pointer;
+}
+
+/* ===== Form ===== */
+.po-form {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 28px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px 28px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 900px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  font-size: 14px;
+  color: #374151;
+  outline: none;
+}
+
+.form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+.date-field {
+  position: relative;
+}
+
+.date-field input {
+  padding-right: 40px;
+}
+
+.date-field i {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: none;
+}
+
+/* ===== Item Details ===== */
+.item-details h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.item-details table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.item-details th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.item-details td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.item-details td input {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  font-size: 14px;
+  color: #374151;
+  outline: none;
+}
+
+.total-cell {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.item-details td i.ti-trash {
+  color: #ef4444;
+  cursor: pointer;
+}
+
+.add-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px dashed #6366f1;
+  background-color: #f5f5ff;
+  color: #6366f1;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.grand-total {
+  text-align: right;
+  font-size: 15px;
+  color: #1f2937;
+  margin-bottom: 24px;
+}
+
+/* ===== Actions ===== */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.cancel-btn {
+  padding: 12px 32px;
+  border-radius: 8px;
+  border: none;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.save-btn {
+  padding: 12px 40px;
+  border-radius: 8px;
+  border: none;
+  background-color: #6366f1;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-btn:hover:not(:disabled) {
+  background-color: #4f52d6;
+}

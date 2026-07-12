@@ -1,0 +1,115 @@
+<header class="topbar">
+  <div class="left">
+    <h2>Procurement Mangement</h2>
+    <p class="breadcrumb">
+      <span routerLink="/dashboard">Dashboard</span> <i class="ti ti-chevron-right"></i>
+      <span class="current">Create Purchase Order</span>
+    </p>
+    <p class="subtitle">Here's what's happening with your platform today</p>
+  </div>
+
+  <div class="right">
+    <i class="ti ti-bell"></i>
+    <i class="ti ti-user-circle"></i>
+    <span class="username">Administrer</span>
+  </div>
+</header>
+
+<div class="section-header">
+  <h3>Create Purchase Order</h3>
+  <i class="ti ti-search"></i>
+</div>
+
+<form class="po-form" [formGroup]="poForm" (ngSubmit)="onSave()">
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label>Vendor Name</label>
+      <select formControlName="vendorName">
+        <option value="" disabled selected>Select vendor</option>
+        <option value="Tech Solutions Pvt Ltd">Tech Solutions Pvt Ltd</option>
+        <option value="Global Supplies">Global Supplies</option>
+        <option value="Industrial Parts Co.">Industrial Parts Co.</option>
+        <option value="IT Needs India">IT Needs India</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>PO Date</label>
+      <div class="date-field">
+        <input type="date" formControlName="poDate">
+        <i class="ti ti-edit"></i>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Required Delivery Date</label>
+      <div class="date-field">
+        <input type="date" formControlName="deliveryDate">
+        <i class="ti ti-edit"></i>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Contact Person</label>
+      <input type="text" formControlName="contactPerson" placeholder="Enter contact person">
+    </div>
+
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" formControlName="email" placeholder="Enter Email">
+    </div>
+
+    <div class="form-group">
+      <label>Phone</label>
+      <input type="tel" formControlName="phone" placeholder="Enter phone number">
+    </div>
+
+  </div>
+
+  <div class="item-details">
+    <h3>Item Details</h3>
+
+    <table formArrayName="items">
+      <thead>
+        <tr>
+          <th>Item Name</th>
+          <th>Description</th>
+          <th>Quality</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
+          <td><input type="text" formControlName="itemName" placeholder="Enter item name"></td>
+          <td><input type="text" formControlName="description" placeholder="Enter description"></td>
+          <td><input type="text" formControlName="quality" placeholder="Enter quality"></td>
+          <td><input type="number" formControlName="unitPrice" placeholder="Enter unit price" (input)="updateTotal(i)"></td>
+          <td class="total-cell">{{ item.get('total')?.value | number:'1.2-2' }}</td>
+          <td>
+            <i class="ti ti-trash" title="Remove" (click)="removeItem(i)"></i>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button type="button" class="add-item-btn" (click)="addItem()">
+      <i class="ti ti-plus"></i> Add Item
+    </button>
+
+    <div class="grand-total">
+      Grand Total: <strong>{{ grandTotal | number:'1.2-2' }}</strong>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="button" class="cancel-btn" (click)="onCancel()">Cancel</button>
+    <button type="submit" class="save-btn" [disabled]="isSaving">
+      {{ isSaving ? 'Saving...' : 'Save' }}
+    </button>
+  </div>
+
+</form>

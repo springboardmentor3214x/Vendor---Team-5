@@ -1,0 +1,69 @@
+<div class="dashboard-container">
+
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="VendorIQ">
+    </div>
+
+    <ul class="menu">
+      <li routerLink="/dashboard" routerLinkActive="active">
+        <i class="ti ti-home"></i> Dashboard
+      </li>
+
+      <li class="menu-title">Management</li>
+
+      <li routerLink="/user-management" routerLinkActive="active">
+        <i class="ti ti-users"></i> User Management
+      </li>
+
+      <li routerLink="/vendor-management" routerLinkActive="active">
+        <i class="ti ti-building-store"></i> Vendor Management
+      </li>
+
+      <li routerLink="/procurement" routerLinkActive="active">
+        <i class="ti ti-shopping-cart"></i> Procurement
+      </li>
+
+      <li routerLink="/purchase-orders" routerLinkActive="active">
+        <i class="ti ti-file-invoice"></i> Purchase Orders
+      </li>
+
+      <li routerLink="/contracts" routerLinkActive="active">
+        <i class="ti ti-file-certificate"></i> Contracts
+      </li>
+
+      <li class="menu-title">Analytics</li>
+
+      <li routerLink="/reports" routerLinkActive="active">
+        <i class="ti ti-file-text"></i> Reports
+      </li>
+
+      <li routerLink="/analytics" routerLinkActive="active">
+        <i class="ti ti-chart-bar"></i> Analytics
+      </li>
+
+      <li routerLink="/notifications" routerLinkActive="active">
+        <i class="ti ti-bell"></i> Notification
+      </li>
+
+      <li class="menu-title">System</li>
+
+      <li routerLink="/settings" routerLinkActive="active">
+        <i class="ti ti-settings"></i> Settings
+      </li>
+
+      <li routerLink="/audit-logs" routerLinkActive="active">
+        <i class="ti ti-file-description"></i> Audit Logs
+      </li>
+
+      <li class="logout" (click)="logout()">
+        <i class="ti ti-logout"></i> Logout
+      </li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+
+</div>

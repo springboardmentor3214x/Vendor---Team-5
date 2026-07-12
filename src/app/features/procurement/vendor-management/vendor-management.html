@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Management | Procurement Management</title>
+  <link rel="stylesheet" href="../procurement.css" />
+  <link rel="stylesheet" href="vendor-management.css" />
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar__logo">
+        <div class="logo-badge">VENDOR</div>
+      </div>
+
+      <nav class="sidebar__nav">
+        <a href="#" class="nav-item nav-item--active" data-nav="dashboard">
+          <span class="nav-item__icon">⌂</span> DashBoard
+        </a>
+        <a href="#" class="nav-item" data-nav="procurement">
+          <span class="nav-item__icon">🛒</span> Procurement
+        </a>
+        <a href="#" class="nav-item nav-item--active" data-nav="vendor-management">
+          <span class="nav-item__icon">📋</span> Vendor Management
+        </a>
+        <a href="#" class="nav-item" data-nav="purchase-orders">
+          <span class="nav-item__icon">📄</span> Purchase Orders
+        </a>
+        <a href="#" class="nav-item" data-nav="contracts">
+          <span class="nav-item__icon">⚙</span> Contracts
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <div class="main">
+
+      <!-- Top navbar -->
+      <header class="topbar">
+        <h1 class="topbar__title">Procurement Mangement</h1>
+        <div class="topbar__actions">
+          <button class="icon-btn" aria-label="Notifications">🔔</button>
+          <div class="user-chip">
+            <span class="user-chip__icon">👤</span> Administrer
+          </div>
+        </div>
+      </header>
+
+      <div class="breadcrumb">
+        <span>Dashdboard</span>
+        <span class="breadcrumb__sep">›</span>
+        <span class="breadcrumb__current">Vendor Management</span>
+      </div>
+
+      <!-- Page content -->
+      <section class="page">
+        <div class="page__header">
+          <h2 class="page__title">Vendor Management</h2>
+          <button class="btn btn--primary" id="addVendorBtn">+ Add Vendors</button>
+        </div>
+
+        <div class="filters">
+          <div class="search-field">
+            <span class="search-field__icon">🔍</span>
+            <input type="text" id="searchVendor" placeholder="Search vendor name..." />
+          </div>
+
+          <select id="filterCategory" class="select-field">
+            <option value="">All Categories</option>
+            <option value="it-vendors">IT Vendors</option>
+            <option value="raw-material-suppliers">Raw Material Suppliers</option>
+            <option value="equipment-vendors">Equipment Vendors</option>
+          </select>
+
+          <select id="filterStatus" class="select-field">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          <select id="filterApproval" class="select-field">
+            <option value="">All Approval Status</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+          </select>
+
+          <button class="btn btn--ghost" id="resetFiltersBtn">Reset</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="vendor-table" id="vendorTable">
+            <thead>
+              <tr>
+                <th>Vendor ID</th>
+                <th>Company Name</th>
+                <th>Category</th>
+                <th>Contact Person</th>
+                <th>Status</th>
+                <th>Approval Status</th>
+              </tr>
+            </thead>
+            <tbody id="vendorTableBody">
+              <!-- Rows are rendered by vendor-management.ts -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="vendor-management.ts"></script>
+</body>
+</html>

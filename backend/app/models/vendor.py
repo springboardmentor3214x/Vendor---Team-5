@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
 
@@ -10,9 +11,8 @@ class Vendor(Base):
 
     # Basic Info
     company_name = Column(String(255), nullable=False)
-    vendor_category = Column(String(100), nullable=False)
-    # Allowed: Raw Material Suppliers, Equipment Vendors, IT Vendors,
-    # Service Providers, Logistics Partners, Maintenance Vendors
+    category_id = Column(Integer, ForeignKey("vendor_categories.id"), nullable=False, index=True)
+    category = relationship("VendorCategory", back_populates="vendors")
 
     contact_person_name = Column(String(255), nullable=False)
     designation = Column(String(100), nullable=True)
@@ -42,7 +42,7 @@ class Vendor(Base):
     payment_terms = Column(String(255), nullable=True)
 
     # Status
-    vendor_status = Column(String(50), default="Pending")
+    vendor_status = Column(String(50), default="Pending", index=True)
     # Allowed: Active, Pending, Inactive, Suspended, Rejected
     approval_status = Column(String(50), default="Pending")
     # Allowed: Pending, Approved, Rejected

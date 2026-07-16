@@ -1,6 +1,7 @@
 from app.core.database import SessionLocal
 from app.models.role import Role
 from app.models.vendor import Vendor
+from app.models.vendor_category import VendorCategory
 from app.models.user import User
 from datetime import datetime
 
@@ -24,12 +25,32 @@ for role_name in roles:
 db.commit()
 print(f"Seeded {len(roles)} roles.")
 
+# Seed vendor categories
+categories = [
+    "Raw Material Suppliers",
+    "Equipment Vendors",
+    "IT Vendors",
+    "Service Providers",
+    "Logistics Partners",
+    "Maintenance Vendors",
+]
+
+for cat_name in categories:
+    existing = db.query(VendorCategory).filter(VendorCategory.name == cat_name).first()
+    if not existing:
+        db.add(VendorCategory(name=cat_name, description=f"{cat_name} category", is_active=True))
+
+db.commit()
+print(f"Seeded {len(categories)} vendor categories.")
+
 # Seed one sample vendor
+raw_material_category = db.query(VendorCategory).filter(VendorCategory.name == "Raw Material Suppliers").first()
+
 sample_vendor = db.query(Vendor).filter(Vendor.email == "sample.vendor@example.com").first()
 if not sample_vendor:
     sample_vendor = Vendor(
         company_name="Sample Supplies Pvt Ltd",
-        vendor_category="Raw Material Suppliers",
+        category_id=raw_material_category.id,
         contact_person_name="Ravi Kumar",
         designation="Sales Manager",
         email="sample.vendor@example.com",

@@ -5,3 +5,4 @@ from app.models.procurement import ProcurementOrder
 from app.models.performance import PerformanceRecord
 from app.models.user import User
 from app.models.role import Role
+from app.models.vendor_category import VendorCategory

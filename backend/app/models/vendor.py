@@ -51,3 +51,4 @@ class Vendor(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    contacts = relationship("VendorContact", back_populates="vendor")

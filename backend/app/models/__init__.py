@@ -8,3 +8,4 @@ from app.models.role import Role
 from app.models.vendor_category import VendorCategory
 from app.models.vendor_contact import VendorContact
 from app.models.activity_log import ActivityLog
+from app.models.contract_document import ContractDocument

@@ -13,9 +13,14 @@ from app.core.database import Base
 from app.core.config import settings
 from app.models.vendor import Vendor
 from app.models.vendor_document import VendorDocument
+from app.models.vendor_category import VendorCategory
+from app.models.vendor_contact import VendorContact
 from app.models.contract import Contract
-from app.models.procurement import ProcurementOrder
+from app.models.contract_document import ContractDocument
+from app.models.procurement_request import ProcurementRequest
+from app.models.purchase_order import PurchaseOrder
 from app.models.performance import PerformanceRecord
+from app.models.activity_log import ActivityLog
 from app.models.user import User
 from app.models.role import Role
 

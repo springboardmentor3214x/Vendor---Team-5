@@ -9,7 +9,7 @@ class PerformanceRecord(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
-    procurement_order_id = Column(Integer, ForeignKey("procurement_orders.id"), nullable=True)
+    purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=True)
 
     on_time_delivery = Column(Float, default=0.0)      # % or score
     quality_rating = Column(Float, default=0.0)        # e.g. out of 5 or 10
@@ -27,3 +27,4 @@ class PerformanceRecord(Base):
 
     # vendor = relationship("Vendor")
     # procurement_order = relationship("ProcurementOrder")
+    # purchase_order = relationship("PurchaseOrder")

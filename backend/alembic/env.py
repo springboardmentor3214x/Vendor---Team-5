@@ -13,6 +13,7 @@ from app.core.database import Base
 from app.core.config import settings
 from app.models.vendor import Vendor
 from app.models.invoice import Invoice
+from app.models.communication import Communication
 from app.models.vendor_document import VendorDocument
 from app.models.vendor_category import VendorCategory
 from app.models.vendor_contact import VendorContact

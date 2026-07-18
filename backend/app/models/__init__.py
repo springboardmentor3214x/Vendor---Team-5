@@ -11,3 +11,4 @@ from app.models.vendor_contact import VendorContact
 from app.models.activity_log import ActivityLog
 from app.models.contract_document import ContractDocument
 from app.models.invoice import Invoice
+from app.models.communication import Communication

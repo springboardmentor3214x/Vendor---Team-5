@@ -1,13 +1,19 @@
 from datetime import date, datetime
 
 from app.services.performance_service import (
+    calculate_average_quality_score,
+    calculate_average_response_time,
     calculate_communication_score,
+    calculate_delayed_delivery_count,
     calculate_delivery_delay,
     calculate_delivery_score,
+    calculate_on_time_delivery_rate,
+    calculate_order_completion_rate,
     calculate_overall_performance_score,
     calculate_quality_score,
     calculate_response_duration_minutes,
     calculate_service_rating_score,
+    generate_vendor_ranking,
     get_delivery_status,
     get_performance_status
 )
@@ -61,3 +67,52 @@ def test_get_performance_statuses():
     assert get_performance_status(60) == "Good"
     assert get_performance_status(40) == "Average"
     assert get_performance_status(39) == "Poor"
+
+
+def test_calculate_on_time_delivery_rate():
+    assert calculate_on_time_delivery_rate(3, 2) == 66.67
+    assert calculate_on_time_delivery_rate(0, 0) == 0.0
+
+
+def test_calculate_delayed_delivery_count():
+    statuses = ["On-Time Delivery", "Delayed Delivery", "Delayed Delivery"]
+    assert calculate_delayed_delivery_count(statuses) == 2
+
+
+def test_calculate_average_quality_score():
+    assert calculate_average_quality_score([80, 90, 85]) == 85.0
+    assert calculate_average_quality_score([]) == 0.0
+
+
+def test_calculate_average_response_time():
+    assert calculate_average_response_time([30, 45, 60]) == 45.0
+    assert calculate_average_response_time([]) == 0.0
+
+
+def test_calculate_order_completion_rate():
+    assert calculate_order_completion_rate(4, 3) == 75.0
+    assert calculate_order_completion_rate(0, 0) == 0.0
+
+
+def test_generate_vendor_ranking():
+    vendor_scores = [
+        {"vendor_id": 1, "vendor_name": "ABC", "overall_performance_score": 90},
+        {"vendor_id": 2, "vendor_name": "XYZ", "overall_performance_score": 75}
+    ]
+
+    ranking = generate_vendor_ranking(vendor_scores)
+
+    assert ranking == [
+        {
+            "vendor_id": 1,
+            "vendor_name": "ABC",
+            "overall_performance_score": 90,
+            "rank_position": 1
+        },
+        {
+            "vendor_id": 2,
+            "vendor_name": "XYZ",
+            "overall_performance_score": 75,
+            "rank_position": 2
+        }
+    ]

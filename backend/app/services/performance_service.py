@@ -129,6 +129,58 @@ def get_performance_status(overall_score: float) -> str:
     return "Poor"
 
 
+def calculate_on_time_delivery_rate(
+    total_deliveries: int,
+    on_time_deliveries: int
+) -> float:
+    """Return the percentage of deliveries completed on time."""
+    if total_deliveries == 0:
+        return 0.0
+    return round((on_time_deliveries / total_deliveries) * 100, 2)
+
+
+def calculate_delayed_delivery_count(delivery_statuses: list[str]) -> int:
+    """Return the number of delayed deliveries."""
+    return delivery_statuses.count("Delayed Delivery")
+
+
+def calculate_average_quality_score(quality_scores: list[float]) -> float:
+    """Return the average quality score."""
+    if not quality_scores:
+        return 0.0
+    return round(sum(quality_scores) / len(quality_scores), 2)
+
+
+def calculate_average_response_time(response_times: list[float]) -> float:
+    """Return the average vendor response time."""
+    if not response_times:
+        return 0.0
+    return round(sum(response_times) / len(response_times), 2)
+
+
+def calculate_order_completion_rate(
+    total_orders: int,
+    completed_orders: int
+) -> float:
+    """Return the percentage of orders completed."""
+    if total_orders == 0:
+        return 0.0
+    return round((completed_orders / total_orders) * 100, 2)
+
+
+def generate_vendor_ranking(vendor_scores: list[dict]) -> list[dict]:
+    """Rank vendors by overall performance score in descending order."""
+    sorted_vendors = sorted(
+        vendor_scores,
+        key=lambda vendor: vendor["overall_performance_score"],
+        reverse=True
+    )
+    return [
+        {**vendor, "rank_position": position}
+        for position, vendor in enumerate(sorted_vendors, start=1)
+    ]
+
+
 def _validate_ratings(ratings: list[float]) -> None:
     if any(rating < 1 or rating > 5 for rating in ratings):
         raise ValueError("Ratings must be between 1 and 5")

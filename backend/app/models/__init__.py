@@ -12,3 +12,8 @@ from app.models.activity_log import ActivityLog
 from app.models.contract_document import ContractDocument
 from app.models.invoice import Invoice
 from app.models.communication import Communication
+from app.models.delivery_performance import DeliveryPerformance
+from app.models.product_quality_evaluation import ProductQualityEvaluation
+from app.models.communication_log import CommunicationLog
+from app.models.service_rating import ServiceRating
+from app.models.vendor_ranking import VendorRanking

@@ -25,6 +25,11 @@ from app.models.performance import PerformanceRecord
 from app.models.activity_log import ActivityLog
 from app.models.user import User
 from app.models.role import Role
+from app.models.delivery_performance import DeliveryPerformance
+from app.models.product_quality_evaluation import ProductQualityEvaluation
+from app.models.communication_log import CommunicationLog
+from app.models.service_rating import ServiceRating
+from app.models.vendor_ranking import VendorRanking
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

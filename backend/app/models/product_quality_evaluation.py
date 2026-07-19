@@ -12,14 +12,13 @@ class ProductQualityEvaluation(Base):
 
     inspection_date = Column(DateTime, default=datetime.utcnow)
 
-    material_quality = Column(String(50), nullable=True)
-    packaging_quality = Column(String(50), nullable=True)
-    quantity_accuracy = Column(String(50), nullable=True)
-    specification_compliance = Column(String(50), nullable=True)
-    product_defects = Column(String(500), nullable=True)
+    material_quality = Column(Float, nullable=True)        # 1-5 rating
+    packaging_quality = Column(Float, nullable=True)       # 1-5 rating
+    quantity_accuracy = Column(Float, nullable=True)       # 1-5 rating
+    specification_compliance = Column(Float, nullable=True)  # 1-5 rating
+    product_defects = Column(Integer, nullable=True)       # count of defects
 
-    overall_quality_rating = Column(Float, nullable=True)
-    # Numeric 1-5 stars; or store label via separate field if needed
+    overall_quality_rating = Column(Float, nullable=True)  # 1-5 stars
 
     inspector_remarks = Column(String(500), nullable=True)
 

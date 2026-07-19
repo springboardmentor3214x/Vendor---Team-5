@@ -13,8 +13,8 @@ class VendorRanking(Base):
     delivery_score = Column(Float, default=0.0)
     quality_score = Column(Float, default=0.0)
     communication_score = Column(Float, default=0.0)
-    service_score = Column(Float, default=0.0)
+    service_rating_score = Column(Float, default=0.0)
 
-    vendor_rank = Column(Integer, nullable=True, index=True)
+    rank_position = Column(Integer, nullable=True, index=True)
 
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

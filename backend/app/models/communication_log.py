@@ -12,8 +12,8 @@ class CommunicationLog(Base):
 
     message_sent_time = Column(DateTime, nullable=True)
     vendor_response_time = Column(DateTime, nullable=True)
-    response_duration_hours = Column(Integer, nullable=True)
-    # calculated: (vendor_response_time - message_sent_time) in hours
+    response_duration_minutes = Column(Integer, nullable=True)
+    # calculated: (vendor_response_time - message_sent_time) in minutes
 
     communication_status = Column(String(50), nullable=True, index=True)
     # Allowed: Pending, Responded, No Response, Escalated

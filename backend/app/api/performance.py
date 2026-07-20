@@ -26,8 +26,6 @@ from app.services.performance_service import (
     calculate_service_rating_score,
     calculate_overall_performance_score,
     get_performance_status,
-    calculate_on_time_delivery_rate,
-    calculate_delayed_delivery_count,
     calculate_average_quality_score,
     calculate_average_response_time,
     calculate_order_completion_rate,
@@ -41,13 +39,14 @@ def performance_record_response(record: PerformanceRecord):
     return {
         "id": record.id,
         "vendor_id": record.vendor_id,
-        "procurement_order_id": record.procurement_order_id,
-        "on_time_delivery": record.on_time_delivery,
-        "quality_rating": record.quality_rating,
-        "communication_score": record.communication_score,
-        "service_rating_score": record.compliance_score,
-        "overall_score": record.overall_score,
-        "risk_level": record.risk_level,
+        "total_completed_orders": record.total_completed_orders,
+        "on_time_delivery_rate": record.on_time_delivery_rate,
+        "delayed_delivery_count": record.delayed_delivery_count,
+        "average_quality_score": record.average_quality_score,
+        "average_response_time": record.average_response_time,
+        "average_service_rating_score": record.average_service_rating_score,
+        "overall_performance_score": record.overall_performance_score,
+        "performance_status": record.performance_status,
         "evaluation_date": record.evaluation_date,
         "notes": record.notes,
         "created_at": record.created_at,
@@ -59,22 +58,38 @@ def performance_record_response(record: PerformanceRecord):
 def performance_dashboard(db: Session = Depends(get_db)):
     records = db.query(PerformanceRecord).all()
     total_vendors = len({record.vendor_id for record in records})
+
     average_overall_score = (
-        sum((record.overall_score or 0) for record in records) / len(records)
+        sum((record.overall_performance_score or 0.0) for record in records) / len(records)
         if records
         else 0.0
     )
-    delivery_scores = [record.on_time_delivery or 0.0 for record in records]
-    quality_scores = [record.quality_rating or 0.0 for record in records]
-    communication_scores = [record.communication_score or 0.0 for record in records]
-    service_scores = [record.compliance_score or 0.0 for record in records]
-    excellent_count = sum(1 for record in records if get_performance_status(record.overall_score or 0) == "Excellent")
-    good_count = sum(1 for record in records if get_performance_status(record.overall_score or 0) == "Good")
-    average_count = sum(1 for record in records if get_performance_status(record.overall_score or 0) == "Average")
-    poor_count = sum(1 for record in records if get_performance_status(record.overall_score or 0) == "Poor")
+
+    delivery_scores = [record.on_time_delivery_rate or 0.0 for record in records]
+    quality_scores = [record.average_quality_score or 0.0 for record in records]
+    response_scores = [record.average_response_time or 0.0 for record in records]
+    service_scores = [record.average_service_rating_score or 0.0 for record in records]
+
+    excellent_count = sum(
+        1 for record in records
+        if get_performance_status(record.overall_performance_score or 0.0) == "Excellent"
+    )
+    good_count = sum(
+        1 for record in records
+        if get_performance_status(record.overall_performance_score or 0.0) == "Good"
+    )
+    average_count = sum(
+        1 for record in records
+        if get_performance_status(record.overall_performance_score or 0.0) == "Average"
+    )
+    poor_count = sum(
+        1 for record in records
+        if get_performance_status(record.overall_performance_score or 0.0) == "Poor"
+    )
+
     completion_rate = calculate_order_completion_rate(
         len(records),
-        sum(1 for record in records if (record.overall_score or 0) >= 60),
+        sum(1 for record in records if (record.overall_performance_score or 0.0) >= 60),
     )
 
     return {
@@ -86,23 +101,10 @@ def performance_dashboard(db: Session = Depends(get_db)):
         "poor_count": poor_count,
         "average_delivery_score": calculate_average_response_time(delivery_scores) if delivery_scores else 0.0,
         "average_quality_score": calculate_average_quality_score(quality_scores) if quality_scores else 0.0,
-        "average_communication_score": calculate_average_response_time(communication_scores) if communication_scores else 0.0,
+        "average_communication_score": calculate_average_response_time(response_scores) if response_scores else 0.0,
         "average_service_rating_score": calculate_average_response_time(service_scores) if service_scores else 0.0,
         "completion_rate": completion_rate,
     }
-
-
-@router.get("/{vendor_id}", response_model=PerformanceRecordOut)
-def get_vendor_performance(vendor_id: int, db: Session = Depends(get_db)):
-    record = (
-        db.query(PerformanceRecord)
-        .filter(PerformanceRecord.vendor_id == vendor_id)
-        .order_by(PerformanceRecord.evaluation_date.desc())
-        .first()
-    )
-    if not record:
-        raise HTTPException(status_code=404, detail="Performance record not found")
-    return performance_record_response(record)
 
 
 @router.post("/delivery", response_model=PerformanceActionResponse)
@@ -110,27 +112,61 @@ def record_delivery_performance(payload: DeliveryPerformanceCreate, db: Session 
     delay_days = calculate_delivery_delay(payload.expected_delivery_date, payload.actual_delivery_date)
     delivery_status = get_delivery_status(payload.expected_delivery_date, payload.actual_delivery_date)
     delivery_score = calculate_delivery_score(delay_days)
-    overall_score = calculate_overall_performance_score(delivery_score, 0, 0, 0)
-    performance_status = get_performance_status(overall_score)
 
-    record = PerformanceRecord(
-        vendor_id=payload.vendor_id,
-        procurement_order_id=payload.purchase_order_id,
-        on_time_delivery=delivery_score,
-        overall_score=overall_score,
-        risk_level=performance_status,
-        evaluation_date=payload.actual_delivery_date,
-        notes=f"Delivery {delivery_status}, delay {delay_days} days",
-    )
-    db.add(record)
+    record = db.query(PerformanceRecord).filter(
+        PerformanceRecord.vendor_id == payload.vendor_id
+    ).first()
+
+    if not record:
+        overall_score = calculate_overall_performance_score(delivery_score, 0, 0, 0)
+        performance_status = get_performance_status(overall_score)
+
+        record = PerformanceRecord(
+            vendor_id=payload.vendor_id,
+            total_completed_orders=1,
+            on_time_delivery_rate=delivery_score,
+            delayed_delivery_count=0 if delay_days <= 0 else 1,
+            average_quality_score=0.0,
+            average_response_time=0.0,
+            average_service_rating_score=0.0,
+            overall_performance_score=overall_score,
+            performance_status=performance_status,
+            evaluation_date=payload.actual_delivery_date,
+            notes=f"PO {payload.purchase_order_id}: Delivery {delivery_status}, delay {delay_days} days",
+        )
+        db.add(record)
+    else:
+        previous_orders = record.total_completed_orders or 0
+        previous_on_time_rate = record.on_time_delivery_rate or 0.0
+        previous_delayed_count = record.delayed_delivery_count or 0
+
+        new_total_orders = previous_orders + 1
+        new_delayed_count = previous_delayed_count + (0 if delay_days <= 0 else 1)
+        new_on_time_rate = ((previous_on_time_rate * previous_orders) + delivery_score) / new_total_orders
+
+        new_overall_score = calculate_overall_performance_score(
+            new_on_time_rate,
+            record.average_quality_score or 0.0,
+            record.average_response_time or 0.0,
+            record.average_service_rating_score or 0.0,
+        )
+
+        record.total_completed_orders = new_total_orders
+        record.on_time_delivery_rate = new_on_time_rate
+        record.delayed_delivery_count = new_delayed_count
+        record.overall_performance_score = new_overall_score
+        record.performance_status = get_performance_status(new_overall_score)
+        record.evaluation_date = payload.actual_delivery_date
+        record.notes = f"PO {payload.purchase_order_id}: Delivery {delivery_status}, delay {delay_days} days"
+
     db.commit()
     db.refresh(record)
 
     return {
         "vendor_id": payload.vendor_id,
         "purchase_order_id": payload.purchase_order_id,
-        "overall_score": overall_score,
-        "performance_status": performance_status,
+        "overall_score": record.overall_performance_score,
+        "performance_status": record.performance_status,
         "notes": record.notes,
         "evaluation_date": record.evaluation_date,
     }
@@ -145,27 +181,50 @@ def record_quality_performance(payload: QualityPerformanceCreate, db: Session = 
         payload.specification_compliance,
         payload.product_defects,
     )
-    overall_score = calculate_overall_performance_score(0, quality_score, 0, 0)
-    performance_status = get_performance_status(overall_score)
 
-    record = PerformanceRecord(
-        vendor_id=payload.vendor_id,
-        procurement_order_id=payload.purchase_order_id,
-        quality_rating=quality_score,
-        overall_score=overall_score,
-        risk_level=performance_status,
-        evaluation_date=datetime.utcnow(),
-        notes=f"Quality score generated with defects={payload.product_defects}",
-    )
-    db.add(record)
+    record = db.query(PerformanceRecord).filter(
+        PerformanceRecord.vendor_id == payload.vendor_id
+    ).first()
+
+    if not record:
+        overall_score = calculate_overall_performance_score(0, quality_score, 0, 0)
+        performance_status = get_performance_status(overall_score)
+
+        record = PerformanceRecord(
+            vendor_id=payload.vendor_id,
+            total_completed_orders=0,
+            on_time_delivery_rate=0.0,
+            delayed_delivery_count=0,
+            average_quality_score=quality_score,
+            average_response_time=0.0,
+            average_service_rating_score=0.0,
+            overall_performance_score=overall_score,
+            performance_status=performance_status,
+            evaluation_date=datetime.utcnow(),
+            notes=f"PO {payload.purchase_order_id}: Quality score generated with defects={payload.product_defects}",
+        )
+        db.add(record)
+    else:
+        record.average_quality_score = quality_score
+        new_overall_score = calculate_overall_performance_score(
+            record.on_time_delivery_rate or 0.0,
+            quality_score,
+            record.average_response_time or 0.0,
+            record.average_service_rating_score or 0.0,
+        )
+        record.overall_performance_score = new_overall_score
+        record.performance_status = get_performance_status(new_overall_score)
+        record.evaluation_date = datetime.utcnow()
+        record.notes = f"PO {payload.purchase_order_id}: Quality score generated with defects={payload.product_defects}"
+
     db.commit()
     db.refresh(record)
 
     return {
         "vendor_id": payload.vendor_id,
         "purchase_order_id": payload.purchase_order_id,
-        "overall_score": overall_score,
-        "performance_status": performance_status,
+        "overall_score": record.overall_performance_score,
+        "performance_status": record.performance_status,
         "notes": record.notes,
         "evaluation_date": record.evaluation_date,
     }
@@ -173,29 +232,55 @@ def record_quality_performance(payload: QualityPerformanceCreate, db: Session = 
 
 @router.post("/communication", response_model=PerformanceActionResponse)
 def record_communication_performance(payload: CommunicationPerformanceCreate, db: Session = Depends(get_db)):
-    response_duration = calculate_response_duration_minutes(payload.message_sent_time, payload.vendor_response_time)
-    communication_score = calculate_communication_score(response_duration)
-    overall_score = calculate_overall_performance_score(0, 0, communication_score, 0)
-    performance_status = get_performance_status(overall_score)
-
-    record = PerformanceRecord(
-        vendor_id=payload.vendor_id,
-        procurement_order_id=payload.purchase_order_id,
-        communication_score=communication_score,
-        overall_score=overall_score,
-        risk_level=performance_status,
-        evaluation_date=datetime.utcnow(),
-        notes=f"Response duration {response_duration} minutes",
+    response_duration = calculate_response_duration_minutes(
+        payload.message_sent_time,
+        payload.vendor_response_time,
     )
-    db.add(record)
+    communication_score = calculate_communication_score(response_duration)
+
+    record = db.query(PerformanceRecord).filter(
+        PerformanceRecord.vendor_id == payload.vendor_id
+    ).first()
+
+    if not record:
+        overall_score = calculate_overall_performance_score(0, 0, communication_score, 0)
+        performance_status = get_performance_status(overall_score)
+
+        record = PerformanceRecord(
+            vendor_id=payload.vendor_id,
+            total_completed_orders=0,
+            on_time_delivery_rate=0.0,
+            delayed_delivery_count=0,
+            average_quality_score=0.0,
+            average_response_time=response_duration,
+            average_service_rating_score=0.0,
+            overall_performance_score=overall_score,
+            performance_status=performance_status,
+            evaluation_date=datetime.utcnow(),
+            notes=f"PO {payload.purchase_order_id}: Response duration {response_duration} minutes",
+        )
+        db.add(record)
+    else:
+        record.average_response_time = response_duration
+        new_overall_score = calculate_overall_performance_score(
+            record.on_time_delivery_rate or 0.0,
+            record.average_quality_score or 0.0,
+            communication_score,
+            record.average_service_rating_score or 0.0,
+        )
+        record.overall_performance_score = new_overall_score
+        record.performance_status = get_performance_status(new_overall_score)
+        record.evaluation_date = datetime.utcnow()
+        record.notes = f"PO {payload.purchase_order_id}: Response duration {response_duration} minutes"
+
     db.commit()
     db.refresh(record)
 
     return {
         "vendor_id": payload.vendor_id,
         "purchase_order_id": payload.purchase_order_id,
-        "overall_score": overall_score,
-        "performance_status": performance_status,
+        "overall_score": record.overall_performance_score,
+        "performance_status": record.performance_status,
         "notes": record.notes,
         "evaluation_date": record.evaluation_date,
     }
@@ -211,27 +296,50 @@ def record_service_rating(payload: ServiceRatingCreate, db: Session = Depends(ge
         payload.communication_effectiveness,
         payload.issue_resolution,
     )
-    overall_score = calculate_overall_performance_score(0, 0, 0, service_rating_score)
-    performance_status = get_performance_status(overall_score)
 
-    record = PerformanceRecord(
-        vendor_id=payload.vendor_id,
-        procurement_order_id=payload.purchase_order_id,
-        compliance_score=service_rating_score,
-        overall_score=overall_score,
-        risk_level=performance_status,
-        evaluation_date=datetime.utcnow(),
-        notes="Service rating recorded",
-    )
-    db.add(record)
+    record = db.query(PerformanceRecord).filter(
+        PerformanceRecord.vendor_id == payload.vendor_id
+    ).first()
+
+    if not record:
+        overall_score = calculate_overall_performance_score(0, 0, 0, service_rating_score)
+        performance_status = get_performance_status(overall_score)
+
+        record = PerformanceRecord(
+            vendor_id=payload.vendor_id,
+            total_completed_orders=0,
+            on_time_delivery_rate=0.0,
+            delayed_delivery_count=0,
+            average_quality_score=0.0,
+            average_response_time=0.0,
+            average_service_rating_score=service_rating_score,
+            overall_performance_score=overall_score,
+            performance_status=performance_status,
+            evaluation_date=datetime.utcnow(),
+            notes=f"PO {payload.purchase_order_id}: Service rating recorded",
+        )
+        db.add(record)
+    else:
+        record.average_service_rating_score = service_rating_score
+        new_overall_score = calculate_overall_performance_score(
+            record.on_time_delivery_rate or 0.0,
+            record.average_quality_score or 0.0,
+            record.average_response_time or 0.0,
+            service_rating_score,
+        )
+        record.overall_performance_score = new_overall_score
+        record.performance_status = get_performance_status(new_overall_score)
+        record.evaluation_date = datetime.utcnow()
+        record.notes = f"PO {payload.purchase_order_id}: Service rating recorded"
+
     db.commit()
     db.refresh(record)
 
     return {
         "vendor_id": payload.vendor_id,
         "purchase_order_id": payload.purchase_order_id,
-        "overall_score": overall_score,
-        "performance_status": performance_status,
+        "overall_score": record.overall_performance_score,
+        "performance_status": record.performance_status,
         "notes": record.notes,
         "evaluation_date": record.evaluation_date,
     }
@@ -252,30 +360,57 @@ def performance_history(vendor_id: int, db: Session = Depends(get_db)):
 def vendor_rankings(db: Session = Depends(get_db)):
     records = db.query(PerformanceRecord).all()
     vendor_scores = {}
+
     for record in records:
-        vendor_scores.setdefault(record.vendor_id, []).append(record.overall_score or 0.0)
+        vendor_scores.setdefault(record.vendor_id, []).append(record.overall_performance_score or 0.0)
 
     average_scores = {
         vendor_id: sum(scores) / len(scores)
         for vendor_id, scores in vendor_scores.items()
     }
+
     ranking_input = [
-        {"vendor_id": vendor_id, "overall_score": score}
+        {"vendor_id": vendor_id, "overall_performance_score": score}
         for vendor_id, score in average_scores.items()
     ]
     ranking_list = generate_vendor_ranking(ranking_input)
+
     result = []
     for idx, item in enumerate(ranking_list, start=1):
         vendor_id = item.get("vendor_id") if isinstance(item, dict) else getattr(item, "vendor_id", None)
-        overall_score = item.get("overall_score") if isinstance(item, dict) else getattr(item, "overall_score", 0.0)
+        overall_score = (
+            item.get("overall_performance_score", item.get("overall_score", 0.0))
+            if isinstance(item, dict)
+            else getattr(item, "overall_performance_score", getattr(item, "overall_score", 0.0))
+        )
         rank = item.get("rank", idx) if isinstance(item, dict) else idx
         vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first() if vendor_id is not None else None
+
         result.append(
             {
                 "vendor_id": vendor_id or 0,
-                "vendor_name": vendor.full_name if vendor else None,
+                "vendor_name": (
+                    getattr(vendor, "full_name", None)
+                    or getattr(vendor, "company_name", None)
+                    or getattr(vendor, "name", None)
+                    or getattr(vendor, "vendor_name", None)
+                ),
                 "overall_score": overall_score or 0.0,
                 "rank": rank,
             }
         )
+
     return {"rankings": result}
+
+
+@router.get("/{vendor_id}", response_model=PerformanceRecordOut)
+def get_vendor_performance(vendor_id: int, db: Session = Depends(get_db)):
+    record = (
+        db.query(PerformanceRecord)
+        .filter(PerformanceRecord.vendor_id == vendor_id)
+        .order_by(PerformanceRecord.evaluation_date.desc())
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Performance record not found")
+    return performance_record_response(record)

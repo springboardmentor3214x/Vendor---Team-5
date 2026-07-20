@@ -1,7 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
-
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class DeliveryPerformanceCreate(BaseModel):
@@ -18,7 +16,7 @@ class QualityPerformanceCreate(BaseModel):
     packaging_quality: float
     quantity_accuracy: float
     specification_compliance: float
-    product_defects: Optional[int] = 0
+    product_defects: int
 
 
 class CommunicationPerformanceCreate(BaseModel):
@@ -40,34 +38,15 @@ class ServiceRatingCreate(BaseModel):
 
 
 class PerformanceActionResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     vendor_id: int
     purchase_order_id: int
     overall_score: float
     performance_status: str
-    notes: Optional[str] = None
+    notes: str | None = None
     evaluation_date: datetime
-
-
-class PerformanceRecordOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    vendor_id: int
-    procurement_order_id: Optional[int] = None
-    on_time_delivery: Optional[float] = None
-    quality_rating: Optional[float] = None
-    communication_score: Optional[float] = None
-    service_rating_score: Optional[float] = None
-    overall_score: float
-    risk_level: str
-    evaluation_date: datetime
-    notes: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
 
 
 class PerformanceDashboardOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     total_vendors: int
     average_overall_score: float
     excellent_count: int
@@ -81,14 +60,32 @@ class PerformanceDashboardOut(BaseModel):
     completion_rate: float
 
 
-class VendorRankingItem(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class PerformanceRecordOut(BaseModel):
+    id: int
     vendor_id: int
-    vendor_name: Optional[str] = None
+    total_completed_orders: int
+    on_time_delivery_rate: float
+    delayed_delivery_count: int
+    average_quality_score: float
+    average_response_time: float
+    average_service_rating_score: float
+    overall_performance_score: float
+    performance_status: str
+    evaluation_date: datetime
+    notes: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RankingItem(BaseModel):
+    vendor_id: int
+    vendor_name: str | None = None
     overall_score: float
     rank: int
 
 
 class VendorRankingOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    rankings: List[VendorRankingItem]
+    rankings: list[RankingItem]

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     auth,
+    communications,
     contracts,
     notifications,
     performance,
@@ -31,6 +32,7 @@ app.include_router(vendors.router, tags=["Vendors"])
 app.include_router(procurement.router, tags=["Procurement"])
 app.include_router(performance.router, tags=["Performance"])
 app.include_router(contracts.router, tags=["Contracts"])
+app.include_router(communications.router, tags=["Communications"])
 app.include_router(notifications.router, tags=["Notifications"])
 app.include_router(reports.router, tags=["Reports"])
 

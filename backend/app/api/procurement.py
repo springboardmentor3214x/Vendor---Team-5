@@ -1,8 +1,11 @@
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
 from app.models.procurement_request import ProcurementRequest
-from app.models.procurement import ProcurementOrder as PurchaseOrder
+from app.models.purchase_order import PurchaseOrder
 from app.schemas.procurement import (
     ProcurementRequestCreate,
     ProcurementRequestOut,
@@ -15,7 +18,6 @@ from app.services.procurement_service import (
     cancel_procurement_request,
     generate_procurement_request_number,
     can_assign_vendor_to_request,
-    can_user_manage_procurement_request,
 )
 from app.services.purchase_order_service import (
     generate_purchase_order_number,
@@ -26,32 +28,32 @@ from app.services.purchase_order_service import (
     cancel_purchase_order,
     is_delivery_delayed,
     can_complete_procurement,
-    can_user_update_purchase_order,
 )
 
 router = APIRouter(tags=["Procurement"])
 
 
-def purchase_order_response(po: PurchaseOrder, procurement_request_id: int | None = None, payment_terms: str | None = None):
+def purchase_order_response(po: PurchaseOrder):
     return {
         "id": po.id,
-        "procurement_request_id": procurement_request_id or 0,
+        "procurement_request_id": po.procurement_request_id,
         "vendor_id": po.vendor_id,
         "contract_id": po.contract_id,
         "quantity": po.quantity,
         "unit_price": po.unit_price,
         "expected_delivery_date": po.expected_delivery_date,
         "actual_delivery_date": po.actual_delivery_date,
-        "po_number": po.order_number,
-        "total_cost": po.total_amount,
-        "payment_terms": payment_terms,
-        "po_status": po.status,
+        "po_number": po.po_number,
+        "total_cost": po.total_cost,
+        "payment_terms": po.payment_terms,
+        "po_status": po.po_status,
         "created_at": po.created_at,
         "updated_at": po.updated_at,
     }
 
 
 # ---------------- Procurement Requests ----------------
+
 
 @router.post("/procurement-requests", response_model=ProcurementRequestOut)
 def create_request(payload: ProcurementRequestCreate, db: Session = Depends(get_db)):
@@ -123,6 +125,7 @@ def cancel_request(request_id: int, db: Session = Depends(get_db)):
 
 # ---------------- Purchase Orders ----------------
 
+
 @router.post("/purchase-orders", response_model=PurchaseOrderOut)
 def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(
@@ -138,24 +141,21 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Cannot create purchase order for this request")
 
     po = PurchaseOrder(
+        procurement_request_id=payload.procurement_request_id,
         vendor_id=payload.vendor_id,
         contract_id=payload.contract_id,
-        item_description=getattr(request, "item_description", "Purchase order item"),
         quantity=payload.quantity,
         unit_price=payload.unit_price,
-        total_amount=calculate_total_cost(payload.quantity, payload.unit_price),
-        order_number=generate_purchase_order_number(db.query(PurchaseOrder).count() + 1),
+        total_cost=calculate_total_cost(payload.quantity, payload.unit_price),
+        po_number=generate_purchase_order_number(db.query(PurchaseOrder).count() + 1),
         expected_delivery_date=payload.expected_delivery_date,
-        status="Draft",
+        payment_terms=payload.payment_terms,
+        po_status="Draft",
     )
     db.add(po)
     db.commit()
     db.refresh(po)
-    return purchase_order_response(
-        po,
-        procurement_request_id=payload.procurement_request_id,
-        payment_terms=payload.payment_terms,
-    )
+    return purchase_order_response(po)
 
 
 @router.get("/purchase-orders", response_model=list[PurchaseOrderOut])
@@ -177,7 +177,7 @@ def issue_purchase_order(po_id: int, db: Session = Depends(get_db)):
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
     try:
-        po.status = issue_purchase_order_action(po.status)
+        po.po_status = issue_purchase_order_action(po.po_status)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     db.commit()
@@ -191,7 +191,7 @@ def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
     try:
-        po.status = mark_purchase_order_delivered(po.status)
+        po.po_status = mark_purchase_order_delivered(po.po_status)
         if po.actual_delivery_date is None:
             po.actual_delivery_date = datetime.utcnow()
     except ValueError as e:
@@ -207,7 +207,7 @@ def cancel_purchase_order_route(po_id: int, db: Session = Depends(get_db)):
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
     try:
-        po.status = cancel_purchase_order(po.status)
+        po.po_status = cancel_purchase_order(po.po_status)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     db.commit()
@@ -222,11 +222,11 @@ def check_completion(po_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Purchase order not found")
     delivery_delayed = is_delivery_delayed(po.expected_delivery_date, po.actual_delivery_date)
     invoice_verified = False
-    is_complete = can_complete_procurement(po.status, invoice_verified)
+    is_complete = can_complete_procurement(po.po_status, invoice_verified)
     return {
         "po_id": po_id,
         "is_complete": is_complete,
         "delivery_delayed": delivery_delayed,
         "invoice_verified": invoice_verified,
-        "po_status": po.status,
+        "po_status": po.po_status,
     }

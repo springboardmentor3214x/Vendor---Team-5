@@ -51,7 +51,7 @@ class VendorCreate(BaseModel):
 
 class VendorUpdate(BaseModel):
     company_name: Optional[str] = None
-    vendor_category: Optional[str] = None
+    category_id: Optional[int] = None
     contact_person_name: Optional[str] = None
     designation: Optional[str] = None
     email: Optional[str] = None

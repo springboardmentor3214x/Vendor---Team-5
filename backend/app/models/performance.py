@@ -1,29 +1,26 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.core.database import Base  # will connect once Pranjal pushes database.py
+from app.core.database import Base
 
 
 class PerformanceRecord(Base):
     __tablename__ = "performance_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
-    procurement_order_id = Column(Integer, ForeignKey("procurement_orders.id"), nullable=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), unique=True, nullable=False, index=True)
 
-    on_time_delivery = Column(Float, default=0.0)      # % or score
-    quality_rating = Column(Float, default=0.0)        # e.g. out of 5 or 10
-    communication_score = Column(Float, default=0.0)
-    compliance_score = Column(Float, default=0.0)
-
-    overall_score = Column(Float, default=0.0)         # computed by Sonali's scoring logic
-    risk_level = Column(String(50), default="low")     # low, medium, high
+    total_completed_orders = Column(Integer, default=0)
+    on_time_delivery_rate = Column(Float, default=0.0)
+    delayed_delivery_count = Column(Integer, default=0)
+    average_quality_score = Column(Float, default=0.0)
+    average_response_time = Column(Float, default=0.0)  # in minutes, per Sonali's function
+    average_service_rating_score = Column(Float, default=0.0)
+    overall_performance_score = Column(Float, default=0.0)
+    performance_status = Column(String(50), default="Not Evaluated", index=True)
+    # Suggested values: Excellent, Good, Average, Poor, Not Evaluated
 
     evaluation_date = Column(DateTime, default=datetime.utcnow)
     notes = Column(String(1000), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # vendor = relationship("Vendor")
-    # procurement_order = relationship("ProcurementOrder")

@@ -12,12 +12,24 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from app.core.database import Base
 from app.core.config import settings
 from app.models.vendor import Vendor
+from app.models.invoice import Invoice
+from app.models.communication import Communication
 from app.models.vendor_document import VendorDocument
+from app.models.vendor_category import VendorCategory
+from app.models.vendor_contact import VendorContact
 from app.models.contract import Contract
-from app.models.procurement import ProcurementOrder
+from app.models.contract_document import ContractDocument
+from app.models.procurement_request import ProcurementRequest
+from app.models.purchase_order import PurchaseOrder
 from app.models.performance import PerformanceRecord
+from app.models.activity_log import ActivityLog
 from app.models.user import User
 from app.models.role import Role
+from app.models.delivery_performance import DeliveryPerformance
+from app.models.product_quality_evaluation import ProductQualityEvaluation
+from app.models.communication_log import CommunicationLog
+from app.models.service_rating import ServiceRating
+from app.models.vendor_ranking import VendorRanking
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

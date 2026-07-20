@@ -40,9 +40,9 @@ export class AuthService {
    * Logs the user in. Right now this is a local mock (no real backend yet).
    * When your API is ready, replace the body of this method with:
    *
-   *   return this.http.post<{ token: string; user: AuthUser }>('/api/auth/login', payload).pipe(
-   *     tap(res => this.setSession(res.token, res.user))
-   *   );
+   * return this.http.post<{ token: string; user: AuthUser }>('/api/auth/login', payload).pipe(
+   * tap(res => this.setSession(res.token, res.user))
+   * );
    */
   login(payload: LoginPayload): Observable<AuthUser> {
     if (!payload.email || !payload.password) {
@@ -84,6 +84,15 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     return !!this.getToken();
+  }
+
+  /**
+   * Added to fix the role guard error.
+   * Reads the current user signal and returns their role string, or an empty string if logged out.
+   */
+  getUserRole(): string {
+    const user = this.currentUser();
+    return user ? user.role : '';
   }
 
   getToken(): string | null {

@@ -1,0 +1,240 @@
+<div class="dashboard">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Logo">
+    </div>
+
+    <nav>
+
+      <a routerLink="/vendor-performance">
+        <i class="ti ti-layout-dashboard"></i>
+        Vendor Performance Dashboard
+      </a>
+
+      <a routerLink="/delivery-performance-monitoring">
+        <i class="ti ti-truck-delivery"></i>
+        Delivery Performance Monitoring
+      </a>
+
+      <a routerLink="/product-quality-evaluation">
+        <i class="ti ti-package"></i>
+        Product Quality Evaluation
+      </a>
+
+      <a routerLink="/communication-response-tracking">
+        <i class="ti ti-message-circle"></i>
+        Communication Response Tracking
+      </a>
+
+      <a routerLink="/service-rating">
+        <i class="ti ti-star"></i>
+        Service Rating
+      </a>
+
+      <a routerLink="/performance-history">
+        <i class="ti ti-history"></i>
+        Performance History
+      </a>
+
+      <a
+        routerLink="/vendor-ranking"
+        routerLinkActive="active">
+
+        <i class="ti ti-trophy"></i>
+        Vendor Ranking
+
+      </a>
+
+      <a routerLink="/performance-metrics">
+        <i class="ti ti-chart-bar"></i>
+        Performance Metrics
+      </a>
+
+      
+
+    </nav>
+
+  </aside>
+
+  <!-- Main -->
+  <main class="content">
+
+    <!-- Header -->
+
+    <div class="topbar">
+
+      <div class="page-title">
+
+        <i class="ti ti-menu-2"></i>
+
+        <h2>Vendor Ranking</h2>
+
+      </div>
+
+      <div class="top-right">
+
+        <input
+          type="text"
+          placeholder="Search..."
+          [(ngModel)]="searchText">
+
+       
+      </div>
+
+    </div>
+
+    <!-- Summary Cards -->
+
+    <div class="cards">
+
+      <div class="card blue">
+        <h4>Total Vendors Evaluated</h4>
+        <h2>58</h2>
+      </div>
+
+      <div class="card green">
+        <h4>Average Delivery</h4>
+        <h2>87%</h2>
+      </div>
+
+      <div class="card pink">
+        <h4>Average Product Quality</h4>
+        <h2>4.2 / 5</h2>
+      </div>
+
+      <div class="card orange">
+        <h4>Average Response Time</h4>
+        <h2>1h 35m</h2>
+      </div>
+
+      <div class="card cyan">
+        <h4>Total Completed Orders</h4>
+        <h2>236</h2>
+      </div>
+
+      <div class="card red">
+        <h4>Delayed Deliveries</h4>
+        <h2>32</h2>
+      </div>
+
+      <div class="card teal">
+        <h4>Top Ranked Vendor</h4>
+        <h2>Vendor A</h2>
+      </div>
+
+    </div>
+
+    <!-- Filters -->
+
+    <div class="filters">
+
+      <div>
+
+        <label>Vendor Category</label>
+
+        <select [(ngModel)]="category">
+
+          <option>All Category</option>
+
+          <option>Raw Material Supplier</option>
+
+          <option>Equipment Vendor</option>
+
+          <option>IT Vendor</option>
+
+          <option>Service Provider</option>
+
+        </select>
+
+      </div>
+
+      <div>
+
+        <label>Minimum Score</label>
+
+        <select [(ngModel)]="score">
+
+          <option>All Scores</option>
+
+          <option>90%</option>
+
+          <option>80%</option>
+
+          <option>70%</option>
+
+        </select>
+
+      </div>
+
+      <div class="search-box">
+
+        <input
+          type="text"
+          placeholder="Search by PO Number or Vendor"
+          [(ngModel)]="searchText">
+
+      </div>
+
+    </div>
+
+    <!-- Ranking Table -->
+
+    <table>
+
+      <thead>
+
+      <tr>
+
+        <th>Rank</th>
+
+        <th>Vendor</th>
+
+        <th>Vendor Category</th>
+
+        <th>Overall Score</th>
+
+        <th>Delivery</th>
+
+        <th>Quality</th>
+
+        <th>Communication</th>
+
+        <th>Remarks</th>
+
+      </tr>
+
+      </thead>
+
+      <tbody>
+
+      <tr *ngFor="let vendor of filteredVendors">
+
+        <td>{{vendor.rank}}</td>
+
+        <td>{{vendor.name}}</td>
+        
+
+        <td>{{vendor.category}}</td>
+
+        <td>{{vendor.score}}</td>
+
+        <td>{{vendor.delivery}}</td>
+
+        <td>{{vendor.quality}}</td>
+
+        <td>{{vendor.communication}}</td>
+
+        <td>{{vendor.remarks}}</td>
+
+      </tr>
+
+      </tbody>
+
+    </table>
+
+  </main>
+
+</div>

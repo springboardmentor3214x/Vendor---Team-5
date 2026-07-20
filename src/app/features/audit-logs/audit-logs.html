@@ -1,0 +1,100 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/auditor">
+        <i class="ti ti-home"></i>
+        Dashboard
+      </li>
+
+      <li routerLink="/report">
+        <i class="ti ti-file-report"></i>
+        Reports
+      </li>
+
+      <li routerLink="/compliance">
+        <i class="ti ti-shield-check"></i>
+        Compliance
+      </li>
+
+      <li class="active">
+        <i class="ti ti-history"></i>
+        Audit Logs
+      </li>
+
+      
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+
+  <main class="main-content">
+
+    <header class="topbar">
+
+      <div class="left">
+        <i class="ti ti-menu-2"></i>
+
+        <div>
+          <h3>Audit Logs</h3>
+        </div>
+
+      </div>
+
+     
+
+
+     
+
+    </header>
+
+    <!-- Table -->
+
+    <section class="table-card">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Log ID</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Module</th>
+            <th>Address</th>
+            <th>Date & Time</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr *ngFor="let log of logs">
+
+            <td>{{log.logId}}</td>
+            <td>{{log.user}}</td>
+            <td>{{log.action}}</td>
+            <td>{{log.module}}</td>
+            <td>{{log.address}}</td>
+            <td>{{log.dateTime}}</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </section>
+
+  </main>
+
+</div>

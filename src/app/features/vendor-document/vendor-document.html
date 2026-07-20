@@ -1,0 +1,253 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+      <hr>
+    </div>
+
+    <ul class="menu">
+      <h3> Vendor Management</h3>
+    <li routerLink="/vendor-list"><i class="ti ti-list"></i>Vendor List</li>
+    <li routerLink="/add-vendor"><i class="ti ti-user-plus"></i>Add Vendor</li>
+    <li class="action" routerLink="/vendor-document"><i class="ti ti-file-description"></i>Vendor Document</li>
+    <li routerLink="/vendor-details"><i class="ti ti-id"></i>Vendor Details</li>
+    <li routerLink="/edit-vendor"><i class="ti ti-edit"></i>Edit Vendor</li>
+    <li routerLink="/vendor-approval"><i class="ti ti-check"></i>Vendor Approval</li>
+    <li routerLink="/vendor-status"><i class="ti ti-chart-bar"></i>Vendor Status</li>
+  </ul>
+
+    
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <div class="topbar">
+
+      <div>
+        <h2>Vendor Documents</h2>
+        <p>Vendor Management > Vendor Dashboard > Vendor Documents</p>
+      </div>
+
+      <div class="top-icons">
+
+        <div class="search-box">
+          <input type="text" placeholder="Search anything">
+          <i class="ti ti-search"></i>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Stepper -->
+    <div class="stepper">
+
+      <div class="step completed">
+        <div class="circle">✓</div>
+        <span>Company Information</span>
+      </div>
+
+      <div class="line"></div>
+
+      <div class="step completed">
+        <div class="circle">✓</div>
+        <span>Contact Information</span>
+      </div>
+
+      <div class="line"></div>
+
+      <div class="step completed">
+        <div class="circle">✓</div>
+        <span>Address</span>
+      </div>
+
+      <div class="line"></div>
+
+      <div class="step completed">
+        <div class="circle">✓</div>
+        <span>Bank Details</span>
+      </div>
+
+      <div class="line"></div>
+
+      <div class="step active">
+        <div class="circle">5</div>
+        <span>Documents</span>
+      </div>
+
+    </div>
+
+    <!-- Documents -->
+    <div class="document-grid">
+
+      <!-- GST -->
+      <div class="document-card">
+
+        <h3>GST Certificate*</h3>
+
+        <div class="file-box">
+
+          <i class="ti ti-file-text"></i>
+
+          <div>
+            <strong>gst_certificate.pdf</strong>
+            <small>(1.2 MB)</small>
+          </div>
+
+          <div class="actions">
+            <button><i class="ti ti-eye"></i></button>
+            <button><i class="ti ti-trash"></i></button>
+          </div>
+
+        </div>
+
+        <button class="replace-btn">
+          Replace File
+        </button>
+
+      </div>
+
+      <!-- PAN -->
+      <div class="document-card">
+
+        <h3>PAN Card*</h3>
+
+        <div class="file-box">
+
+          <i class="ti ti-file-text"></i>
+
+          <div>
+            <strong>pan_card.pdf</strong>
+            <small>(534 KB)</small>
+          </div>
+
+          <div class="actions">
+            <button><i class="ti ti-eye"></i></button>
+            <button><i class="ti ti-trash"></i></button>
+          </div>
+
+        </div>
+
+        <button class="replace-btn">
+          Replace File
+        </button>
+
+      </div>
+
+      <!-- Company -->
+      <div class="document-card">
+
+        <h3>Company Registration Certificate*</h3>
+
+        <div class="file-box">
+
+          <i class="ti ti-file-text"></i>
+
+          <div>
+            <strong>company_registration.pdf</strong>
+            <small>(1.8 MB)</small>
+          </div>
+
+          <div class="actions">
+            <button><i class="ti ti-eye"></i></button>
+            <button><i class="ti ti-trash"></i></button>
+          </div>
+
+        </div>
+
+        <button class="replace-btn">
+          Replace File
+        </button>
+
+      </div>
+
+      <!-- ISO -->
+      <div class="document-card">
+
+        <h3>ISO Certificate</h3>
+
+        <div class="file-box">
+
+          <i class="ti ti-file-text"></i>
+
+          <div>
+            <strong>iso_certificate.pdf</strong>
+            <small>(1.1 MB)</small>
+          </div>
+
+          <div class="actions">
+            <button><i class="ti ti-eye"></i></button>
+            <button><i class="ti ti-trash"></i></button>
+          </div>
+
+        </div>
+
+        <button class="replace-btn">
+          Replace File
+        </button>
+
+      </div>
+
+      <!-- Other -->
+      <div class="document-card">
+
+        <h3>Other Supporting Documents</h3>
+
+        <div class="file-box">
+
+          <i class="ti ti-file-text"></i>
+
+          <div>
+            <strong>other_docs.pdf</strong>
+            <small>(2.3 MB)</small>
+          </div>
+
+          <div class="actions">
+            <button><i class="ti ti-eye"></i></button>
+            <button><i class="ti ti-trash"></i></button>
+          </div>
+
+        </div>
+
+        <button class="replace-btn">
+          Replace File
+        </button>
+
+      </div>
+
+      <!-- Upload -->
+      <div class="upload-card">
+
+        <i class="ti ti-cloud-upload upload-icon"></i>
+
+        <h3>Upload</h3>
+
+        <p>Drag & Drop files here or click to upload</p>
+
+        <input type="file" multiple>
+
+      </div>
+
+    </div>
+
+    <!-- Footer Buttons -->
+    <div class="footer-buttons">
+
+      <button class="save-btn">
+        Save
+      </button>
+
+      <button class="finish-btn">
+        Finish
+      </button>
+
+    </div>
+
+  </main>
+
+</div>

@@ -1,0 +1,212 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/vendor-performance-dashboard" routerLinkActive="active">
+        <i class="ti ti-layout-dashboard"></i>
+        Vendor Performance Dashboard
+      </li>
+
+      <li routerLink="/delivery-performance-monitoring" routerLinkActive="active">
+        <i class="ti ti-truck-delivery"></i>
+        Delivery Performance Monitoring
+      </li>
+
+      <li routerLink="/product-quality-evaluation" routerLinkActive="active">
+        <i class="ti ti-stars"></i>
+        Product Quality Evaluation
+      </li>
+
+      <li routerLink="/communication-response-tracking" routerLinkActive="active">
+        <i class="ti ti-users"></i>
+        Communication Response Tracking
+      </li>
+
+      <li routerLink="/service-rating" routerLinkActive="active">
+        <i class="ti ti-star"></i>
+        Service Rating
+      </li>
+
+      <li routerLink="/performance-history" routerLinkActive="active">
+        <i class="ti ti-history"></i>
+        Performance History
+      </li>
+
+      <li routerLink="/vendor-ranking" routerLinkActive="active">
+        <i class="ti ti-trophy"></i>
+        Vendor Ranking
+      </li>
+
+      <li routerLink="/performance-metrics" routerLinkActive="active">
+        <i class="ti ti-chart-bar"></i>
+        Performance Metrics
+      </li>
+
+      
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+
+  <main class="content">
+
+    <!-- Header -->
+
+    <div class="header">
+
+      <div class="page-title">
+        <i class="ti ti-menu-2"></i>
+        <h2>Service Rating</h2>
+          
+      </div>
+    
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Search..."
+          [(ngModel)]="searchText">
+        <i class="ti ti-search"></i>
+      </div>
+
+     
+
+    </div>
+
+    <!-- Form -->
+
+    <div class="service-card">
+
+      <h3>Service Rating</h3>
+
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Purchase Order Number</label>
+
+          <select [(ngModel)]="purchaseOrder">
+            <option *ngFor="let po of purchaseOrders">{{po}}</option>
+          </select>
+
+        </div>
+
+        <div class="form-group">
+
+          <label>Vendor Name</label>
+
+          <select [(ngModel)]="vendorName">
+            <option *ngFor="let vendor of vendors">{{vendor}}</option>
+          </select>
+
+        </div>
+
+        <div class="form-group">
+
+          <label>Service Completion Date</label>
+
+          <input type="date" [(ngModel)]="serviceDate">
+
+        </div>
+
+      </div>
+
+      <!-- Rating Cards -->
+
+      <div class="rating-grid">
+
+        <div class="rating-card">
+          <h4>Professionalism</h4>
+          <div class="stars">★ ★ ★ ★ ☆</div>
+          <select [(ngModel)]="professionalism">
+            <option *ngFor="let rating of ratings">{{rating}}</option>
+          </select>
+        </div>
+
+        <div class="rating-card">
+          <h4>Customer Support</h4>
+          <div class="stars">★ ★ ★ ★ ☆</div>
+          <select [(ngModel)]="customerSupport">
+            <option *ngFor="let rating of ratings">{{rating}}</option>
+          </select>
+        </div>
+
+        <div class="rating-card">
+          <h4>Documentation Quality</h4>
+          <div class="stars">★ ★ ★ ★ ☆</div>
+          <select [(ngModel)]="documentationQuality">
+            <option *ngFor="let rating of ratings">{{rating}}</option>
+          </select>
+        </div>
+
+        <div class="rating-card">
+          <h4>Flexibility</h4>
+          <div class="stars">★ ★ ★ ★ ☆</div>
+          <select [(ngModel)]="flexibility">
+            <option *ngFor="let rating of ratings">{{rating}}</option>
+          </select>
+        </div>
+
+        <div class="rating-card">
+          <h4>Communication Effectiveness</h4>
+          <div class="stars">★ ★ ★ ★ ☆</div>
+          <select [(ngModel)]="communicationEffectiveness">
+            <option *ngFor="let rating of ratings">{{rating}}</option>
+          </select>
+        </div>
+
+        <div class="rating-card">
+          <h4>Issue Resolution</h4>
+          <div class="stars">★ ★ ★ ★ ☆</div>
+          <select [(ngModel)]="issueResolution">
+            <option *ngFor="let rating of ratings">{{rating}}</option>
+          </select>
+        </div>
+
+        <div class="rating-card overall">
+          <h4>Overall Service Rating</h4>
+          <div class="stars">★ ★ ★ ★ ★</div>
+          <select [(ngModel)]="overallRating">
+            <option *ngFor="let rating of ratings">{{rating}}</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Comments</label>
+
+        <textarea
+          rows="5"
+          [(ngModel)]="comments"
+          placeholder="Overall service was good. Vendor responded promptly and resolved issues effectively.">
+        </textarea>
+
+      </div>
+
+      <div class="button-group">
+
+        <button class="reset-btn" (click)="resetForm()">
+          <i class="ti ti-refresh"></i>
+          Reset
+        </button>
+
+        <button class="save-btn" (click)="saveRating()">
+          <i class="ti ti-device-floppy"></i>
+          Save Rating
+        </button>
+
+      </div>
+
+    </div>
+
+  </main>
+
+</div>

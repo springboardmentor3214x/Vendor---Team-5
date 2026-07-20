@@ -1,0 +1,132 @@
+<div class="contracts-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/vendor">
+        <i class="ti ti-home"></i>
+        <span>Dashboard</span>
+      </li>
+
+      <li routerLink="/vendor-profile">
+        <i class="ti ti-users"></i>
+        <span>Vendor Profile</span>
+      </li>
+
+      <li routerLink="/orders">
+        <i class="ti ti-shopping-cart"></i>
+        <span>Orders</span>
+      </li>
+
+      <li class="active">
+        <i class="ti ti-file-text"></i>
+        <span>Contracts</span>
+      </li>
+
+      <li routerLink="/communication">
+        <i class="ti ti-message-circle"></i>
+        <span>Communication</span>
+      </li>
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="topbar">
+
+      <div class="left">
+        <i class="ti ti-menu-2"></i>
+        <h2>Contracts</h2>
+      </div>
+
+      
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs">
+
+      <button class="active">All Contracts</button>
+      <button>Active</button>
+      <button>Expiring Soon</button>
+      <button>Expired</button>
+
+    </div>
+
+    <!-- Search -->
+    <div class="search-box">
+
+      <i class="ti ti-search"></i>
+
+      <input
+        type="text"
+        placeholder="Search contracts..."
+      >
+
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Contract ID</th>
+            <th>Contract Name</th>
+            <th>Status</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Value</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr *ngFor="let contract of contracts">
+
+            <td>{{ contract.id }}</td>
+
+            <td>{{ contract.name }}</td>
+
+            <td>
+              <span
+                [ngClass]="{
+                  'active-status': contract.status === 'Active',
+                  'expiring': contract.status === 'Expiring Soon',
+                  'expired': contract.status === 'Expired'
+                }">
+
+                {{ contract.status }}
+
+              </span>
+            </td>
+
+            <td>{{ contract.startDate }}</td>
+
+            <td>{{ contract.endDate }}</td>
+
+            <td>{{ contract.value }}</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </main>
+
+</div>

@@ -1,0 +1,303 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <div class="sidebar-title">
+      <span>Supply Chain Manager</span>
+     
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/vendor-performance">
+        <i class="ti ti-users"></i>
+        <span>Vendor Performance</span>
+      </li>
+
+      <li routerLink="/vendor-reliability">
+        <i class="ti ti-chart-line"></i>
+        <span>Vendor Reliability</span>
+      </li>
+
+      <li routerLink="/procurement-tracking">
+        <i class="ti ti-truck"></i>
+        <span>Procurement Tracking</span>
+      </li>
+
+       <li routerLink="/notifications">
+        <i class="ti ti-bell"></i> Notification
+      </li>
+
+
+      <li routerLink="/logout">
+        <i class="ti ti-logout"></i> Logout
+      </li>
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="topbar">
+
+      <div class="left-header">
+
+        <i class="ti ti-menu-2 menu-icon"></i>
+
+        <h2>Dashboard</h2>
+
+      </div>
+
+      <div class="search-box">
+
+        <input
+          type="text"
+          placeholder="Search anything">
+
+        <i class="ti ti-search"></i>
+
+      </div>
+      <div class="header-right">
+  <button class="profile-btn" routerLink="/profile">
+    <i class="ti ti-user"></i>
+    Profile
+  </button>
+</div>
+     
+    </header>
+
+    <!-- Summary Cards -->
+    <div class="cards">
+
+      <div class="card">
+
+        <div class="icon purple">
+          <i class="ti ti-users"></i>
+        </div>
+
+        <div>
+
+          <h4>Total Vendors</h4>
+
+          <h2>250</h2>
+
+          <small class="green">
+            ▲ 12.5% from last month
+          </small>
+
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <div class="icon green">
+          <i class="ti ti-home"></i>
+        </div>
+
+        <div>
+
+          <h4>Active Vendors</h4>
+
+          <h2>180</h2>
+
+          <small class="green">
+            ▲ 8.2% from last month
+          </small>
+
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <div class="icon orange">
+          <i class="ti ti-shopping-cart"></i>
+        </div>
+
+        <div>
+
+          <h4>Pending Procurements</h4>
+
+          <h2>42</h2>
+
+          <small class="red">
+            ▼ 5.4% from last month
+          </small>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Charts -->
+    <div class="charts">
+
+      <div class="chart-card">
+
+        <div class="chart-header">
+
+          <h3>Vendor Reliability Score</h3>
+
+          <select>
+            <option>This Month</option>
+          </select>
+
+        </div>
+
+        <div class="chart-body">
+
+          <canvas id="lineChart"></canvas>
+
+        </div>
+
+      </div>
+
+      <div class="chart-card">
+
+        <div class="chart-header">
+
+          <h3>Spend Analysis</h3>
+
+          <select>
+            <option>This Month</option>
+          </select>
+
+        </div>
+
+        <div class="chart-body">
+
+          <canvas id="barChart"></canvas>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="activity-card">
+
+      <h2>Recent Activities</h2>
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>Activity</th>
+
+            <th>Reference ID</th>
+
+            <th>Category</th>
+
+            <th>Performed By</th>
+
+            <th>Date</th>
+
+            <th>Status</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr>
+
+            <td>New Vendor added - TechNova Solutions</td>
+
+            <td>VEN-2505-001</td>
+
+            <td>Vendor</td>
+
+            <td>Swathi.C</td>
+
+            <td>10 Jul 2026</td>
+
+            <td class="completed">Completed</td>
+
+          </tr>
+
+          <tr>
+
+            <td>Purchase request approved</td>
+
+            <td>PR-2505-045</td>
+
+            <td>Procurement</td>
+
+            <td>Pranjelly</td>
+
+            <td>10 Jul 2026</td>
+
+            <td class="completed">Completed</td>
+
+          </tr>
+
+          <tr>
+
+            <td>Contract renewed - ABC Supplies</td>
+
+            <td>CON-2505-09</td>
+
+            <td>Contracts</td>
+
+            <td>Bharathi</td>
+
+            <td>09 Jul 2026</td>
+
+            <td class="completed">Completed</td>
+
+          </tr>
+
+          <tr>
+
+            <td>Invoice pending approval</td>
+
+            <td>INV-2505-110</td>
+
+            <td>Finance</td>
+
+            <td>Swathi.H</td>
+
+            <td>08 Jul 2026</td>
+
+            <td class="pending">Pending</td>
+
+          </tr>
+
+          <tr>
+
+            <td>Vendor reliability score updated</td>
+
+            <td>VEN-2505-002</td>
+
+            <td>Vendor</td>
+
+            <td>Sonali</td>
+
+            <td>09 Jul 2026</td>
+
+            <td class="completed">Completed</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </main>
+
+</div>

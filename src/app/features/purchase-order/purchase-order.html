@@ -1,115 +1,142 @@
-<header class="topbar">
-  <div class="left">
-    <h2>Procurement Mangement</h2>
-    <p class="breadcrumb">
-      <span routerLink="/dashboard">Dashboard</span> <i class="ti ti-chevron-right"></i>
-      <span class="current">Create Purchase Order</span>
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg">
+      
+      <h3>Finance Officer</h3>
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/finance-officer" routerLinkActive="active">
+        <i class="ti ti-layout-dashboard"></i>
+        Dashboard
+      </li>
+
+      <li class="active" routerLink="/purchase-order">
+        <i class="ti ti-shopping-cart"></i>
+        Purchase Order
+      </li>
+
+      <li routerLink="/invoice-management">
+        <i class="ti ti-file-invoice"></i>
+        Invoice Management
+      </li>
+
+      <li routerLink="/payment-details">
+        <i class="ti ti-credit-card"></i>
+        Payment Details
+      </li>
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+
+      <div class="left-section">
+        <i class="ti ti-menu-2 menu-icon"></i>
+        <h2>Finance Officer</h2>
+      </div>
+
+    </header>
+
+    <p class="welcome">
+      Hello! Welcome to your platform today.
     </p>
-    <p class="subtitle">Here's what's happening with your platform today</p>
-  </div>
 
-  <div class="right">
-    <i class="ti ti-bell"></i>
-    <i class="ti ti-user-circle"></i>
-    <span class="username">Administrer</span>
-  </div>
-</header>
+    <h2 class="page-title">
+      Purchase Order
+    </h2>
 
-<div class="section-header">
-  <h3>Create Purchase Order</h3>
-  <i class="ti ti-search"></i>
-</div>
+    <!-- Tabs -->
 
-<form class="po-form" [formGroup]="poForm" (ngSubmit)="onSave()">
+    <div class="tabs">
 
-  <div class="form-grid">
+      <button
+        *ngFor="let tab of tabs"
+        [class.active-tab]="selectedTab==tab"
+        (click)="changeTab(tab)">
+        {{tab}}
+      </button>
 
-    <div class="form-group">
-      <label>Vendor Name</label>
-      <select formControlName="vendorName">
-        <option value="" disabled selected>Select vendor</option>
-        <option value="Tech Solutions Pvt Ltd">Tech Solutions Pvt Ltd</option>
-        <option value="Global Supplies">Global Supplies</option>
-        <option value="Industrial Parts Co.">Industrial Parts Co.</option>
-        <option value="IT Needs India">IT Needs India</option>
-      </select>
     </div>
 
-    <div class="form-group">
-      <label>PO Date</label>
-      <div class="date-field">
-        <input type="date" formControlName="poDate">
-        <i class="ti ti-edit"></i>
-      </div>
+    <!-- Search -->
+
+    <div class="search-box">
+
+      <i class="ti ti-search"></i>
+
+      <input
+        type="text"
+        placeholder="Search purchase orders..."
+        [(ngModel)]="searchText">
+
     </div>
 
-    <div class="form-group">
-      <label>Required Delivery Date</label>
-      <div class="date-field">
-        <input type="date" formControlName="deliveryDate">
-        <i class="ti ti-edit"></i>
-      </div>
-    </div>
+    <!-- Table -->
 
-    <div class="form-group">
-      <label>Contact Person</label>
-      <input type="text" formControlName="contactPerson" placeholder="Enter contact person">
-    </div>
+    <table>
 
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" formControlName="email" placeholder="Enter Email">
-    </div>
-
-    <div class="form-group">
-      <label>Phone</label>
-      <input type="tel" formControlName="phone" placeholder="Enter phone number">
-    </div>
-
-  </div>
-
-  <div class="item-details">
-    <h3>Item Details</h3>
-
-    <table formArrayName="items">
       <thead>
-        <tr>
-          <th>Item Name</th>
-          <th>Description</th>
-          <th>Quality</th>
-          <th>Unit Price</th>
-          <th>Total</th>
-          <th></th>
-        </tr>
+
+      <tr>
+
+        <th>PO Number</th>
+        <th>Vendor</th>
+        <th>Order Date</th>
+        <th>Delivery Date</th>
+        <th>Amount</th>
+        <th>Status</th>
+
+      </tr>
+
       </thead>
+
       <tbody>
-        <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
-          <td><input type="text" formControlName="itemName" placeholder="Enter item name"></td>
-          <td><input type="text" formControlName="description" placeholder="Enter description"></td>
-          <td><input type="text" formControlName="quality" placeholder="Enter quality"></td>
-          <td><input type="number" formControlName="unitPrice" placeholder="Enter unit price" (input)="updateTotal(i)"></td>
-          <td class="total-cell">{{ item.get('total')?.value | number:'1.2-2' }}</td>
-          <td>
-            <i class="ti ti-trash" title="Remove" (click)="removeItem(i)"></i>
-          </td>
-        </tr>
+
+      <tr *ngFor="let order of filteredOrders">
+
+        <td>{{order.poNumber}}</td>
+
+        <td>{{order.vendor}}</td>
+
+        <td>{{order.orderDate}}</td>
+
+        <td>{{order.deliveryDate}}</td>
+
+        <td>₹{{order.amount}}</td>
+
+        <td>
+
+          <span
+            [ngClass]="{
+            approved:order.status=='Approved',
+            pending:order.status=='Pending Approval',
+            cancelled:order.status=='Cancelled',
+            draft:order.status=='Draft'
+          }">
+
+            {{order.status}}
+
+          </span>
+
+        </td>
+
+      </tr>
+
       </tbody>
+
     </table>
 
-    <button type="button" class="add-item-btn" (click)="addItem()">
-      <i class="ti ti-plus"></i> Add Item
-    </button>
-
-    <div class="grand-total">
-      Grand Total: <strong>{{ grandTotal | number:'1.2-2' }}</strong>
-    </div>
   </div>
 
-  <div class="form-actions">
-    <button type="button" class="cancel-btn" (click)="onCancel()">Cancel</button>
-    <button type="submit" class="save-btn" [disabled]="isSaving">
-      {{ isSaving ? 'Saving...' : 'Save' }}
-    </button>
-  </div>
-
-</form>
+</div>

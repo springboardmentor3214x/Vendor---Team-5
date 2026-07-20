@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../services/auth.service'; // 1. Import your auth service!
 
 export type UserRole =
   | 'Admin'
@@ -30,18 +31,26 @@ export class LoginComponent {
     'Finance Officer'
   ];
 
+  // 2. Updated to route directly to '/dashboard' since that's what you configured!
+  private roleRouteMap: Record<UserRole, string> = {
+    'Admin': '/dashboard',
+    'Procurement Manager': '/procurement-management',
+    'Vendor': '/vendor',
+    'Auditor': '/auditor',
+    'Supply Chain Manager': '/supply-chain-manager',
+    'Finance Officer': '/finance-officer',
+  };
+
   isRoleDropdownOpen = false;
   selectedRole: UserRole | null = null;
-
   isPasswordVisible = false;
-
   isSubmitting = false;
   errorMessage: string | null = null;
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
-    // private authService: AuthService // wire up your real auth service here
+    private router: Router,
+    private authService: AuthService // 3. Uncommented the auth service injection
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -50,26 +59,12 @@ export class LoginComponent {
     });
   }
 
-  get email() {
-    return this.loginForm.get('email');
-  }
+  get email() { return this.loginForm.get('email'); }
+  get password() { return this.loginForm.get('password'); }
 
-  get password() {
-    return this.loginForm.get('password');
-  }
-
-  toggleRoleDropdown(): void {
-    this.isRoleDropdownOpen = !this.isRoleDropdownOpen;
-  }
-
-  selectRole(role: UserRole): void {
-    this.selectedRole = role;
-    this.isRoleDropdownOpen = false;
-  }
-
-  togglePasswordVisibility(): void {
-    this.isPasswordVisible = !this.isPasswordVisible;
-  }
+  toggleRoleDropdown(): void { this.isRoleDropdownOpen = !this.isRoleDropdownOpen; }
+  selectRole(role: UserRole): void { this.selectedRole = role; this.isRoleDropdownOpen = false; }
+  togglePasswordVisibility(): void { this.isPasswordVisible = !this.isPasswordVisible; }
 
   onSubmit(): void {
     this.errorMessage = null;
@@ -92,20 +87,21 @@ export class LoginComponent {
       role: this.selectedRole,
       rememberMe: this.loginForm.get('rememberMe')?.value
     };
-
-    // Replace with your real auth call, e.g.:
-    // this.authService.login(payload).subscribe({
-    //   next: () => this.router.navigate(['/dashboard']),
-    //   error: (err) => {
-    //     this.errorMessage = err?.error?.message || 'Invalid email or password.';
-    //     this.isSubmitting = false;
-    //   }
-    // });
-
-    setTimeout(() => {
-      console.log('Login payload:', payload);
-      this.isSubmitting = false;
-      this.router.navigate(['/dashboard']);
-    }, 800);
+   
+    console.log('Selected Role:', this.selectedRole);
+    console.log('Login payload:', payload);
+    // 4. Actively use the service subscription so the Guard knows who you are!
+    this.authService.login(payload).subscribe({
+      next: (user) => {
+        console.log('Login logic successful! Routing...', user);
+        this.isSubmitting = false;
+        const route = this.roleRouteMap[this.selectedRole!];
+        this.router.navigate([route]);
+      },
+      error: (err) => {
+        this.errorMessage = err?.message || 'Invalid email or password.';
+        this.isSubmitting = false;
+      }
+    });
   }
 }

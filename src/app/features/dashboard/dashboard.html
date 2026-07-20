@@ -10,46 +10,39 @@
     <ul class="menu">
 
       <li routerLink="/dashboard" class="active">
-        <i class="ti ti-home"></i> Dashboard
+        <i class="ti ti-gauge"></i> Dashboard
       </li>
 
-      <li routerLink="/user-management" class="active">
+      <li routerLink="/user-management">
         <i class="ti ti-users"></i> User Management
       </li>
 
-      <li routerLink="/vendor-management">
-        <i class="ti ti-building-store"></i> Vendor Management
+      <li routerLink="/vendor-managements">
+        <i class="ti ti-building"></i> Vendor Management
       </li>
 
-      <li routerLink="/procurement">
+      <li routerLink="/procurements">
         <i class="ti ti-shopping-cart"></i> Procurement
       </li>
 
+    
+
       <li routerLink="/reports">
-        <i class="ti ti-file-text"></i> Reports
+        <i class="ti ti-chart-bar"></i> Reports
       </li>
 
       <li routerLink="/analytics">
-         <i class="ti ti-chart-bar"></i> Analytics
+        <i class="ti ti-chart-line"></i> Analytics
       </li>
 
       <li routerLink="/notifications">
-       <i class="ti ti-bell"></i> Notification
+        <i class="ti ti-bell"></i> Notification
       </li>
 
-      <li routerLink="/settings">
-         <i class="ti ti-settings"></i> Settings
-      </li>
-
-      <li routerLink="/audit-logs">
-       <i class="ti ti-file-description"></i> Audit Logs
-      </li>
 
       <li class="logout" (click)="logout()">
         <i class="ti ti-logout"></i> Logout
       </li>
-      
-      
 
     </ul>
 
@@ -62,20 +55,22 @@
     <header class="topbar">
 
       <div class="left">
-        <i class="fa fa-bars"></i>
+        <i class="ti ti-bars"></i>
         <h2>Dashboard</h2>
       </div>
 
       <div class="search-box">
-        <i class="fa fa-search"></i>
+        <i class="ti ti-search"></i>
         <input type="text" placeholder="Search anything">
       </div>
 
-      <div class="right">
-        <i class="ti ti-bell"></i>
-        <i class="ti ti-user-circle"></i>
-        <span class="username">Administrator</span>
-      </div>
+      <div class="header-right">
+  <button class="profile-btn" routerLink="/profile">
+    <i class="ti ti-user"></i>
+    Profile
+  </button>
+</div>
+     
 
     </header>
 
@@ -84,7 +79,7 @@
 
       <div class="card purple">
         <div class="icon">
-          <i class="ti ti-users"></i>
+          <i class="fa fa-users"></i>
         </div>
         <div>
           <h4>Total Vendors</h4>

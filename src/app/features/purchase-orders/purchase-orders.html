@@ -1,0 +1,107 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/procurement-management">
+        <i class="ti ti-layout-dashboard"></i>
+        Dashboard
+      </li>
+
+      <li routerLink="/procurement">
+        <i class="ti ti-shopping-cart"></i>
+        Procurement
+      </li>
+
+      <li routerLink="/vendor-management">
+        <i class="ti ti-building-store"></i>
+        Vendor Management
+      </li>
+
+      <li class="menu-open">
+
+        <div class="menu-title">
+          <i class="ti ti-file-invoice"></i>
+          <span>Purchase Orders</span>
+          <i class="ti ti-chevron-down arrow"></i>
+        </div>
+
+        <ul class="submenu">
+
+          <li routerLink="/create-purchase-order">
+            Create Purchase Order
+          </li>
+
+        </ul>
+
+      </li>
+
+      <li routerLink="/contract">
+        <i class="ti ti-file-description"></i>
+        Contracts
+      </li>
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+
+  <main class="main-content">
+
+    <header class="topbar">
+
+      <div>
+
+        <h2>Procurement Management</h2>
+
+        <div class="breadcrumb">
+          Dashboard >
+          <span>Purchase Orders</span>
+        </div>
+
+        <p>Here's what's happening with your platform today</p>
+
+      </div>
+
+     
+
+    </header>
+
+    <h3 class="page-title">
+      Purchase Orders
+    </h3>
+
+    <div class="filters">
+
+      <input
+        type="text"
+        placeholder="Search PO number or vendor...">
+
+      <select>
+        <option>All Status</option>
+        <option>Approved</option>
+        <option>Pending</option>
+      </select>
+
+      <select>
+        <option>All Vendors</option>
+      </select>
+
+      <input type="text" placeholder="10/07/2026 - 30/06/2026">
+
+      <button class="reset-btn">
+        Reset
+      </button>
+
+    </div>
+
+  </main>
+
+</div>

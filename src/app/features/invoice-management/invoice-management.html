@@ -1,0 +1,133 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="VendorIQ">
+      <h3>Finance Officer</h3>
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/finance-officer" routerLinkActive="active">
+        <i class="ti ti-layout-dashboard"></i>
+        Dashboard
+      </li>
+
+      <li routerLink="/purchase-order" routerLinkActive="active">
+        <i class="ti ti-shopping-cart"></i>
+        Purchase Order
+      </li>
+
+      <li class="active">
+        <i class="ti ti-file-invoice"></i>
+        Invoice Management
+      </li>
+
+      <li routerLink="/payment-details" routerLinkActive="active">
+        <i class="ti ti-credit-card"></i>
+        Payment Details
+      </li>
+
+     
+
+    </ul>
+
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+
+    <!-- Header -->
+    <header class="topbar">
+
+      <div class="title">
+        <h2>Finance Officer</h2>
+      </div>
+
+
+    </header>
+
+    <!-- Page -->
+    <div class="page">
+
+      <h2>Invoice Management</h2>
+
+      <!-- Tabs -->
+      <div class="tabs">
+
+        <button class="active">All Orders</button>
+        <button>Draft</button>
+        <button>Pending Approval</button>
+        <button>Approved</button>
+        <button>Cancelled</button>
+
+      </div>
+
+      <!-- Search -->
+      <div class="search-box">
+
+        <input
+          type="text"
+          placeholder="Search purchase orders..."
+          [(ngModel)]="searchText">
+
+      </div>
+
+      <!-- Table -->
+      <div class="table-card">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Invoice Number</th>
+              <th>Vendor</th>
+              <th>Invoice Date</th>
+              <th>Due Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            <tr *ngFor="let invoice of invoices">
+
+              <td>{{invoice.number}}</td>
+              <td>{{invoice.vendor}}</td>
+              <td>{{invoice.invoiceDate}}</td>
+              <td>{{invoice.dueDate}}</td>
+              <td>{{invoice.amount}}</td>
+
+              <td>
+
+                <span
+                  [class.paid]="invoice.status=='Paid'"
+                  [class.pending]="invoice.status=='Pending'"
+                  [class.overdue]="invoice.status=='Overdue'">
+
+                  {{invoice.status}}
+
+                </span>
+
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

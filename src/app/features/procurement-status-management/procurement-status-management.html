@@ -1,0 +1,191 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Logo">
+     
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/procurements">Dashboard</li>
+
+      <li routerLink="/procurement-request">
+        Procurement Request
+      </li>
+
+      <li routerLink="/request-list">
+        Request List
+      </li>
+
+      <li routerLink="/approval">
+        Approval
+      </li>
+
+      <li routerLink="/vendor-assignment">
+        Vendor Assignment
+      </li>
+
+      <li routerLink="/purchase-orders-creation">
+        Purchase Orders Creation
+      </li>
+
+      <li routerLink="/purchase-orders-details">
+        Purchase Orders Details
+      </li>
+
+      <li class="active">
+        Procurement Status Management
+      </li>
+
+      <li routerLink="/order-tracking">
+        Order Tracking
+      </li>
+
+      <li routerLink="/invoice-managements">
+        Invoice Management
+      </li>
+
+     
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <div class="header">
+
+      <h2>Procurement Status Management</h2>
+
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Search...">
+      </div>
+
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+
+      <select>
+        <option>All Status</option>
+      </select>
+
+      <select>
+        <option>All Departments</option>
+      </select>
+
+      <select>
+        <option>All Priorities</option>
+      </select>
+
+      <input type="date">
+
+      <input type="date">
+
+    </div>
+
+    <!-- Status Cards -->
+    <div class="status-cards">
+
+      <div class="status-card pending">
+        <h4>Pending</h4>
+        <h2>18</h2>
+      </div>
+
+      <div class="status-card approved">
+        <h4>Approved</h4>
+        <h2>60</h2>
+      </div>
+
+      <div class="status-card ordered">
+        <h4>Ordered</h4>
+        <h2>42</h2>
+      </div>
+
+      <div class="status-card delivered">
+        <h4>Delivered</h4>
+        <h2>30</h2>
+      </div>
+
+      <div class="status-card completed">
+        <h4>Completed</h4>
+        <h2>28</h2>
+      </div>
+
+      <div class="status-card cancelled">
+        <h4>Cancelled</h4>
+        <h2>5</h2>
+      </div>
+
+    </div>
+
+    <!-- Table -->
+
+    <table class="status-table">
+
+      <thead>
+
+      <tr>
+
+        <th>Request No</th>
+        <th>Request Title</th>
+        <th>Department</th>
+        <th>Vendor</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Updated On</th>
+        <th>Updated By</th>
+        <th>Action</th>
+
+      </tr>
+
+      </thead>
+
+      <tbody>
+
+      <tr *ngFor="let item of requests">
+
+        <td>{{item.number}}</td>
+
+        <td>{{item.title}}</td>
+
+        <td>{{item.department}}</td>
+
+        <td>{{item.vendor}}</td>
+
+        <td>
+          <span class="priority {{item.priority.toLowerCase()}}">
+            {{item.priority}}
+          </span>
+        </td>
+
+        <td>
+          <span class="status {{item.status.toLowerCase()}}">
+            {{item.status}}
+          </span>
+        </td>
+
+        <td>{{item.updated}}</td>
+
+        <td>{{item.by}}</td>
+
+        <td>
+          <button>Update Status</button>
+        </td>
+
+      </tr>
+
+      </tbody>
+
+    </table>
+
+  </main>
+
+</div>

@@ -10,6 +10,7 @@ import {
   Validators
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService, RegisterPayload } from '../../../services/auth.service';
 
 export type UserRole =
   | 'Administration'
@@ -23,10 +24,14 @@ function passwordsMatchValidator(): ValidatorFn {
   return (group: AbstractControl): ValidationErrors | null => {
     const password = group.get('password')?.value;
     const confirmPassword = group.get('confirmPassword')?.value;
+
     if (!password || !confirmPassword) {
       return null;
     }
-    return password === confirmPassword ? null : { passwordMismatch: true };
+
+    return password === confirmPassword
+      ? null
+      : { passwordMismatch: true };
   };
 }
 
@@ -38,6 +43,7 @@ function passwordsMatchValidator(): ValidatorFn {
   styleUrl: './register.css'
 })
 export class RegisterComponent {
+
   registerForm: FormGroup;
 
   roles: UserRole[] = [
@@ -60,41 +66,57 @@ export class RegisterComponent {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
-    // private authService: AuthService // wire up your real auth service here
+    private router: Router,
+    private authService: AuthService
   ) {
+
     this.registerForm = this.fb.group(
       {
         fullName: ['', [Validators.required, Validators.minLength(2)]],
-        employeeId: ['', [Validators.required]],
-        companyName: ['', [Validators.required]],
+        employeeId: ['', Validators.required],
+        companyName: ['', Validators.required],
         email: ['', [Validators.required, Validators.email]],
-        mobileNumber: ['', [Validators.required, Validators.pattern(/^[0-9+\-\s]{7,15}$/)]],
+        mobileNumber: [
+          '',
+          [
+            Validators.required,
+            Validators.pattern(/^[0-9+\-\s]{7,15}$/)
+          ]
+        ],
         password: ['', [Validators.required, Validators.minLength(6)]],
-        confirmPassword: ['', [Validators.required]]
+        confirmPassword: ['', Validators.required]
       },
-      { validators: passwordsMatchValidator() }
+      {
+        validators: passwordsMatchValidator()
+      }
     );
+
   }
 
   get fullName() {
     return this.registerForm.get('fullName');
   }
+
   get employeeId() {
     return this.registerForm.get('employeeId');
   }
+
   get companyName() {
     return this.registerForm.get('companyName');
   }
+
   get email() {
     return this.registerForm.get('email');
   }
+
   get mobileNumber() {
     return this.registerForm.get('mobileNumber');
   }
+
   get password() {
     return this.registerForm.get('password');
   }
+
   get confirmPassword() {
     return this.registerForm.get('confirmPassword');
   }
@@ -117,6 +139,7 @@ export class RegisterComponent {
   }
 
   onSubmit(): void {
+
     this.errorMessage = null;
 
     if (this.registerForm.invalid) {
@@ -125,35 +148,35 @@ export class RegisterComponent {
     }
 
     if (!this.selectedRole) {
-      this.errorMessage = 'Please select a role before submitting.';
+      this.errorMessage = 'Please select a role.';
       return;
     }
 
     this.isSubmitting = true;
 
-    const payload = {
+    const payload: RegisterPayload = {
       fullName: this.fullName?.value,
-      employeeId: this.employeeId?.value,
-      companyName: this.companyName?.value,
       email: this.email?.value,
-      mobileNumber: this.mobileNumber?.value,
       password: this.password?.value,
       role: this.selectedRole
     };
 
-    // Replace with your real auth call, e.g.:
-    // this.authService.register(payload).subscribe({
-    //   next: () => this.router.navigate(['/login']),
-    //   error: (err) => {
-    //     this.errorMessage = err?.error?.message || 'Registration failed. Please try again.';
-    //     this.isSubmitting = false;
-    //   }
-    // });
+    this.authService.register(payload).subscribe({
 
-    setTimeout(() => {
-      console.log('Register payload:', payload);
-      this.isSubmitting = false;
-      this.router.navigate(['/login']);
-    }, 800);
+      next: () => {
+        this.isSubmitting = false;
+        alert('Registration Successful!');
+        this.router.navigate(['/login']);
+      },
+
+      error: (err) => {
+        this.isSubmitting = false;
+        this.errorMessage =
+          err.error?.detail || 'Registration failed. Please try again.';
+      }
+
+    });
+
   }
+
 }

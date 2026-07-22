@@ -1,0 +1,281 @@
+<div class="vendor-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg"
+           alt="Vendor Logo">
+    </div>
+      <h3 class="menu-title">Vendor Management</h3>
+
+  <ul class="menu">
+    <li routerLink="/vendor-list"><i class="ti ti-list"></i>Vendor List</li>
+    <li routerLink="/add-vendor"><i class="ti ti-user-plus"></i>Add Vendor</li>
+    <li routerLink="/vendor-document"><i class="ti ti-file-description"></i>Vendor Document</li>
+    <li routerLink="/vendor-details"><i class="ti ti-id"></i>Vendor Details</li>
+    <li routerLink="/edit-vendor"><i class="ti ti-edit"></i>Edit Vendor</li>
+    <li routerLink="/vendor-approval"><i class="ti ti-check"></i>Vendor Approval</li>
+    <li routerLink="/vendor-status"><i class="ti ti-chart-bar"></i>Vendor Status</li>
+  </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="header">
+
+      <div class="header-left">
+
+        <i class="ti ti-menu-2"></i>
+
+        <div>
+
+          <h2>Vendor Management</h2>
+
+          <small>Dashboard</small>
+
+        </div>
+
+      </div>
+
+     <div class="header-right">
+  <button class="profile-btn" routerLink="/profile">
+    <i class="ti ti-user"></i>
+    Profile
+  </button>
+</div>
+
+    </header>
+
+    <!-- Top Buttons -->
+    <div class="toolbar">
+
+      <div class="search">
+
+        <input
+          type="text"
+          placeholder="Search vendor name, email, phone or ID">
+
+        <i class="ti ti-search"></i>
+
+      </div>
+
+      <div class="buttons">
+
+        <button>
+          <i class="ti ti-filter"></i>
+          Filter
+        </button>
+
+        <button>
+          <i class="ti ti-download"></i>
+          Export
+        </button>
+
+        <button class="add-btn">
+          <i class="ti ti-plus"></i>
+          Add Vendor
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="cards">
+
+      <div class="card purple">
+
+        <i class="ti ti-users"></i>
+
+        <div>
+
+          <h4>Total Vendors</h4>
+
+          <h2>245</h2>
+
+          <small>All Vendors</small>
+
+        </div>
+
+      </div>
+
+      <div class="card blue">
+
+        <i class="ti ti-circle-check"></i>
+
+        <div>
+
+          <h4>Active Vendors</h4>
+
+          <h2>150</h2>
+
+          <small>Active Approved</small>
+
+        </div>
+
+      </div>
+
+      <div class="card orange">
+
+        <i class="ti ti-clock"></i>
+
+        <div>
+
+          <h4>Pending Approval</h4>
+
+          <h2>32</h2>
+
+          <small>Acting Approval</small>
+
+        </div>
+
+      </div>
+
+      <div class="card violet">
+
+        <i class="ti ti-ban"></i>
+
+        <div>
+
+          <h4>Rejected</h4>
+
+          <h2>18</h2>
+
+          <small>Rejected Vendors</small>
+
+        </div>
+
+      </div>
+
+      <div class="card red">
+
+        <i class="ti ti-user-off"></i>
+
+        <div>
+
+          <h4>Suspended Vendors</h4>
+
+          <h2>10</h2>
+
+          <small>Temporary Suspended</small>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Vendor Table -->
+    <div class="table-card">
+
+      <div class="table-header">
+
+        <h3>All Vendors</h3>
+
+        <div>
+
+          <select>
+
+            <option>Status : All</option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>Vendor ID</th>
+            <th>Vendor Name</th>
+            <th>Company Name</th>
+            <th>Category</th>
+            <th>Email ID</th>
+            <th>Status</th>
+            <th>Approved</th>
+            <th>Action</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr>
+
+            <td>VEN-0001</td>
+            <td>Tech Solutions</td>
+            <td>Tech Solutions</td>
+            <td>IT</td>
+            <td>bharathi12@gmail.com</td>
+            <td class="active-status">Active</td>
+            <td class="approved">Approved</td>
+
+            <td>
+
+              <i class="ti ti-eye"></i>
+              <i class="ti ti-edit"></i>
+              <i class="ti ti-trash"></i>
+
+            </td>
+
+          </tr>
+
+          <tr>
+
+            <td>VEN-0002</td>
+            <td>Build Constructions</td>
+            <td>Build Pvt Ltd</td>
+            <td>Procurement</td>
+            <td>sonali65@gmail.com</td>
+            <td class="pending-status">Pending</td>
+            <td class="pending-status">Pending</td>
+
+            <td>
+
+              <i class="ti ti-eye"></i>
+              <i class="ti ti-edit"></i>
+              <i class="ti ti-trash"></i>
+
+            </td>
+
+          </tr>
+
+          <tr>
+
+            <td>VEN-0003</td>
+            <td>Green Supplies</td>
+            <td>Green Supplies</td>
+            <td>Analytics</td>
+            <td>swathi123@gmail.com</td>
+            <td class="active-status">Active</td>
+            <td class="approved">Approved</td>
+
+          <td>
+
+  
+    <i class="ti ti-eye"></i>
+    <i class="ti ti-edit"></i>
+    <i class="ti ti-trash"></i>
+
+</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </main>
+
+</div>

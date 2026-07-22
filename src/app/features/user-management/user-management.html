@@ -1,0 +1,205 @@
+<div class="user-management-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+     <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="VendorIQ">
+    </div>
+
+    <ul class="menu">
+      <li routerLink="/dashboard">
+        <i class="ti ti-layout-dashboard"></i>
+        Dashboard
+      </li>
+    <li class="active">
+        <i class="ti ti-user"></i>
+        user management
+    </li>
+    
+      <li routerLink="/vendor-managements">
+        <i class="ti ti-building-store"></i>
+        Vendor Management
+      </li>
+      <li routerLink="/procurements">
+        <i class="ti ti-shopping-cart"></i>
+        Procurement
+      </li>
+
+      <li routerLink="/reports">
+        <i class="ti ti-report"></i>
+        Reports
+      </li>
+
+      <li routerLink="/analytics">
+        <i class="ti ti-chart-bar"></i>
+        Analytics
+      </li>
+
+     
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <!-- Header -->
+    <div class="topbar">
+
+      <div>
+        <h1>User Management</h1>
+        <p>Dashboard > User Management</p>
+      </div>
+
+     
+    </div>
+
+    <!-- Cards -->
+    <div class="cards">
+
+      <div class="card purple">
+        <div>
+          <h2>156</h2>
+          <p>Total Users</p>
+        </div>
+      </div>
+
+      <div class="card green">
+        <div>
+          <h2>126</h2>
+          <p>Active Users</p>
+        </div>
+      </div>
+
+      <div class="card orange">
+        <div>
+          <h2>20</h2>
+          <p>Inactive Users</p>
+        </div>
+      </div>
+
+      <div class="card blue">
+        <div>
+          <h2>10</h2>
+          <p>Locked Users</p>
+        </div>
+      </div>
+
+      <div class="card red">
+        <div>
+          <h2>12</h2>
+          <p>Administrators</p>
+        </div>
+      </div>
+
+      <div class="card cyan">
+        <div>
+          <h2>8</h2>
+          <p>New This Month</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+
+      <input
+        type="text"
+        placeholder="Search anything"
+      >
+
+      <select>
+        <option>All Roles</option>
+      </select>
+
+      <select>
+        <option>All Status</option>
+      </select>
+
+      <select>
+        <option>All Department</option>
+      </select>
+
+      <button>More Filters</button>
+
+      <button>Export</button>
+
+      <button class="add-btn">
+        + Add User
+      </button>
+
+    </div>
+
+    <!-- Table -->
+    <table>
+
+      <thead>
+
+      <tr>
+
+        <th>User ID</th>
+
+        <th>Name</th>
+
+        <th>Email</th>
+
+        <th>Role</th>
+
+        <th>Department</th>
+
+        <th>Status</th>
+
+        <th>Last Login</th>
+
+        <th>Joined On</th>
+
+        <th>Action</th>
+
+      </tr>
+
+      </thead>
+
+      <tbody>
+
+      <tr *ngFor="let user of users">
+
+        <td>{{user.userId}}</td>
+
+        <td>{{user.name}}</td>
+
+        <td>{{user.email}}</td>
+
+        <td>{{user.role}}</td>
+
+        <td>{{user.department}}</td>
+
+        <td>
+          <span [class]="user.statusClass">
+            {{user.status}}
+          </span>
+        </td>
+
+        <td>{{user.lastLogin}}</td>
+
+        <td>{{user.joinedOn}}</td>
+
+        <td>
+               <i class="ti ti-eye" (click)="viewUser(user)" title="View"></i>
+
+                 <i class="ti ti-edit" (click)="editUser(user)" title="Edit"></i>
+
+                <i class="ti ti-trash" (click)="deleteUser(user)" title="Delete"></i>
+          
+        </td>
+
+      </tr>
+
+      </tbody>
+
+    </table>
+
+  </main>
+
+</div>

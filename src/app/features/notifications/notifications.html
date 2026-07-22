@@ -1,0 +1,126 @@
+<div class="notification-page">
+
+    <div class="header">
+        <h1>Notifications</h1>
+        <p>Stay updated with important alerts and activities.</p>
+    </div>
+
+    <!-- Summary Cards -->
+
+    <div class="cards">
+
+        <div class="card">
+            <div class="icon blue">
+                🔔
+            </div>
+
+            <div>
+                <h2>8</h2>
+                <span>Unread</span>
+
+                <a href="#">View all unread</a>
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="icon green">
+                ✅
+            </div>
+
+            <div>
+                <h2>24</h2>
+                <span>All Notifications</span>
+
+                <a href="#">View all</a>
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="icon orange">
+                ⚠️
+            </div>
+
+            <div>
+                <h2>3</h2>
+                <span>Priority Alerts</span>
+
+                <a href="#">View alerts</a>
+
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="icon pink">
+                ⓘ
+            </div>
+
+            <div>
+
+                <h2>5</h2>
+
+                <span>System Updates</span>
+
+                <a href="#">View updates</a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Notification List -->
+
+    <div class="notification-box">
+
+        <div class="top-bar">
+
+            <h3>All Notifications</h3>
+
+            <button (click)="markAllRead()">
+                Mark all as read
+            </button>
+
+        </div>
+
+        <div class="notification-item"
+             *ngFor="let notification of notifications">
+
+            <div class="left">
+
+                <div class="status-dot"
+                     [class.read]="notification.read">
+                </div>
+
+                <div class="icon-circle">
+                    {{notification.icon}}
+                </div>
+
+                <div>
+
+                    <h4>{{notification.title}}</h4>
+
+                    <p>{{notification.message}}</p>
+
+                    <small>{{notification.category}}</small>
+
+                </div>
+
+            </div>
+
+            <div class="right">
+
+                {{notification.date}}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

@@ -1,0 +1,172 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/procurement-management">
+        <i class="ti ti-layout-dashboard"></i>
+        <span>Dashboard</span>
+      </li>
+
+      <li routerLink="/procurement">
+        <i class="ti ti-shopping-cart"></i>
+        <span>Procurement</span>
+      </li>
+
+      <li class="active" routerLink="/vendor-management">
+        <i class="ti ti-building-store"></i>
+        <span>Vendor Management</span>
+      </li>
+
+      <li routerLink="/purchase-orders">
+        <i class="ti ti-file-invoice"></i>
+        <span>Purchase Orders</span>
+      </li>
+
+      <li routerLink="/contracts">
+        <i class="ti ti-file-description"></i>
+        <span>Contracts</span>
+      </li>
+
+      
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="topbar">
+
+      <div>
+        <h2>Procurement Management</h2>
+
+        <div class="breadcrumb">
+          Dashboard >
+          <span>Vendor Management</span>
+        </div>
+
+        <p>Here's what's happening with your platform today</p>
+      </div>
+
+     
+
+    </header>
+
+    <!-- Page Header -->
+    <div class="page-header">
+
+      <h3>Vendor Management</h3>
+
+      <div class="actions">
+
+        <button class="add-btn" (click)="addVendor()">
+          <i class="ti ti-plus"></i>
+          Add Vendor
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+
+      <input
+        type="text"
+        placeholder="Search vendor name..."
+      >
+
+      <select>
+        <option>All Categories</option>
+        <option>IT Vendors</option>
+        <option>Raw Material Suppliers</option>
+        <option>Equipment Vendors</option>
+      </select>
+
+      <select>
+        <option>All Status</option>
+        <option>Active</option>
+        <option>Inactive</option>
+        <option>Pending</option>
+      </select>
+
+      <select>
+        <option>All Approval Status</option>
+        <option>Approved</option>
+        <option>Pending</option>
+        <option>Rejected</option>
+      </select>
+
+      <button class="reset-btn" (click)="resetFilters()">
+        Reset
+      </button>
+
+    </div>
+
+    <!-- Vendor Table -->
+    <div class="table-card">
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Vendor ID</th>
+            <th>Company Name</th>
+            <th>Category</th>
+            <th>Contact Person</th>
+            <th>Status</th>
+            <th>Approval Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          <tr *ngFor="let vendor of vendors">
+
+            <td>{{ vendor.id }}</td>
+            <td>{{ vendor.company }}</td>
+            <td>{{ vendor.category }}</td>
+            <td>{{ vendor.contact }}</td>
+
+            <td>
+              <span
+                [ngClass]="{
+                  'active-status': vendor.status === 'Active',
+                  'inactive-status': vendor.status === 'Inactive',
+                  'pending-status': vendor.status === 'Pending'
+                }">
+                {{ vendor.status }}
+              </span>
+            </td>
+
+            <td>
+              <span
+                [ngClass]="{
+                  'approved': vendor.approval === 'Approved',
+                  'pending': vendor.approval === 'Pending',
+                  'rejected': vendor.approval === 'Rejected'
+                }">
+                {{ vendor.approval }}
+              </span>
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </main>
+
+</div>

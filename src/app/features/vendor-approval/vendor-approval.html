@@ -1,0 +1,128 @@
+<div class="dashboard">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Logo">
+    </div>
+
+     <ul class="menu">
+      <h3> Vendor Management</h3>
+    <li routerLink="/vendor-list"><i class="ti ti-list"></i>Vendor List</li>
+    <li routerLink="/add-vendor"><i class="ti ti-user-plus"></i>Add Vendor</li>
+    <li class="action" routerLink="/vendor-document"><i class="ti ti-file-description"></i>Vendor Document</li>
+    <li routerLink="/vendor-details"><i class="ti ti-id"></i>Vendor Details</li>
+    <li routerLink="/edit-vendor"><i class="ti ti-edit"></i>Edit Vendor</li>
+    <li routerLink="/vendor-approval"><i class="ti ti-check"></i>Vendor Approval</li>
+    <li routerLink="/vendor-status"><i class="ti ti-chart-bar"></i>Vendor Status</li>
+  </ul>
+    
+
+  </aside>
+
+  <!-- Main Content -->
+
+  <section class="content">
+
+    <!-- Header -->
+
+    <div class="topbar">
+
+      <div>
+        <h2>Vendor Approval</h2>
+        <small>Dashboard / Vendor Management / Vendor Approval</small>
+      </div>
+
+      <div class="search">
+        <input type="text" placeholder="Search anything">
+      </div>
+
+      
+    </div>
+
+    <!-- Vendor Information -->
+
+    <div class="card">
+
+      <h3>Vendor Information</h3>
+
+      <div class="info-grid">
+
+        <div><strong>Vendor Name</strong></div>
+        <div>{{vendor.name}}</div>
+
+        <div><strong>Email</strong></div>
+        <div>{{vendor.email}}</div>
+
+        <div><strong>Phone</strong></div>
+        <div>{{vendor.phone}}</div>
+
+        <div><strong>Submitted On</strong></div>
+        <div>{{vendor.submittedOn}}</div>
+
+        <div><strong>Status</strong></div>
+        <div class="pending">{{vendor.status}}</div>
+
+        <div><strong>Approval Status</strong></div>
+        <div class="pending">{{vendor.approvalStatus}}</div>
+
+      </div>
+
+    </div>
+
+    <!-- Approval -->
+
+    <div class="card">
+
+      <h3>Approval Action</h3>
+
+      <div class="approval-grid">
+
+        <div class="form-group">
+
+          <label>Description</label>
+
+          <textarea
+            rows="4"
+            [(ngModel)]="description"
+            name="description">
+          </textarea>
+
+        </div>
+
+        <div class="form-group">
+
+          <label>Remarks</label>
+
+          <textarea
+            rows="4"
+            [(ngModel)]="remarks"
+            name="remarks">
+          </textarea>
+
+        </div>
+
+      </div>
+
+      <div class="buttons">
+
+        <button
+          class="reject-btn"
+          (click)="rejectVendor()">
+          Reject
+        </button>
+
+        <button
+          class="approve-btn"
+          (click)="approveVendor()">
+          Accept
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</div>

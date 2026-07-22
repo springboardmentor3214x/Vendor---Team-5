@@ -1,0 +1,198 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="VendorIQ">
+    </div>
+
+
+    <ul class="menu">
+
+      <li class="active">
+        <i class="ti ti-home"></i>
+        Dashboard
+      </li>
+
+      <ul class="submenu" *ngIf="financeOpen">
+
+        <li routerLink="/purchase-order">
+            <i class="ti ti-shopping-cart"></i>
+          Purchase Order
+        </li>
+
+        <li routerLink="/invoice-management">
+            <i class="ti ti-file-invoice"></i>
+          Invoice Management
+        </li>
+
+        <li routerLink="/payment-details">
+            <i class="ti ti-credit-card"></i>
+          Payment Details
+        </li>
+
+      </ul>
+      <li routerLink="/notifications">
+        <i class="ti ti-bell"></i>
+        Notifications
+      </li>
+
+      <li routerLink="/logout">
+        <i class="ti ti-logout"></i>
+        Logout
+      </li>
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+
+    <!-- Header -->
+    <header class="topbar">
+
+      <h2>Finance Officer Dashboard</h2>
+
+      <input
+        type="text"
+        placeholder="Search anything"
+        class="search">
+
+      <div class="header-right">
+  <button class="profile-btn" routerLink="/profile">
+    <i class="ti ti-user"></i>
+    Profile
+  </button>
+</div>
+      
+
+    </header>
+
+    <!-- Cards -->
+    <div class="cards">
+
+      <div class="card" *ngFor="let card of cards">
+
+        <div
+          class="icon"
+          [style.background]="card.color">
+
+          {{card.icon}}
+
+        </div>
+
+        <div>
+
+          <h4>{{card.title}}</h4>
+
+          <h2>{{card.count}}</h2>
+
+          <p>▲ 12.5% from last month</p>
+
+        </div>
+
+      </div>
+
+    </div>
+    <!-- Charts -->
+    <div class="charts">
+
+      <!-- Vendor Reliability -->
+      <div class="chart-card">
+
+        <div class="card-header">
+          <h3>Vendor Reliability Score</h3>
+
+          <select>
+            <option>This Month</option>
+          </select>
+        </div>
+
+        <canvas id="vendorChart"></canvas>
+
+      </div>
+
+      <!-- Spend Analysis -->
+      <div class="chart-card">
+
+        <div class="card-header">
+          <h3>Spend Analysis</h3>
+
+          <select>
+            <option>This Month</option>
+          </select>
+        </div>
+
+        <canvas id="spendChart"></canvas>
+
+      </div>
+
+    </div>
+
+    <!-- Recent Activities -->
+
+    <div class="activity-card">
+
+      <h3>Recent Activities</h3>
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>Activity</th>
+
+            <th>Reference ID</th>
+
+            <th>Category</th>
+
+            <th>Performed By</th>
+
+            <th>Date</th>
+
+            <th>Status</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr *ngFor="let item of activities">
+
+            <td>{{item.activity}}</td>
+
+            <td>{{item.id}}</td>
+
+            <td>{{item.category}}</td>
+
+            <td>{{item.user}}</td>
+
+            <td>{{item.date}}</td>
+
+            <td>
+
+              <span
+                [class.completed]="item.status==='Completed'"
+                [class.pending]="item.status==='Pending'">
+
+                {{item.status}}
+
+              </span>
+
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</div>

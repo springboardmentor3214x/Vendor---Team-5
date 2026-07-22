@@ -1,0 +1,252 @@
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Segoe UI',sans-serif;
+}
+
+body{
+  background:#f5f7fb;
+}
+
+.user-management-container{
+  display:flex;
+  min-height:100vh;
+}
+
+/* Sidebar */
+
+.sidebar{
+  width:250px;
+  background:#fff;
+  padding:20px;
+  border-right:1px solid #eee;
+}
+
+.logo{
+  text-align:center;
+  margin-bottom:25px;
+}
+
+.logo img{
+  width:70px;
+}
+
+.logo h3{
+  color:#5a4ff3;
+  margin-top:8px;
+}
+
+.menu-title{
+  color:#888;
+  margin:20px 0 10px;
+  font-size:14px;
+}
+
+.menu{
+  list-style:none;
+}
+
+.menu li{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  border-radius:8px;
+  cursor:pointer;
+  margin-bottom:6px;
+  transition:.3s;
+}
+
+.menu li:hover{
+  background:#f3f2ff;
+}
+
+.menu li.active{
+  background:#5a4ff3;
+  color:#fff;
+}
+
+/* Main */
+
+.content{
+  flex:1;
+  padding:30px;
+}
+
+/* Header */
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:25px;
+}
+
+.topbar h1{
+  font-size:34px;
+}
+
+.topbar p{
+  color:#777;
+  margin-top:5px;
+}
+
+.profile{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  font-size:18px;
+}
+
+.profile span{
+  font-weight:600;
+}
+
+/* Cards */
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:18px;
+  margin-bottom:25px;
+}
+
+.card{
+  background:#fff;
+  border-radius:12px;
+  padding:20px;
+  box-shadow:0 3px 12px rgba(0,0,0,.08);
+}
+
+.card h2{
+  font-size:28px;
+  margin-bottom:5px;
+}
+
+.card p{
+  color:#666;
+}
+
+.purple{
+  border-top:5px solid #675cff;
+}
+
+.green{
+  border-top:5px solid #27c24c;
+}
+
+.orange{
+  border-top:5px solid #ff9800;
+}
+
+.blue{
+  border-top:5px solid #3f51b5;
+}
+
+.red{
+  border-top:5px solid #ff3d57;
+}
+
+.cyan{
+  border-top:5px solid #00c8ff;
+}
+
+/* Toolbar */
+
+.toolbar{
+  display:flex;
+  gap:15px;
+  margin-bottom:25px;
+  flex-wrap:wrap;
+}
+
+.toolbar input,
+.toolbar select{
+  padding:12px;
+  border:1px solid #ddd;
+  border-radius:8px;
+}
+
+.toolbar input{
+  width:280px;
+}
+
+.toolbar button{
+  padding:12px 18px;
+  border:none;
+  border-radius:8px;
+  background:#eee;
+  cursor:pointer;
+}
+
+.add-btn{
+  background:#5a4ff3!important;
+  color:white;
+}
+
+/* Table */
+
+table{
+  width:100%;
+  background:#fff;
+  border-radius:12px;
+  border-collapse:collapse;
+  overflow:hidden;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+th{
+  background:#fafafa;
+  padding:18px;
+  text-align:left;
+  border-bottom:1px solid #eee;
+}
+
+td{
+  padding:18px;
+  border-bottom:1px solid #eee;
+}
+
+tbody tr:hover{
+  background:#f9f9ff;
+}
+
+.active-status{
+  color:#2bbf55;
+  font-weight:600;
+}
+
+.inactive-status{
+  color:#ff4d4f;
+  font-weight:600;
+}
+
+td i{
+  margin-right:12px;
+  cursor:pointer;
+  font-size:18px;
+}
+
+/* Pagination */
+
+.pagination{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:25px;
+}
+
+.pagination button{
+  padding:10px 16px;
+  border:1px solid #ddd;
+  background:white;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.pagination .active{
+  background:#5a4ff3;
+  color:white;
+  border:none;
+}

@@ -1,0 +1,161 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+  <div class="logo">
+    <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Logo">
+  </div>
+
+  <h3 class="menu-title">Vendor Management</h3>
+
+   <ul class="menu">
+    <li class="action" routerLink="/vendor-list"><i class="ti ti-list"></i>Vendor List</li>
+    <li routerLink="/add-vendor"><i class="ti ti-user-plus"></i>Add Vendor</li>
+    <li routerLink="/vendor-document"><i class="ti ti-file-description"></i>Vendor Document</li>
+    <li routerLink="/vendor-details"><i class="ti ti-id"></i>Vendor Details</li>
+    <li routerLink="/edit-vendor"><i class="ti ti-edit"></i>Edit Vendor</li>
+    <li routerLink="/vendor-approval"><i class="ti ti-check"></i>Vendor Approval</li>
+    <li routerLink="/vendor-status"><i class="ti ti-chart-bar"></i>Vendor Status</li>
+  </ul>
+
+  
+
+</aside>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <!-- Header -->
+    <div class="header">
+
+      <div class="header-left">
+
+        <div class="page-title">
+          <i class="ti ti-menu-2"></i>
+          <div>
+            <h2>Vendor List</h2>
+            <small>Dashboard / Vendor Management / Vendor List</small>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Search anything..."
+          [(ngModel)]="searchText">
+        <i class="ti ti-search"></i>
+      </div>
+
+     
+
+    </div>
+
+    <!-- Toolbar -->
+
+    <div class="toolbar">
+
+      <h3>All Vendors</h3>
+
+      <div class="toolbar-right">
+
+        <select>
+          <option>Status : All</option>
+          <option>Active</option>
+          <option>Inactive</option>
+          <option>Pending</option>
+        </select>
+
+        <button>
+          <i class="ti ti-settings"></i>
+        </button>
+
+        <button>
+          <i class="ti ti-layout-list"></i>
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- Vendor Table -->
+
+    <div class="table-container">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Vendor Name</th>
+            <th>Phone</th>
+            <th>Email ID</th>
+            <th>Status</th>
+            <th>Approved Status</th>
+            <th>Action</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr *ngFor="let vendor of vendors">
+
+            <td>{{vendor.name}}</td>
+            <td>{{vendor.phone}}</td>
+            <td>{{vendor.email}}</td>
+
+            <td>
+              <span
+                [ngClass]="{
+                  'active': vendor.status=='Active',
+                  'inactive': vendor.status=='Inactive',
+                  'pending': vendor.status=='Pending'
+                }">
+
+                {{vendor.status}}
+
+              </span>
+            </td>
+
+            <td>
+              <span
+                [ngClass]="{
+                  'approved': vendor.approval=='Approved',
+                  'pending': vendor.approval=='Pending'
+                }">
+
+                {{vendor.approval}}
+
+              </span>
+            </td>
+
+            <td>
+
+              <button class="icon-btn">
+                <i class="ti ti-eye"></i>
+              </button>
+
+              <button class="icon-btn">
+                <i class="ti ti-edit"></i>
+              </button>
+
+              <button class="icon-btn">
+                <i class="ti ti-trash"></i>
+              </button>
+
+            </td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </main>
+
+</div>

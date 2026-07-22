@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
+import { VendorService } from '../../services/vendor.service';
+
 @Component({
   selector: 'app-vendor-list',
   standalone: true,
@@ -13,45 +15,22 @@ export class VendorListComponent {
 
   searchText: string = '';
 
-  vendors = [
-    {
-      name: 'Tech Solutions',
-      phone: '9768506541',
-      email: 'bharathi12@gmail.com',
-      status: 'Active',
-      approval: 'Approved'
-    },
-    {
-      name: 'Build Constructions',
-      phone: '4367236541',
-      email: 'sonali65@gmail.com',
-      status: 'Pending',
-      approval: 'Pending'
-    },
-    {
-      name: 'Green Supplies',
-      phone: '4325678961',
-      email: 'swathi123@gmail.com',
-      status: 'Active',
-      approval: 'Approved'
-    },
-    {
-      name: 'Security Systems',
-      phone: '9875678961',
-      email: 'pranjelly20@gmail.com',
-      status: 'Inactive',
-      approval: 'Approved'
-    },
-    {
-      name: 'Future Tech',
-      phone: '4356745305',
-      email: 'priya120@gmail.com',
-      status: 'Inactive',
-      approval: 'Pending'
-    }
-  ];
+  vendors: any[] = [];
 
-  constructor() {}
+  constructor(private vendorService: VendorService) {
+    this.loadVendors();
+  }
+
+  loadVendors(): void {
+    this.vendorService.getVendors().subscribe({
+      next: (data) => {
+        this.vendors = data;
+      },
+      error: (err) => {
+        console.error('Failed to load vendors', err);
+      }
+    });
+  }
 
   addVendor() {
     alert('Add Vendor Clicked');

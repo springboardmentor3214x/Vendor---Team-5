@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+
 @Component({
   selector: 'app-procurement-request',
   standalone: true,
@@ -10,6 +11,8 @@ import { Router, RouterLink } from '@angular/router';
   styleUrls: ['./procurement-request.css']
 })
 export class ProcurementRequestComponent {
+
+  constructor(private router: Router) {}
 
   procurement = {
     requestNumber: 'PR-2026-00124',
@@ -29,16 +32,20 @@ export class ProcurementRequestComponent {
   };
 
   saveDraft(): void {
-    console.log('Draft Saved');
-    alert('Draft Saved Successfully');
+    console.log('Draft Saved', this.procurement);
+    alert('Draft saved successfully.');
   }
 
   submitRequest(): void {
-    console.log(this.procurement);
-    alert('Procurement Request Submitted Successfully');
+    console.log('Procurement Request Submitted', this.procurement);
+
+    alert('Procurement Request submitted successfully.');
+
+    this.router.navigate(['/procurement-management']);
   }
 
   cancel(): void {
+
     this.procurement = {
       requestNumber: 'PR-2026-00124',
       requestTitle: '',
@@ -55,12 +62,17 @@ export class ProcurementRequestComponent {
       justification: '',
       remarks: ''
     };
+
   }
 
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      console.log('Selected File:', file.name);
+  onFileSelected(event: Event): void {
+
+    const input = event.target as HTMLInputElement;
+
+    if (input.files && input.files.length > 0) {
+      console.log('Selected File:', input.files[0].name);
     }
+
   }
+
 }

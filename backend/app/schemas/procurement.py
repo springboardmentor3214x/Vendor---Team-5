@@ -1,13 +1,14 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional
 
 
 class ProcurementRequestCreate(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
     department: str
-    item_description: str
+    item_description: str = Field(alias="itemDescription")
     quantity: int = 1
-    requested_by: Optional[int] = None
+    requested_by: Optional[int] = Field(default=None, alias="requestedBy")
 
 
 class ProcurementRequestOut(ProcurementRequestCreate):
@@ -23,13 +24,14 @@ class ProcurementRequestOut(ProcurementRequestCreate):
 
 
 class PurchaseOrderCreate(BaseModel):
-    procurement_request_id: int
-    vendor_id: int
-    contract_id: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
+    procurement_request_id: int = Field(alias="procurementRequestId")
+    vendor_id: int = Field(alias="vendorId")
+    contract_id: Optional[int] = Field(default=None, alias="contractId")
     quantity: int = 1
-    unit_price: float = 0.0
-    expected_delivery_date: Optional[datetime] = None
-    payment_terms: Optional[str] = None
+    unit_price: float = Field(default=0.0, alias="unitPrice")
+    expected_delivery_date: Optional[datetime] = Field(default=None, alias="expectedDeliveryDate")
+    payment_terms: Optional[str] = Field(default=None, alias="paymentTerms")
 
 
 class PurchaseOrderOut(PurchaseOrderCreate):

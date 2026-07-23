@@ -1,0 +1,117 @@
+<div class="dashboard">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Logo">
+    </div>
+    <ul class="menu">
+      <h3> Vendor Management</h3>
+    <li routerLink="/vendor-list"><i class="ti ti-list"></i>Vendor List</li>
+    <li routerLink="/add-vendor"><i class="ti ti-user-plus"></i>Add Vendor</li>
+    <li class="action" routerLink="/vendor-document"><i class="ti ti-file-description"></i>Vendor Document</li>
+    <li routerLink="/vendor-details"><i class="ti ti-id"></i>Vendor Details</li>
+    <li routerLink="/edit-vendor"><i class="ti ti-edit"></i>Edit Vendor</li>
+    <li routerLink="/vendor-approval"><i class="ti ti-check"></i>Vendor Approval</li>
+    <li class="action" routerLink="/vendor-status"><i class="ti ti-chart-bar"></i>Vendor Status</li>
+  </ul>
+  </aside>
+  <!-- Content -->
+
+  <section class="content">
+
+    <div class="topbar">
+
+      <div>
+        <h2>Vendor Status</h2>
+        <small>Dashboard / Vendor Management / Vendor Status</small>
+      </div>
+
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Search anything"
+          [(ngModel)]="search">
+      </div>
+
+      
+
+    </div>
+
+    <div class="filters">
+
+      <input
+        type="text"
+        placeholder="Search Vendor"
+        [(ngModel)]="search">
+
+      <select [(ngModel)]="selectedStatus">
+        <option>All Status</option>
+        <option>Active</option>
+        <option>Pending</option>
+        <option>Inactive</option>
+        <option>Suspended</option>
+      </select>
+
+    </div>
+
+    <table>
+
+      <thead>
+
+      <tr>
+        <th>Vendor Name</th>
+        <th>Status</th>
+        <th>Approval Status</th>
+      </tr>
+
+      </thead>
+
+      <tbody>
+
+      <tr *ngFor="let vendor of vendors">
+
+        <td>{{vendor.name}}</td>
+
+        <td>
+
+          <span
+          [ngClass]="{
+            active: vendor.status=='Active',
+            pending: vendor.status=='Pending',
+            inactive: vendor.status=='Inactive',
+            suspended: vendor.status=='Suspended'
+          }">
+
+          {{vendor.status}}
+
+          </span>
+
+        </td>
+
+        <td>
+
+          <span
+          [ngClass]="{
+            approved: vendor.approvalStatus=='Approved',
+            pending: vendor.approvalStatus=='Pending',
+            rejected: vendor.approvalStatus=='Rejected'
+          }">
+
+          {{vendor.approvalStatus}}
+
+          </span>
+
+        </td>
+
+      </tr>
+
+      </tbody>
+
+    </table>
+
+  </section>
+
+</div>

@@ -1,0 +1,276 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/vendor-performance-dashboard" routerLinkActive="active">
+        <i class="ti ti-layout-dashboard"></i>
+        Vendor Performance Dashboard
+      </li>
+
+      <li routerLink="/delivery-performance-monitoring" routerLinkActive="active">
+        <i class="ti ti-truck-delivery"></i>
+        Delivery Performance Monitoring
+      </li>
+
+      <li routerLink="/product-quality-evaluation" routerLinkActive="active">
+        <i class="ti ti-stars"></i>
+        Product Quality Evaluation
+      </li>
+
+      <li routerLink="/communication-response-tracking" routerLinkActive="active">
+        <i class="ti ti-users"></i>
+        Communication Response Tracking
+      </li>
+
+      <li routerLink="/service-rating" routerLinkActive="active">
+        <i class="ti ti-star"></i>
+        Service Rating
+      </li>
+
+      <li routerLink="/performance-history" routerLinkActive="active">
+        <i class="ti ti-history"></i>
+        Performance History
+      </li>
+
+      <li routerLink="/vendor-ranking" routerLinkActive="active">
+        <i class="ti ti-trophy"></i>
+        Vendor Ranking
+      </li>
+
+      <li routerLink="/performance-metrics" routerLinkActive="active">
+        <i class="ti ti-chart-bar"></i>
+        Performance Metrics
+      </li>
+
+      
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+
+  <main class="content">
+
+    <!-- Header -->
+
+    <div class="header">
+
+      <div class="header-left">
+
+        <div class="page-title">
+          <i class="ti ti-menu-2"></i>
+
+          <div>
+            <h2>Product Quality Evaluation</h2>
+            <small>Vendor Performance / Product Quality Evaluation</small>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="search-box">
+
+        <input
+          type="text"
+          placeholder="Search..."
+          [(ngModel)]="searchText">
+
+        <i class="ti ti-search"></i>
+
+      </div>
+
+     
+
+    </div>
+
+    <!-- Form -->
+
+    <div class="quality-card">
+
+      <h3>Product Quality Evaluation</h3>
+
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Purchase Order Number</label>
+
+          <select>
+            <option>PO-2026-0123</option>
+            <option>PO-2026-0124</option>
+            <option>PO-2026-0125</option>
+          </select>
+
+        </div>
+
+        <div class="form-group">
+
+          <label>Vendor Name</label>
+
+          <select>
+            <option>Vendor A Pvt Ltd</option>
+            <option>Vendor B Solutions</option>
+            <option>Vendor C Supplies</option>
+          </select>
+
+        </div>
+
+        <div class="form-group">
+
+          <label>Inspection Date</label>
+
+          <input type="date">
+
+        </div>
+
+      </div>
+      <!-- Rating Cards -->
+
+      <div class="rating-grid">
+
+        <div class="rating-card">
+
+          <h4>Material Quality</h4>
+
+          <div class="stars">
+            ★ ★ ★ ★ ☆
+          </div>
+
+          <select>
+            <option>4 - Good</option>
+            <option>5 - Excellent</option>
+            <option>3 - Average</option>
+          </select>
+
+        </div>
+
+        <div class="rating-card">
+
+          <h4>Packaging Quality</h4>
+
+          <div class="stars">
+            ★ ★ ★ ★ ☆
+          </div>
+
+          <select>
+            <option>4 - Good</option>
+            <option>5 - Excellent</option>
+            <option>3 - Average</option>
+          </select>
+
+        </div>
+
+        <div class="rating-card">
+
+          <h4>Quantity Accuracy</h4>
+
+          <div class="stars">
+            ★ ★ ★ ★ ★
+          </div>
+
+          <select>
+            <option>5 - Excellent</option>
+            <option>4 - Good</option>
+            <option>3 - Average</option>
+          </select>
+
+        </div>
+
+        <div class="rating-card">
+
+          <h4>Specification Compliance</h4>
+
+          <div class="stars">
+            ★ ★ ★ ★ ☆
+          </div>
+
+          <select>
+            <option>4 - Good</option>
+            <option>5 - Excellent</option>
+            <option>3 - Average</option>
+          </select>
+
+        </div>
+
+      </div>
+
+      <!-- Product Defects -->
+
+      <div class="form-row">
+
+        <div class="form-group full-width">
+
+          <label>Product Defects</label>
+
+          <select>
+
+            <option>Minor Defects</option>
+            <option>No Defects</option>
+            <option>Major Defects</option>
+
+          </select>
+
+        </div>
+
+        <div class="form-group">
+
+          <label>Overall Quality Rating</label>
+
+          <div class="stars overall-stars">
+            ★ ★ ★ ★ ☆
+          </div>
+
+          <select>
+
+            <option>4 - Good</option>
+            <option>5 - Excellent</option>
+            <option>3 - Average</option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+      <!-- Remarks -->
+
+      <div class="form-group">
+
+        <label>Inspector Remarks</label>
+
+        <textarea rows="5"
+          [(ngModel)]="remarks"
+          placeholder="Material is good and packed well. Minor defects found in few items.">
+        </textarea>
+
+      </div>
+
+      <!-- Buttons -->
+
+      <div class="button-group">
+
+        <button class="reset-btn">
+          <i class="ti ti-refresh"></i>
+          Reset
+        </button>
+
+        <button class="save-btn">
+          <i class="ti ti-device-floppy"></i>
+          Save Evaluation
+        </button>
+
+      </div>
+
+    </div>
+
+  </main>
+
+</div>

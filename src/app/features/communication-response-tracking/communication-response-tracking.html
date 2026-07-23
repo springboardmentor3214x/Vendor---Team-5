@@ -1,0 +1,173 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/vendor-performance-dashboard" routerLinkActive="active">
+        <i class="ti ti-layout-dashboard"></i>
+        <span>Vendor Performance Dashboard</span>
+      </li>
+
+      <li routerLink="/delivery-performance-monitoring" routerLinkActive="active">
+        <i class="ti ti-truck-delivery"></i>
+        <span>Delivery Performance Monitoring</span>
+      </li>
+
+      <li routerLink="/product-quality-evaluation" routerLinkActive="active">
+        <i class="ti ti-stars"></i>
+        <span>Product Quality Evaluation</span>
+      </li>
+
+      <li routerLink="/communication-response-tracking" routerLinkActive="active" class="active">
+        <i class="ti ti-message-circle"></i>
+        <span>Communication Response Tracking</span>
+      </li>
+
+      <li routerLink="/service-rating" routerLinkActive="active">
+        <i class="ti ti-star"></i>
+        <span>Service Rating</span>
+      </li>
+
+      <li routerLink="/performance-history" routerLinkActive="active">
+        <i class="ti ti-history"></i>
+        <span>Performance History</span>
+      </li>
+
+      <li routerLink="/vendor-ranking" routerLinkActive="active">
+        <i class="ti ti-trophy"></i>
+        <span>Vendor Ranking</span>
+      </li>
+
+      <li routerLink="/performance-metrics" routerLinkActive="active">
+        <i class="ti ti-chart-bar"></i>
+        <span>Performance Metrics</span>
+      </li>
+
+      
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <!-- Header -->
+    <div class="header">
+
+      <div class="page-title">
+        <i class="ti ti-menu-2"></i>
+
+        <div>
+          <h2>Communication Response Tracking</h2>
+          <small>Vendor Performance / Communication Response Tracking</small>
+        </div>
+
+      </div>
+
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Search..."
+          [(ngModel)]="searchText">
+        <i class="ti ti-search"></i>
+      </div>
+
+     
+
+    </div>
+
+    <!-- Filters -->
+
+    <div class="filter-section">
+
+      <div class="filter-item">
+        <label>Vendor</label>
+        <select [(ngModel)]="selectedVendor">
+          <option *ngFor="let vendor of vendors">{{vendor}}</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>Communication Status</label>
+        <select [(ngModel)]="selectedStatus">
+          <option>All Status</option>
+          <option>Responded</option>
+          <option>Pending</option>
+        </select>
+      </div>
+
+      <div class="filter-item">
+        <label>Date Range</label>
+        <input type="date" [(ngModel)]="dateRange">
+      </div>
+
+      <div class="filter-item search-vendor">
+        <label>&nbsp;</label>
+        <input
+          type="text"
+          placeholder="Search by PO Number or Vendor"
+          [(ngModel)]="searchText">
+      </div>
+
+    </div>
+
+    <!-- Table -->
+
+    <div class="table-container">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Purchase Order</th>
+            <th>Vendor</th>
+            <th>Message Sent</th>
+            <th>Response Time</th>
+            <th>Duration</th>
+            <th>Status</th>
+            <th>Remarks</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr *ngFor="let item of communications">
+
+            <td>{{item.po}}</td>
+            <td>{{item.vendor}}</td>
+            <td>{{item.sentTime}}</td>
+            <td>{{item.responseTime}}</td>
+            <td>{{item.duration}}</td>
+
+            <td>
+              <span
+                [ngClass]="{
+                  'responded': item.status==='Responded',
+                  'pending': item.status==='Pending'
+                }">
+                {{item.status}}
+              </span>
+            </td>
+
+            <td>{{item.remarks}}</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </main>
+
+</div>

@@ -1,0 +1,206 @@
+<div class="dashboard-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+        </div>
+
+        <ul class="menu">
+
+            <li routerLink="/procurements">
+                <i class="ti ti-chart-bar"></i>
+                <span>Dashboard</span>
+            </li>
+
+            <li routerLink="/procurement-request">
+                <i class="ti ti-file-text"></i>
+                <span>Procurement Request</span>
+            </li>
+
+            <li class="active" routerLink="/request-list">
+                <i class="ti ti-list-details"></i>
+                <span>Request List</span>
+            </li>
+
+            <li routerLink="/approval">
+                <i class="ti ti-circle-check"></i>
+                <span>Approval</span>
+            </li>
+
+            <li routerLink="/vendor-assignment">
+                <i class="ti ti-users"></i>
+                <span>Vendor Assignment</span>
+            </li>
+
+            <li routerLink="/purchase-order-creation">
+                <i class="ti ti-shopping-cart-plus"></i>
+                <span>Purchase Order Creation</span>
+            </li>
+
+            <li routerLink="/purchase-order-details">
+                <i class="ti ti-file-invoice"></i>
+                <span>Purchase Order Details</span>
+            </li>
+
+            <li routerLink="/procurement-status-management">
+                <i class="ti ti-chart-pie"></i>
+                <span>Procurement Status Management</span>
+            </li>
+
+            <li routerLink="/order-tracking">
+                <i class="ti ti-truck-delivery"></i>
+                <span>Order Tracking</span>
+            </li>
+
+            <li routerLink="/invoice-managements">
+                <i class="ti ti-receipt"></i>
+                <span>Invoice Management</span>
+            </li>
+
+        </ul>
+
+    </aside>
+
+    <!-- Main Content -->
+
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <h2>Procurement Request List</h2>
+
+            <div class="search-box">
+
+                <i class="ti ti-search"></i>
+
+                <input
+                    type="text"
+                    placeholder="Search request..."
+                    [(ngModel)]="searchText">
+
+            </div>
+
+        </header>
+
+        <!-- Filters -->
+
+        <div class="filter-section">
+
+            <input
+                type="text"
+                placeholder="Search Request No / Vendor">
+
+            <select>
+                <option>All Departments</option>
+                <option>IT</option>
+                <option>HR</option>
+                <option>Finance</option>
+                <option>Admin</option>
+            </select>
+
+            <select>
+                <option>All Status</option>
+                <option>Pending</option>
+                <option>Approved</option>
+                <option>Completed</option>
+            </select>
+
+            <select>
+                <option>All Priorities</option>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+            </select>
+
+            <button>
+                Clear Filters
+            </button>
+
+        </div>
+
+        <div class="table-card">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Request No</th>
+                        <th>Title</th>
+                        <th>Department</th>
+                        <th>Requested By</th>
+                        <th>Vendor</th>
+                        <th>Priority</th>
+                        <th>Budget</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    <tr *ngFor="let request of requests">
+
+                        <td>{{request.number}}</td>
+
+                        <td>{{request.title}}</td>
+
+                        <td>{{request.department}}</td>
+
+                        <td>{{request.requestedBy}}</td>
+
+                        <td>{{request.vendor}}</td>
+
+                        <td>
+
+                            <span
+                                [ngClass]="request.priority.toLowerCase()">
+
+                                {{request.priority}}
+
+                            </span>
+
+                        </td>
+
+                        <td>{{request.budget}}</td>
+
+                        <td>
+
+                            <span
+                                [ngClass]="request.status.toLowerCase()">
+
+                                {{request.status}}
+
+                            </span>
+
+                        </td>
+
+                        <td>{{request.date}}</td>
+
+                        <td>
+
+                            <i class="ti ti-eye action"></i>
+
+                            <i class="ti ti-edit action"></i>
+
+                            <i class="ti ti-trash action delete"></i>
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </main>
+
+</div>

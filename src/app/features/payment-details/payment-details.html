@@ -1,0 +1,148 @@
+<div class="dashboard-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor">
+      <h3>Finance Officer</h3>
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/finance-officer" routerLinkActive="active">
+        <i class="ti ti-layout-dashboard"></i>
+        Dashboard
+      </li>
+
+      <li routerLink="/purchase-order" routerLinkActive="active">
+        <i class="ti ti-shopping-cart"></i>
+        Purchase Order
+      </li>
+
+      <li routerLink="/invoice-management" routerLinkActive="active">
+        <i class="ti ti-file-invoice"></i>
+        Invoice Management
+      </li>
+
+      <li routerLink="/payment-details" routerLinkActive="active">
+        <i class="ti ti-credit-card"></i>
+        Payment Details
+      </li>
+
+     
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+
+  <div class="main-content">
+
+    <!-- Header -->
+
+    <header class="topbar">
+
+      <div class="title">
+        <h2>Finance Officer</h2>
+      </div>
+
+      
+
+    </header>
+
+    <!-- Page -->
+
+    <div class="content">
+
+      <h2 class="page-title">
+        Payment Details
+      </h2>
+
+      <!-- Tabs -->
+
+      <div class="tabs">
+
+        <span class="active-tab">All Orders</span>
+        <span>Completed</span>
+        <span>Pending</span>
+        <span>Failed</span>
+
+      </div>
+
+      <!-- Search -->
+
+      <div class="search-box">
+
+        <i class="ti ti-search"></i>
+
+        <input
+          type="text"
+          placeholder="Search payments..."
+          [(ngModel)]="searchText">
+
+      </div>
+
+      <!-- Table -->
+
+      <div class="table-container">
+
+        <table>
+
+          <thead>
+
+            <tr>
+              <th>Payment ID</th>
+              <th>Vendor</th>
+              <th>Invoice Number</th>
+              <th>Payment Date</th>
+              <th>Amount</th>
+              <th>Payment Method</th>
+              <th>Status</th>
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            <tr *ngFor="let payment of filteredPayments">
+
+              <td>{{payment.paymentId}}</td>
+
+              <td>{{payment.vendor}}</td>
+
+              <td>{{payment.invoiceNumber}}</td>
+
+              <td>{{payment.paymentDate}}</td>
+
+              <td>{{payment.amount}}</td>
+
+              <td>{{payment.paymentMethod}}</td>
+
+              <td>
+                <span
+                  [ngClass]="{
+                    'paid': payment.status=='Paid',
+                    'pending': payment.status=='Pending',
+                    'overdue': payment.status=='Overdue'
+                  }">
+
+                  {{payment.status}}
+
+                </span>
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

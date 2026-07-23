@@ -1,0 +1,298 @@
+/* Reset */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    background:#f4f6fb;
+}
+
+/* Main Layout */
+
+.dashboard-container{
+    display:flex;
+    height:100vh;
+    background:#f5f7fb;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 240px;
+    background: #fff;
+    border-right: 1px solid #e5e5e5;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.logo img {
+    width: 80px;
+}
+
+.menu-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #222;
+}
+
+.menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #444;
+}
+
+.menu li.active {
+    background: #5d4ef5;
+    color: white;
+}
+
+.menu li:hover {
+    background: #ece8ff;
+}
+
+.sidebar-bottom {
+    margin-top: auto;
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.sidebar-bottom div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+
+/* Content */
+
+.content{
+    flex:1;
+    padding:25px;
+}
+
+/* Header */
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:#fff;
+    padding:18px 25px;
+    border-radius:10px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.page-title{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.page-title h2{
+    font-size:20px;
+}
+
+.page-title small{
+    color:#777;
+}
+
+.search-box{
+    width:350px;
+    position:relative;
+}
+
+.search-box input{
+    width:100%;
+    padding:10px 40px 10px 15px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    outline:none;
+}
+
+.search-box i{
+    position:absolute;
+    right:15px;
+    top:12px;
+    color:#777;
+}
+
+.header-icons{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    font-size:20px;
+}
+
+.header-icons span{
+    font-size:16px;
+}
+
+/* Toolbar */
+
+.toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.toolbar h3{
+    font-size:22px;
+}
+
+.toolbar-right{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.toolbar-right select{
+    padding:10px 15px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    outline:none;
+}
+
+.toolbar-right button{
+    width:42px;
+    height:42px;
+    border:none;
+    background:#fff;
+    border-radius:6px;
+    cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+
+/* Table */
+
+.table-container{
+    background:#fff;
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+thead{
+    background:#f8f8f8;
+}
+
+th{
+    padding:16px;
+    text-align:left;
+    font-size:15px;
+}
+
+td{
+    padding:18px 16px;
+    border-top:1px solid #eee;
+    font-size:15px;
+}
+
+tr:hover{
+    background:#fafafa;
+}
+
+/* Status */
+
+.active{
+    color:#28a745;
+    font-weight:600;
+}
+
+.inactive{
+    color:#dc3545;
+    font-weight:600;
+}
+
+.pending{
+    color:#f4b400;
+    font-weight:600;
+}
+
+.approved{
+    color:#28a745;
+    font-weight:600;
+}
+
+/* Action Buttons */
+
+.icon-btn{
+    border:none;
+    background:none;
+    cursor:pointer;
+    margin-right:10px;
+    font-size:18px;
+    color:#555;
+    transition:.3s;
+}
+
+.icon-btn:hover{
+    color:#5d4ef5;
+}
+
+/* Responsive */
+
+@media(max-width:992px){
+
+.dashboard-container{
+    flex-direction:column;
+}
+
+.sidebar{
+    width:100%;
+    height:auto;
+}
+
+.header{
+    flex-direction:column;
+    gap:15px;
+}
+
+.search-box{
+    width:100%;
+}
+
+.toolbar{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:15px;
+}
+
+.table-container{
+    overflow:auto;
+}
+
+table{
+    min-width:900px;
+}
+
+}

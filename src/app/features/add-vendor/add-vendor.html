@@ -1,0 +1,287 @@
+<div class="page">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+      
+
+      <li class="title">
+         Vendor Management
+      </li>
+    <li routerLink="/vendor-list"><i class="ti ti-list"></i>Vendor List</li>
+    <li routerLink="/add-vendor"><i class="ti ti-user-plus"></i>Add Vendor</li>
+    <li routerLink="/vendor-document"><i class="ti ti-file-description"></i>Vendor Document</li>
+    <li routerLink="/vendor-details"><i class="ti ti-id"></i>Vendor Details</li>
+    <li routerLink="/edit-vendor"><i class="ti ti-edit"></i>Edit Vendor</li>
+    <li routerLink="/vendor-approval"><i class="ti ti-check"></i>Vendor Approval</li>
+    <li routerLink="/vendor-status"><i class="ti ti-chart-bar"></i>Vendor Status</li>
+  </ul>
+
+    
+
+  </aside>
+
+  <!-- Main Content -->
+  <div class="content">
+
+    <!-- Header -->
+    <div class="header">
+
+      <div>
+        <h2>Add Vendor</h2>
+        <p>Vendor Management > Vendor</p>
+        <small>Dashboard > Add Vendor</small>
+      </div>
+
+      <div class="search-bar">
+        <input type="text" placeholder="Search anything">
+      </div>
+
+    </div>
+
+    <!-- Form -->
+    <form>
+
+      <!-- Row 1 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Company Name *</label>
+          <input type="text"
+                 name="companyName"
+                 [(ngModel)]="vendor.companyName"
+                 placeholder="Enter Company Name">
+        </div>
+
+        <div class="form-group">
+          <label>Vendor Category *</label>
+          <input type="text"
+                 name="vendorCategory"
+                 [(ngModel)]="vendor.vendorCategory"
+                 placeholder="Enter Vendor Category">
+        </div>
+
+        <div class="form-group">
+          <label>Contact Person Name *</label>
+          <input type="text"
+                 name="contactPerson"
+                 [(ngModel)]="vendor.contactPerson"
+                 placeholder="Enter Contact Person">
+        </div>
+
+      </div>
+
+      <!-- Row 2 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Destination *</label>
+          <input type="text"
+                 name="destination"
+                 [(ngModel)]="vendor.destination"
+                 placeholder="Enter Address">
+        </div>
+
+        <div class="form-group">
+          <label>Email Address *</label>
+          <input type="email"
+                 name="email"
+                 [(ngModel)]="vendor.email"
+                 placeholder="Enter Email">
+        </div>
+
+        <div class="form-group">
+          <label>Phone Number *</label>
+          <input type="text"
+                 name="phone"
+                 [(ngModel)]="vendor.phone"
+                 placeholder="Enter Phone Number">
+        </div>
+
+      </div>
+
+      <!-- Row 3 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Alternate Phone *</label>
+          <input type="text"
+                 name="alternatePhone"
+                 [(ngModel)]="vendor.alternatePhone"
+                 placeholder="Enter Alternate Phone">
+        </div>
+
+        <div class="form-group">
+          <label>GST Number *</label>
+          <input type="text"
+                 name="gstNumber"
+                 [(ngModel)]="vendor.gstNumber"
+                 placeholder="Enter GST Number">
+        </div>
+
+        <div class="form-group">
+          <label>PAN Number *</label>
+          <input type="text"
+                 name="panNumber"
+                 [(ngModel)]="vendor.panNumber"
+                 placeholder="Enter PAN Number">
+        </div>
+
+      </div>
+
+      <!-- Row 4 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Company Registration Number *</label>
+          <input type="text"
+                 name="registrationNumber"
+                 [(ngModel)]="vendor.registrationNumber"
+                 placeholder="Enter Registration Number">
+        </div>
+
+        <div class="form-group">
+          <label>Address Line 1 *</label>
+          <input type="text"
+                 name="address1"
+                 [(ngModel)]="vendor.address1"
+                 placeholder="Enter Address Line 1">
+        </div>
+
+        <div class="form-group">
+          <label>Address Line 2 *</label>
+          <input type="text"
+                 name="address2"
+                 [(ngModel)]="vendor.address2"
+                 placeholder="Enter Address Line 2">
+        </div>
+
+      </div>
+
+      <!-- Row 5 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>City *</label>
+          <select name="city" [(ngModel)]="vendor.city">
+            <option value="">Select City</option>
+            <option>Hyderabad</option>
+            <option>Bangalore</option>
+            <option>Chennai</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>State *</label>
+          <select name="state" [(ngModel)]="vendor.state">
+            <option value="">Select State</option>
+            <option>Telangana</option>
+            <option>Karnataka</option>
+            <option>Tamil Nadu</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Country *</label>
+          <select name="country" [(ngModel)]="vendor.country">
+            <option value="">Select Country</option>
+            <option>India</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Row 6 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Pincode *</label>
+          <input type="text"
+                 name="pincode"
+                 [(ngModel)]="vendor.pincode"
+                 placeholder="Enter Pincode">
+        </div>
+
+        <div class="form-group">
+          <label>Website *</label>
+          <input type="text"
+                 name="website"
+                 [(ngModel)]="vendor.website"
+                 placeholder="Enter Website">
+        </div>
+
+        <div class="form-group">
+          <label>Description *</label>
+          <textarea
+            name="description"
+            [(ngModel)]="vendor.description"
+            placeholder="Enter Description"></textarea>
+        </div>
+
+      </div>
+
+      <!-- Row 7 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Bank Account Number *</label>
+          <input type="text"
+                 name="bankAccountNumber"
+                 [(ngModel)]="vendor.bankAccountNumber"
+                 placeholder="Enter Account Number">
+        </div>
+
+        <div class="form-group">
+          <label>IFSC Code *</label>
+          <input type="text"
+                 name="ifscCode"
+                 [(ngModel)]="vendor.ifscCode"
+                 placeholder="Enter IFSC Code">
+        </div>
+
+        <div class="form-group">
+          <label>Payment Terms *</label>
+          <input type="text"
+                 name="paymentTerms"
+                 [(ngModel)]="vendor.paymentTerms"
+                 placeholder="Enter Payment Terms">
+        </div>
+
+      </div>
+
+      <!-- Row 8 -->
+      <div class="form-row">
+
+        <div class="form-group">
+          <label>Status *</label>
+          <select name="status" [(ngModel)]="vendor.status">
+            <option value="">Select Status</option>
+            <option>Active</option>
+            <option>Inactive</option>
+            <option>Pending</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Buttons -->
+      <div class="button-group">
+        <button type="button" class="save-btn" (click)="saveVendor()">
+          Save
+        </button>
+
+        <button type="reset" class="cancel-btn">
+          Cancel
+        </button>
+      </div>
+
+    </form>
+
+  </div>
+
+</div>

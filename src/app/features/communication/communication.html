@@ -1,0 +1,118 @@
+<div class="communication-container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="logo">
+      <img src="https://cdn.vectorstock.com/i/500p/11/31/scratched-vendor-stamp-seal-vector-23351131.jpg" alt="Vendor Logo">
+    </div>
+
+    <ul class="menu">
+
+      <li routerLink="/vendor">
+        <i class="ti ti-home"></i>
+        <span>Dashboard</span>
+      </li>
+
+      <li routerLink="/vendor-profile">
+        <i class="ti ti-users"></i>
+        <span>Vendor Profile</span>
+      </li>
+
+      <li routerLink="/orders">
+        <i class="ti ti-shopping-cart"></i>
+        <span>Orders</span>
+      </li>
+
+      <li routerLink="/contracts">
+        <i class="ti ti-file-text"></i>
+        <span>Contracts</span>
+      </li>
+
+      <li class="active">
+        <i class="ti ti-message-circle"></i>
+        <span>Communication</span>
+      </li>
+
+    </ul>
+
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Header -->
+    <header class="topbar">
+
+      <div class="left">
+        <i class="ti ti-menu-2"></i>
+        <h2>Communication</h2>
+      </div>
+
+      
+
+    </header>
+
+    <div class="chat-layout">
+
+      <!-- Message List -->
+      <div class="message-list">
+
+        <button class="new-message">
+          <i class="ti ti-edit"></i>
+          New Message
+        </button>
+
+        <div
+          class="message-card"
+          *ngFor="let msg of messages"
+          [class.selected]="selectedMessage?.sender === msg.sender"
+          (click)="selectMessage(msg)">
+
+          <div class="message-header">
+            <h4>{{ msg.sender }}</h4>
+            <span>{{ msg.time }}</span>
+          </div>
+
+          <p>{{ msg.subject }}</p>
+
+          <div
+            class="badge"
+            *ngIf="msg.unread > 0">
+
+            {{ msg.unread }}
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Message View -->
+      <div class="message-view">
+
+        <h3>{{ selectedMessage?.sender }}</h3>
+
+        <div class="message-body">
+
+          <p>Dear Vendor,</p>
+
+          <br>
+
+          <p>{{ selectedMessage?.content }}</p>
+
+          <br><br>
+
+          <p>Thank you,</p>
+
+          <p>Procurement Team</p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+</div>

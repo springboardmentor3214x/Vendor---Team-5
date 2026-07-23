@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { LoginComponent } from './features/auth/login/login';
 import { ForgotPasswordComponent } from './features/auth/forgot-password/forgot-password';
 import { ResetPasswordComponent } from './features/auth/reset-password/reset-password';
@@ -88,225 +89,285 @@ export const routes: Routes = [
 
   {
     path: 'dashboard',
-    component: DashboardComponent
+    component: DashboardComponent,
+    canActivate: [authGuard]
   },
 
   {
     path: 'user-management',
-    component: UserManagementComponent
+    component: UserManagementComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Administrator'] }
   },
 
   {
     path: 'reports',
-    component: ReportsComponent
+    component: ReportsComponent,
+    canActivate: [authGuard]
   },
 
   {
     path: 'finance-officer',
-    component: FinanceOfficerComponent
+    component: FinanceOfficerComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Finance Officer'] }
   },
 
   {
     path: 'purchase-order',
-    component: PurchaseOrderComponent
+    component: PurchaseOrderComponent,
+    canActivate: [authGuard]
   },
 
   {
     path: 'invoice-management',
-    component: InvoiceManagementComponent
+    component: InvoiceManagementComponent,
+    canActivate: [authGuard]
   },
 
   {
     path: 'payment-details',
-    component: PaymentDetailsComponent
+    component: PaymentDetailsComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'vendor',
-    component: VendorComponent
+    component: VendorComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Vendor'] }
   },
    {
     path: 'vendor-profile',
-    component: VendorProfileComponent
+    component: VendorProfileComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'orders',
-    component: OrdersComponent
+    component: OrdersComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'contracts',
-    component: ContractsComponent
+    component: ContractsComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'communication',
-    component: CommunicationComponent
+    component: CommunicationComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'auditor',
-    component: AuditorComponent
+    component: AuditorComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Auditor'] }
   },
    {
     path: 'notifications',
-    component: Notifications
+    component: Notifications,
+     canActivate: [authGuard]
   },
   {
     path: 'report',
-    component: ReportComponent
+    component: ReportComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'compliance',
-    component: ComplianceComponent
+    component: ComplianceComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'audit-logs',
-    component: AuditLogsComponent
+    component: AuditLogsComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'analytics',
-    component: AnalyticsComponent
+    component: AnalyticsComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'profile',
-    component: ProfileComponent
+    component: ProfileComponent,
+    canActivate: [authGuard]
   },
   {
     path: 'supply-chain-manager',
-    component: SupplyChainManagerComponent
+    component: SupplyChainManagerComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['Supply Chain Manager'] }
   },
   {
     path: 'vendor-performance',
-    component: VendorPerformanceComponent
+    component: VendorPerformanceComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-reliability',
-    component: VendorReliabilityComponent
+    component: VendorReliabilityComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'procurement-tracking',
-    component: ProcurementTrackingComponent
+    component: ProcurementTrackingComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'procurement-management',
-    component: ProcurementManagementComponent
+    component: ProcurementManagementComponent,
+    canActivate: [authGuard]
   },
    {
     path: 'procurement',
-    component: ProcurementComponent
+    component: ProcurementComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'vendor-management',
-    component: VendorManagementComponent
+    component: VendorManagementComponent,
+    canActivate: [authGuard]
   },
    {
     path: 'contract',
-    component: ContractComponent
+    component: ContractComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'purchase-orders',
-    component: PurchaseOrdersComponent
+    component: PurchaseOrdersComponent,
+    canActivate: [authGuard]
   },
   {
     path: 'create-purchase-order',
-    component: CreatePurchaseOrderComponent
+    component: CreatePurchaseOrderComponent,
+     canActivate: [authGuard]
+
   },
   {
     path: 'vendor-managements',
-    component: VendorManagementsComponent
+    component: VendorManagementsComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-list',
-    component: VendorListComponent
+    component: VendorListComponent,
+    canActivate: [authGuard]
   },
   {
     path: 'add-vendor',
-    component: AddVendorComponent
+    component: AddVendorComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-document',
-    component: VendorDocumentComponent
+    component: VendorDocumentComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-details',
-    component: VendorDetailsComponent
+    component: VendorDetailsComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'edit-vendor',
-    component: EditVendorComponent
+    component: EditVendorComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-approval',
-    component: VendorApprovalComponent
+    component: VendorApprovalComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-status',
-    component: VendorStatusComponent
+    component: VendorStatusComponent,
+     canActivate: [authGuard]
   },
   { 
     path: 'procurements',
-    component: ProcurementsComponent
+    component: ProcurementsComponent,
+     canActivate: [authGuard]
   },
   { 
     path: 'procurement-request',
-    component: ProcurementRequestComponent
+    component: ProcurementRequestComponent,
+    canActivate: [authGuard]
   },
   { 
     path: 'request-list',
-    component: RequestListComponent
+    component: RequestListComponent,
+     canActivate: [authGuard]
   },
   { 
     path: 'approval',
-    component: ApprovalComponent
+    component: ApprovalComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-assignment',
-    component: VendorAssignmentComponent
+    component: VendorAssignmentComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'purchase-orders-creation',
-    component: PurchaseOrdersCreationComponent
+    component: PurchaseOrdersCreationComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'purchase-orders-details',
-    component: PurchaseOrdersDetailsComponent
+    component: PurchaseOrdersDetailsComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'procurement-status-management',
-    component: ProcurementStatusManagementComponent
+    component: ProcurementStatusManagementComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'order-tracking',
-    component: OrderTrackingComponent
+    component: OrderTrackingComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'invoice-managements',
-    component: InvoiceManagementsComponent
+    component: InvoiceManagementsComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'delivery-performance-monitoring',
-    component: DeliveryPerformanceMonitoringComponent
+    component: DeliveryPerformanceMonitoringComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'product-quality-evaluation',
-    component: ProductQualityEvaluationComponent
+    component: ProductQualityEvaluationComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'communication-response-tracking',
-    component: CommunicationResponseTrackingComponent
+    component: CommunicationResponseTrackingComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'service-rating',
-    component: ServiceRatingComponent
+    component: ServiceRatingComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'performance-history',
-    component: PerformanceHistoryComponent
+    component: PerformanceHistoryComponent,
+     canActivate: [authGuard]
   },
   {
     path: 'vendor-ranking',
-    component: VendorRankingComponent
+    component: VendorRankingComponent,
+     canActivate: [authGuard]
   },
    {
     path: 'performance-metrics',
-    component: PerformanceMetricsComponent
+    component: PerformanceMetricsComponent,
+     canActivate: [authGuard]
   },
   {
     path: '**',

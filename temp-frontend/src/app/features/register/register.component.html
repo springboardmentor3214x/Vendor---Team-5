@@ -1,0 +1,89 @@
+<section class="auth-shell">
+  <div class="auth-card">
+    <div class="text-center mb-4">
+      <span class="auth-logo">VR</span>
+      <h2>Create account</h2>
+      <p>Register a new user for the vendor reliability platform.</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="mb-3">
+        <label class="form-label">Full name</label>
+        <input class="form-control" formControlName="fullName" />
+        <div class="field-error" *ngIf="control('fullName')?.touched && control('fullName')?.invalid">
+          Full name is required.
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input class="form-control" formControlName="email" type="email" autocomplete="email" />
+        <div class="field-error" *ngIf="control('email')?.touched && control('email')?.invalid">
+          Enter a valid email address.
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Password</label>
+          <input class="form-control" formControlName="password" type="password" autocomplete="new-password" />
+          <div class="field-error" *ngIf="control('password')?.touched && control('password')?.hasError('minlength')">
+            Password must be at least 8 characters.
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Confirm password</label>
+          <input class="form-control" formControlName="confirmPassword" type="password" autocomplete="new-password" />
+          <div class="field-error" *ngIf="control('confirmPassword')?.touched && form.value.password !== form.value.confirmPassword">
+            Passwords do not match.
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Role</label>
+        <select class="form-select" formControlName="role">
+          <option value="Vendor">Vendor</option>
+          <option value="Administrator">Administrator</option>
+          <option value="Procurement Manager">Procurement Manager</option>
+          <option value="Supply Chain Manager">Supply Chain Manager</option>
+          <option value="Finance Officer">Finance Officer</option>
+          <option value="Auditor">Auditor</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Company name</label>
+        <input class="form-control" formControlName="companyName" />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Employee ID</label>
+        <input class="form-control" formControlName="employeeId" />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Mobile number</label>
+        <input class="form-control" formControlName="mobileNumber" />
+      </div>
+
+      <div class="alert alert-danger" *ngIf="errorMessage()">
+        {{ errorMessage() }}
+      </div>
+
+      <div class="alert alert-success" *ngIf="successMessage()">
+        {{ successMessage() }}
+      </div>
+
+      <button class="btn btn-primary w-100" type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Registering...' : 'Register' }}
+      </button>
+    </form>
+
+    <div class="mt-3 text-center">
+      <span>Already have an account?</span>
+      <a routerLink="/login">Back to login</a>
+    </div>
+  </div>
+</section>

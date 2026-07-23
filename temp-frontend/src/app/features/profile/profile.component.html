@@ -1,0 +1,34 @@
+<section class="page-card">
+  <div class="mb-4">
+    <h2 class="mb-1">Profile</h2>
+    <p class="text-muted mb-0">Manage your account details and contact information.</p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="save()" class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Full name</label>
+      <input class="form-control" formControlName="fullName" />
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Company</label>
+      <input class="form-control" formControlName="companyName" />
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Mobile number</label>
+      <input class="form-control" formControlName="mobileNumber" />
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Profile picture</label>
+      <input class="form-control" formControlName="profilePicture" />
+    </div>
+
+    <div class="col-12 pt-2">
+      <button class="btn btn-primary" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Saving...' : 'Save profile' }}
+      </button>
+    </div>
+  </form>
+</section>

@@ -1,0 +1,11 @@
+<section class="page-card">
+  <h2 class="mb-3">Procurement</h2>
+  <div class="row g-3">
+    <div class="col-md-4" *ngFor="let item of activity">
+      <div class="mini-card">
+        <small class="text-muted">{{ item.label }}</small>
+        <strong class="d-block fs-4">{{ item.value }}</strong>
+      </div>
+    </div>
+  </div>
+</section>

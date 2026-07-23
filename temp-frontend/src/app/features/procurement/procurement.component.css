@@ -1,0 +1,13 @@
+.page-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 24px rgba(6, 16, 31, 0.1);
+}
+
+.mini-card {
+  background: #f8fbff;
+  border: 1px solid #d9e7f4;
+  border-radius: 14px;
+  padding: 1rem;
+}

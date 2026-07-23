@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = [
         "http://localhost:4200",
         "http://127.0.0.1:4200",
+        "http://localhost:60739",
+        "http://localhost:59027",
+        "http://localhost:55057",
+        "http://localhost:50531",
     ]
 
     DATABASE_URL: str

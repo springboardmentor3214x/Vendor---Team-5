@@ -1,0 +1,39 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-badge">VR</span>
+      <div>
+        <strong>Vendor Reliability</strong>
+        <small>Operations Console</small>
+      </div>
+    </div>
+
+    <nav class="nav-list">
+      <a
+        *ngFor="let item of navItems"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: false }"
+      >
+        {{ item.label }}
+      </a>
+    </nav>
+
+    <button class="btn btn-outline-light w-100 mt-auto" type="button" (click)="logout()">
+      Logout
+    </button>
+  </aside>
+
+  <section class="content-pane">
+    <header class="topbar">
+      <div>
+        <h1>Vendor Reliability System</h1>
+        <p>Operational visibility across vendors, contracts, procurement, and performance.</p>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <router-outlet></router-outlet>
+    </main>
+  </section>
+</div>

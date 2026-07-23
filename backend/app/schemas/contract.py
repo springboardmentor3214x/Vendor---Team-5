@@ -1,10 +1,12 @@
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ContractBase(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
+
     vendor_id: int = Field(alias="vendorId")
     contract_title: str = Field(alias="contractTitle")
     contract_type: Optional[str] = Field(default=None, alias="contractType")
@@ -20,9 +22,8 @@ class ContractCreate(ContractBase):
 
 
 class ContractResponse(ContractBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
-    class Config:
-        from_attributes = True
+    id: int
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")

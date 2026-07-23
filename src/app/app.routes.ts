@@ -12,7 +12,7 @@ import { FinanceOfficerComponent } from './features/finance-officer/finance-offi
 import { PurchaseOrderComponent } from './features/purchase-order/purchase-order';
 import { InvoiceManagementComponent } from './features/invoice-management/invoice-management';
 import { PaymentDetailsComponent } from './features/payment-details/payment-details';
-import { VendorComponent} from './features/vendor/vendor';
+import { VendorComponent } from './features/vendor/vendor';
 import { VendorProfileComponent } from './features/vendor-profile/vendor-profile';
 import { OrdersComponent } from './features/orders/orders';
 import { ContractsComponent } from './features/contracts/contracts';
@@ -59,14 +59,15 @@ import { ServiceRatingComponent } from './features/service-rating/service-rating
 import { PerformanceHistoryComponent } from './features/performance-history/performance-history';
 import { VendorRankingComponent } from './features/vendor-ranking/vendor-ranking';
 import { PerformanceMetricsComponent } from './features/performance-metrics/performance-metrics';
-export const routes: Routes = [
 
+export const routes: Routes = [
   {
     path: '',
     redirectTo: 'login',
     pathMatch: 'full'
   },
 
+  // Public routes
   {
     path: 'login',
     component: LoginComponent
@@ -75,146 +76,77 @@ export const routes: Routes = [
     path: 'register',
     component: RegisterComponent
   },
-
   {
     path: 'forgot-password',
     component: ForgotPasswordComponent
   },
-
   {
     path: 'reset-password',
     component: ResetPasswordComponent
   },
 
+  // Main app routes
   {
     path: 'dashboard',
     component: DashboardComponent
   },
-
+  {
+    path: 'profile',
+    component: ProfileComponent
+  },
   {
     path: 'user-management',
     component: UserManagementComponent
   },
-
   {
     path: 'reports',
     component: ReportsComponent
-  },
-
-  {
-    path: 'finance-officer',
-    component: FinanceOfficerComponent
-  },
-
-  {
-    path: 'purchase-order',
-    component: PurchaseOrderComponent
-  },
-
-  {
-    path: 'invoice-management',
-    component: InvoiceManagementComponent
-  },
-
-  {
-    path: 'payment-details',
-    component: PaymentDetailsComponent
-  },
-   {
-    path: 'vendor',
-    component: VendorComponent
-  },
-   {
-    path: 'vendor-profile',
-    component: VendorProfileComponent
-  },
-  {
-    path: 'orders',
-    component: OrdersComponent
-  },
-  {
-    path: 'contracts',
-    component: ContractsComponent
-  },
-   {
-    path: 'communication',
-    component: CommunicationComponent
-  },
-   {
-    path: 'auditor',
-    component: AuditorComponent
-  },
-   {
-    path: 'notifications',
-    component: Notifications
   },
   {
     path: 'report',
     component: ReportComponent
   },
   {
-    path: 'compliance',
-    component: ComplianceComponent
+    path: 'analytics',
+    component: AnalyticsComponent
+  },
+  {
+    path: 'notifications',
+    component: Notifications
   },
   {
     path: 'audit-logs',
     component: AuditLogsComponent
   },
   {
-    path: 'analytics',
-    component: AnalyticsComponent
-  },
-   {
-    path: 'profile',
-    component: ProfileComponent
+    path: 'auditor',
+    component: AuditorComponent
   },
   {
-    path: 'supply-chain-manager',
-    component: SupplyChainManagerComponent
+    path: 'compliance',
+    component: ComplianceComponent
+  },
+
+  // Vendor routes
+  {
+    path: 'vendor',
+    component: VendorComponent
   },
   {
-    path: 'vendor-performance',
-    component: VendorPerformanceComponent
+    path: 'vendor-list',
+    component: VendorListComponent
   },
   {
-    path: 'vendor-reliability',
-    component: VendorReliabilityComponent
-  },
-  {
-    path: 'procurement-tracking',
-    component: ProcurementTrackingComponent
-  },
-  {
-    path: 'procurement-management',
-    component: ProcurementManagementComponent
-  },
-   {
-    path: 'procurement',
-    component: ProcurementComponent
-  },
-   {
     path: 'vendor-management',
     component: VendorManagementComponent
-  },
-   {
-    path: 'contract',
-    component: ContractComponent
-  },
-  {
-    path: 'purchase-orders',
-    component: PurchaseOrdersComponent
-  },
-  {
-    path: 'create-purchase-order',
-    component: CreatePurchaseOrderComponent
   },
   {
     path: 'vendor-managements',
     component: VendorManagementsComponent
   },
   {
-    path: 'vendor-list',
-    component: VendorListComponent
+    path: 'vendor-profile',
+    component: VendorProfileComponent
   },
   {
     path: 'add-vendor',
@@ -228,8 +160,16 @@ export const routes: Routes = [
     path: 'vendor-details',
     component: VendorDetailsComponent
   },
-   {
+  {
+    path: 'vendor-details/:id',
+    component: VendorDetailsComponent
+  },
+  {
     path: 'edit-vendor',
+    component: EditVendorComponent
+  },
+  {
+    path: 'edit-vendor/:id',
     component: EditVendorComponent
   },
   {
@@ -240,19 +180,37 @@ export const routes: Routes = [
     path: 'vendor-status',
     component: VendorStatusComponent
   },
-  { 
+  {
+    path: 'vendor-performance',
+    component: VendorPerformanceComponent
+  },
+  {
+    path: 'vendor-reliability',
+    component: VendorReliabilityComponent
+  },
+  {
+    path: 'vendor-ranking',
+    component: VendorRankingComponent
+  },
+
+  // Procurement routes
+  {
+    path: 'procurement',
+    component: ProcurementComponent
+  },
+  {
     path: 'procurements',
     component: ProcurementsComponent
   },
-  { 
+  {
     path: 'procurement-request',
     component: ProcurementRequestComponent
   },
-  { 
+  {
     path: 'request-list',
     component: RequestListComponent
   },
-  { 
+  {
     path: 'approval',
     component: ApprovalComponent
   },
@@ -260,57 +218,131 @@ export const routes: Routes = [
     path: 'vendor-assignment',
     component: VendorAssignmentComponent
   },
-   {
-    path: 'purchase-orders-creation',
-    component: PurchaseOrdersCreationComponent
+  {
+    path: 'procurement-management',
+    component: ProcurementManagementComponent
   },
-   {
-    path: 'purchase-orders-details',
-    component: PurchaseOrdersDetailsComponent
+  {
+    path: 'procurement-tracking',
+    component: ProcurementTrackingComponent
   },
   {
     path: 'procurement-status-management',
     component: ProcurementStatusManagementComponent
   },
-   {
+
+  // Purchase order routes
+  {
+    path: 'purchase-order',
+    component: PurchaseOrderComponent
+  },
+  {
+    path: 'purchase-orders',
+    component: PurchaseOrdersComponent
+  },
+  {
+    path: 'purchase-orders/:id',
+    component: PurchaseOrdersDetailsComponent
+  },
+  {
+    path: 'purchase-orders-details',
+    component: PurchaseOrdersDetailsComponent
+  },
+  {
+    path: 'purchase-orders-details/:id',
+    component: PurchaseOrdersDetailsComponent
+  },
+  {
+    path: 'create-purchase-order',
+    component: CreatePurchaseOrderComponent
+  },
+  {
+    path: 'purchase-orders-creation',
+    component: PurchaseOrdersCreationComponent
+  },
+  {
     path: 'order-tracking',
     component: OrderTrackingComponent
+  },
+  {
+    path: 'orders',
+    component: OrdersComponent
+  },
+
+  // Invoice and finance routes
+  {
+    path: 'invoice-management',
+    component: InvoiceManagementComponent
   },
   {
     path: 'invoice-managements',
     component: InvoiceManagementsComponent
   },
-   {
-    path: 'delivery-performance-monitoring',
-    component: DeliveryPerformanceMonitoringComponent
+  {
+    path: 'payment-details',
+    component: PaymentDetailsComponent
   },
-   {
-    path: 'product-quality-evaluation',
-    component: ProductQualityEvaluationComponent
+  {
+    path: 'finance-officer',
+    component: FinanceOfficerComponent
   },
-   {
+
+  // Contract and communication routes
+  {
+    path: 'contract',
+    component: ContractComponent
+  },
+  {
+    path: 'contracts',
+    component: ContractsComponent
+  },
+  {
+    path: 'communication',
+    component: CommunicationComponent
+  },
+  {
     path: 'communication-response-tracking',
     component: CommunicationResponseTrackingComponent
   },
-   {
+
+  // Performance routes
+  {
+    path: 'delivery-performance-monitoring',
+    component: DeliveryPerformanceMonitoringComponent
+  },
+  {
+    path: 'product-quality-evaluation',
+    component: ProductQualityEvaluationComponent
+  },
+  {
     path: 'service-rating',
     component: ServiceRatingComponent
   },
-   {
+  {
     path: 'performance-history',
     component: PerformanceHistoryComponent
   },
   {
-    path: 'vendor-ranking',
-    component: VendorRankingComponent
-  },
-   {
     path: 'performance-metrics',
     component: PerformanceMetricsComponent
   },
+
+  // Role-based pages
+  {
+    path: 'finance-officer',
+    component: FinanceOfficerComponent
+  },
+  {
+    path: 'supply-chain-manager',
+    component: SupplyChainManagerComponent
+  },
+  {
+    path: 'auditor',
+    component: AuditorComponent
+  },
+
   {
     path: '**',
     redirectTo: 'login'
   }
-
 ];

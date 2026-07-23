@@ -14,10 +14,7 @@ export interface LoginPayload {
 
 export interface RegisterPayload {
   fullName: string;
-  employeeId?: string;
-  companyName?: string;
   email: string;
-  mobileNumber?: string;
   password: string;
   role: string;
 }

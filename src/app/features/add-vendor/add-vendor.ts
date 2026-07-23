@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { VendorService } from '../../services/vendor.service';
 
 @Component({
   selector: 'app-add-vendor',
@@ -12,7 +13,10 @@ import { Router } from '@angular/router';
 })
 export class AddVendorComponent {
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private vendorService: VendorService
+  ) {}
 
   vendor = {
     companyName: '',
@@ -36,7 +40,7 @@ export class AddVendorComponent {
     bankAccountNumber: '',
     ifscCode: '',
     paymentTerms: '',
-    status: ''
+    status: 'pending'
   };
 
   saveVendor() {
@@ -51,12 +55,20 @@ export class AddVendorComponent {
       return;
     }
 
-    console.log('Vendor Details:', this.vendor);
+    this.vendorService.addVendor(this.vendor as any).subscribe({
 
-    alert('Vendor added successfully.');
+      next: () => {
+        alert('Vendor added successfully.');
+        this.router.navigate(['/vendor-list']);
+      },
 
-    // Navigate to Vendor List page
-    this.router.navigate(['/vendor-list']);
+      error: (err) => {
+        console.error(err);
+        alert('Failed to add vendor.');
+      }
+
+    });
+
   }
 
   cancel() {
@@ -83,8 +95,9 @@ export class AddVendorComponent {
       bankAccountNumber: '',
       ifscCode: '',
       paymentTerms: '',
-      status: ''
+      status: 'pending'
     };
+
   }
 
 }

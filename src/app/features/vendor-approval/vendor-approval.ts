@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { VendorService } from '../../services/vendor.service';
+
 @Component({
   selector: 'app-vendor-approval',
   standalone: true,
@@ -10,6 +12,8 @@ import { RouterLink } from '@angular/router';
   styleUrls: ['./vendor-approval.css']
 })
 export class VendorApprovalComponent {
+
+  vendorId = 1; // Replace with actual vendor ID later
 
   vendor = {
     name: 'Bharathi',
@@ -20,8 +24,10 @@ export class VendorApprovalComponent {
     approvalStatus: 'Pending'
   };
 
-  description: string = '';
-  remarks: string = '';
+  description = '';
+  remarks = '';
+
+  constructor(private vendorService: VendorService) {}
 
   approveVendor() {
 
@@ -30,10 +36,18 @@ export class VendorApprovalComponent {
       return;
     }
 
-    this.vendor.status = 'Approved';
-    this.vendor.approvalStatus = 'Approved';
+    this.vendorService.approveVendor(this.vendorId).subscribe({
+      next: () => {
+        this.vendor.status = 'Approved';
+        this.vendor.approvalStatus = 'Approved';
+        alert('Vendor Approved Successfully');
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Failed to approve vendor');
+      }
+    });
 
-    alert('Vendor Approved Successfully');
   }
 
   rejectVendor() {
@@ -43,15 +57,22 @@ export class VendorApprovalComponent {
       return;
     }
 
-    this.vendor.status = 'Rejected';
-    this.vendor.approvalStatus = 'Rejected';
+    this.vendorService.rejectVendor(this.vendorId).subscribe({
+      next: () => {
+        this.vendor.status = 'Rejected';
+        this.vendor.approvalStatus = 'Rejected';
+        alert('Vendor Rejected Successfully');
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Failed to reject vendor');
+      }
+    });
 
-    alert('Vendor Rejected Successfully');
   }
 
   back() {
     window.history.back();
   }
-
 
 }

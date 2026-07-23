@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { VendorService } from '../../services/vendor.service';
 
 @Component({
   selector: 'app-vendor-details',
@@ -14,34 +15,60 @@ import { RouterLink } from '@angular/router';
   templateUrl: './vendor-details.html',
   styleUrls: ['./vendor-details.css']
 })
-export class VendorDetailsComponent {
+export class VendorDetailsComponent implements OnInit {
 
-  vendor = {
-    vendorName: 'Tech Solution PVT LTD',
-    email: 'bharathi12@gmail.com',
-    phone: '9876543210',
-    address: 'Hyderabad, Telangana, India',
-    gst: '74658CT9324103',
-    contact: '9087655351',
-    company: 'IT Services',
-    registrationDate: 'Active',
-    status: 'Approved',
-    approvalStatus: 'Approved'
-  };
+  vendorId = 1; // Replace with route parameter during integration
 
-  description: string = '';
-  remarks: string = '';
+  vendor: any = {};
+
+  description = '';
+  remarks = '';
+
+  constructor(private vendorService: VendorService) {}
+
+  ngOnInit(): void {
+    this.loadVendor();
+  }
+
+  loadVendor(): void {
+    this.vendorService.getVendor(this.vendorId).subscribe({
+      next: (data) => {
+        this.vendor = data;
+      },
+      error: (err) => {
+        console.error('Failed to load vendor', err);
+      }
+    });
+  }
 
   editVendor() {
     alert('Edit Vendor');
   }
 
   approveVendor() {
-    alert('Vendor Approved Successfully');
+    this.vendorService.approveVendor(this.vendorId).subscribe({
+      next: () => {
+        alert('Vendor Approved Successfully');
+        this.loadVendor();
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Failed to approve vendor');
+      }
+    });
   }
 
   rejectVendor() {
-    alert('Vendor Rejected Successfully');
+    this.vendorService.rejectVendor(this.vendorId).subscribe({
+      next: () => {
+        alert('Vendor Rejected Successfully');
+        this.loadVendor();
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Failed to reject vendor');
+      }
+    });
   }
 
   back() {

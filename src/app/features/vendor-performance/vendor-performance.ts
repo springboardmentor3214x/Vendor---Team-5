@@ -1,7 +1,9 @@
-import { Component, AfterViewInit } from '@angular/core';
+import { Component, AfterViewInit, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 import {
   Chart,
@@ -22,56 +24,36 @@ Chart.register(...registerables);
   templateUrl: './vendor-performance.html',
   styleUrls: ['./vendor-performance.css']
 })
-export class VendorPerformanceComponent implements AfterViewInit {
+export class VendorPerformanceComponent implements OnInit, AfterViewInit {
 
   searchText = '';
 
-  vendors = [
-    {
-      rank: 1,
-      name: 'Vendor A',
-      orders: 28,
-      delivery: '92%',
-      quality: '4.8/5',
-      response: '4.1',
-      score: '92%',
-      status: 'Top Performer'
-    },
-    {
-      rank: 2,
-      name: 'Vendor B',
-      orders: 24,
-      delivery: '90%',
-      quality: '4.3/5',
-      response: '5.2',
-      score: '89%',
-      status: 'Top Performer'
-    },
-    {
-      rank: 3,
-      name: 'Vendor C',
-      orders: 32,
-      delivery: '86%',
-      quality: '4.2/5',
-      response: '6.0',
-      score: '86%',
-      status: 'Top Performer'
-    },
-    {
-      rank: 4,
-      name: 'Vendor D',
-      orders: 18,
-      delivery: '82%',
-      quality: '4.0/5',
-      response: '6.8',
-      score: '82%',
-      status: 'Good'
-    }
-  ];
+  vendors: any[] = [];
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit(): void {
+    this.loadPerformance();
+  }
 
   ngAfterViewInit(): void {
     this.createLineChart();
     this.createBarChart();
+  }
+
+  loadPerformance(): void {
+
+    this.http.get<any>(
+      `${environment.apiUrl}/performance/rankings`
+    ).subscribe({
+      next: (data) => {
+        this.vendors = data;
+      },
+      error: (err) => {
+        console.error('Failed to load performance', err);
+      }
+    });
+
   }
 
   createLineChart(): void {
@@ -79,7 +61,7 @@ export class VendorPerformanceComponent implements AfterViewInit {
     new Chart('lineChart', {
       type: 'line',
       data: {
-        labels: ['Jan 26', 'Feb 26', 'Mar 26', 'Apr 26', 'May 26', 'Jun 26', 'Jul 26'],
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
         datasets: [
           {
             label: 'Overall Score',
@@ -108,13 +90,7 @@ export class VendorPerformanceComponent implements AfterViewInit {
     new Chart('barChart', {
       type: 'bar',
       data: {
-        labels: [
-          'Vendor A',
-          'Vendor B',
-          'Vendor C',
-          'Vendor D',
-          'Vendor E'
-        ],
+        labels: ['Vendor A', 'Vendor B', 'Vendor C', 'Vendor D', 'Vendor E'],
         datasets: [
           {
             data: [92, 89, 86, 82, 79],

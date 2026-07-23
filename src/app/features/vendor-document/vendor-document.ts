@@ -24,41 +24,63 @@ export class VendorDocumentComponent {
     {
       name: 'GST Certificate',
       file: null,
-      fileName: 'gst_certificate.pdf',
-      size: '1.2 MB'
+      fileName: '',
+      size: ''
     },
     {
       name: 'PAN Card',
       file: null,
-      fileName: 'pan_card.pdf',
-      size: '534 KB'
+      fileName: '',
+      size: ''
     },
     {
       name: 'Company Registration Certificate',
       file: null,
-      fileName: 'company_registration.pdf',
-      size: '1.8 MB'
+      fileName: '',
+      size: ''
     },
     {
       name: 'ISO Certificate',
       file: null,
-      fileName: 'iso_certificate.pdf',
-      size: '1.1 MB'
+      fileName: '',
+      size: ''
     },
     {
       name: 'Other Supporting Documents',
       file: null,
-      fileName: 'other_docs.pdf',
-      size: '2.3 MB'
+      fileName: '',
+      size: ''
     }
   ];
 
   uploadFile(event: Event, index: number): void {
+
     const input = event.target as HTMLInputElement;
 
     if (input.files && input.files.length > 0) {
 
       const file = input.files[0];
+
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg',
+        'image/png'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        alert('Only PDF, JPG, JPEG and PNG files are allowed.');
+        input.value = '';
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024;
+
+      if (file.size > maxSize) {
+        alert('File size should not exceed 5 MB.');
+        input.value = '';
+        return;
+      }
 
       this.documents[index].file = file;
       this.documents[index].fileName = file.name;
@@ -101,7 +123,6 @@ export class VendorDocumentComponent {
   finish(): void {
 
     alert('Vendor registration completed.');
-
     this.router.navigate(['/vendor-list']);
 
   }

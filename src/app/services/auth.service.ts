@@ -1,7 +1,9 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
-import { delay, tap } from 'rxjs/operators';
+import { tap, delay } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 export interface LoginPayload {
   email: string;
@@ -37,45 +39,61 @@ export class AuthService {
 
   currentUser = signal<AuthUser | null>(this.readStoredUser());
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private http: HttpClient) {}
 
   login(payload: LoginPayload): Observable<any> {
 
-    if (!payload.email || !payload.password) {
-      return throwError(() => new Error('Email and Password are required.'));
-    }
-
-    const user: AuthUser = {
+  return this.http.post<any>(
+    `${environment.apiUrl}/auth/login`,
+    {
       email: payload.email,
+      password: payload.password
+    }
+  ).pipe(
+    tap((response) => {
+
+      localStorage.setItem(TOKEN_KEY, response.access_token);
+
+      const user: AuthUser = {
+        email: payload.email,
+        role: payload.role,
+      };
+
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      this.currentUser.set(user);
+
+    })
+  );
+
+}
+
+   register(payload: RegisterPayload): Observable<any> {
+
+  return this.http.post(
+    `${environment.apiUrl}/auth/register`,
+    {
+      full_name: payload.fullName,
+      email: payload.email,
+      password: payload.password,
       role: payload.role
-    };
+    }
+  );
 
-    return of(user).pipe(
-      delay(500),
-      tap(() => {
-        localStorage.setItem(TOKEN_KEY, 'mock-token');
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
-        this.currentUser.set(user);
-      })
-    );
-  }
-
-  register(payload: RegisterPayload): Observable<any> {
-
-    return of({
-      success: true,
-      message: 'Registration Successful',
-      user: payload
-    }).pipe(delay(500));
-  }
+}
+  
 
   forgotPassword(email: string): Observable<any> {
 
-    return of({
-      success: true,
-      message: 'Reset link sent.'
-    }).pipe(delay(500));
-  }
+  return this.http.post(
+    `${environment.apiUrl}/auth/reset-password`,
+    {
+      email: email
+    }
+  );
+
+}
 
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);

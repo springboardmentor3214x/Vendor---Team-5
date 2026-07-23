@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-purchase-orders-creation',
@@ -15,6 +15,8 @@ import { RouterLink } from '@angular/router';
   styleUrls: ['./purchase-orders-creation.css']
 })
 export class PurchaseOrdersCreationComponent {
+
+  constructor(private router: Router) {}
 
   purchaseOrder = {
     purchaseOrderNumber: 'PO-2026-00056',
@@ -64,18 +66,23 @@ export class PurchaseOrdersCreationComponent {
   ];
 
   saveDraft(): void {
-    alert('Purchase Order saved successfully.');
+    console.log('Draft Saved', this.purchaseOrder);
+    alert('Purchase Order saved as Draft.');
+  }
+
+  generatePurchaseOrder(): void {
+    console.log('Purchase Order Generated', this.purchaseOrder);
+    console.log(this.products);
+
+    alert('Purchase Order generated successfully.');
+
+    this.router.navigate(['/purchase-orders']);
   }
 
   cancel(): void {
     if (confirm('Are you sure you want to cancel?')) {
-      console.log('Purchase Order cancelled');
+      this.router.navigate(['/purchase-orders']);
     }
   }
 
-  generatePurchaseOrder(): void {
-    alert('Purchase Order generated successfully.');
-    console.log(this.purchaseOrder);
-    console.log(this.products);
-  }
 }

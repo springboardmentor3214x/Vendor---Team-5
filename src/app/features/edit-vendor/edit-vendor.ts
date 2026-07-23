@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { VendorService } from '../../services/vendor.service';
 
 @Component({
   selector: 'app-edit-vendor',
@@ -10,130 +11,57 @@ import { Router, RouterLink } from '@angular/router';
   templateUrl: './edit-vendor.html',
   styleUrls: ['./edit-vendor.css']
 })
-export class EditVendorComponent {
+export class EditVendorComponent implements OnInit {
 
-  constructor(private router: Router) {}
+  vendorId = 1; // Temporary. Replace with actual vendor ID during integration.
 
-  vendor = {
+  constructor(
+    private router: Router,
+    private vendorService: VendorService
+  ) {}
 
-    companyName: 'Tech Solution PVT LTD',
+  vendor: any = {};
 
-    category: 'IT Services',
+  ngOnInit(): void {
+    this.loadVendor();
+  }
 
-    contactPerson: 'Ramesh Kumar',
-
-    destination: 'Hyderabad',
-
-    email: 'techsolution@gmail.com',
-
-    phone: '9876543210',
-
-    altPhone: '9876500000',
-
-    gst: '36ABCDE1234F1Z5',
-
-    pan: 'ABCDE1234F',
-
-    registration: 'REG123456789',
-
-    address1: 'Madhapur',
-
-    address2: 'Hitech City',
-
-    city: 'Hyderabad',
-
-    state: 'Telangana',
-
-    country: 'India',
-
-    pincode: '500081',
-
-    website: 'www.techsolution.com',
-
-    description: 'IT Software Services',
-
-    bankAccount: '123456789012',
-
-    ifsc: 'SBIN0001234',
-
-    paymentTerms: '30 Days',
-
-    status: 'Active'
-
-  };
+  loadVendor(): void {
+    this.vendorService.getVendor(this.vendorId).subscribe({
+      next: (data) => {
+        this.vendor = data;
+      },
+      error: (err) => {
+        console.error('Failed to load vendor', err);
+      }
+    });
+  }
 
   saveVendor(): void {
-
-    console.log('Vendor Saved', this.vendor);
-
-    alert('Vendor details saved successfully.');
-
+    this.updateVendor();
   }
 
   updateVendor(): void {
 
-    console.log('Vendor Updated', this.vendor);
-
-    alert('Vendor updated successfully.');
+    this.vendorService.updateVendor(this.vendorId, this.vendor).subscribe({
+      next: () => {
+        alert('Vendor updated successfully.');
+        this.router.navigate(['/vendor-details']);
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Failed to update vendor.');
+      }
+    });
 
   }
 
   resetForm(): void {
-
-    this.vendor = {
-
-      companyName: '',
-
-      category: '',
-
-      contactPerson: '',
-
-      destination: '',
-
-      email: '',
-
-      phone: '',
-
-      altPhone: '',
-
-      gst: '',
-
-      pan: '',
-
-      registration: '',
-
-      address1: '',
-
-      address2: '',
-
-      city: '',
-
-      state: '',
-
-      country: '',
-
-      pincode: '',
-
-      website: '',
-
-      description: '',
-
-      bankAccount: '',
-
-      ifsc: '',
-
-      paymentTerms: '',
-
-      status: ''
-
-    };
-
+    this.loadVendor();
   }
 
   back(): void {
-
     this.router.navigate(['/vendor-details']);
-
   }
 
 }

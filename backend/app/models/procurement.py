@@ -1,7 +1,10 @@
+# DEPRECATED: This model is obsolete. 
+# It was split into ProcurementRequest and PurchaseOrder in migrations.
+# Kept here only for backward-compatibility to prevent import errors.
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.core.database import Base  # will connect once Pranjal pushes database.py
+from app.core.database import Base
 
 
 class ProcurementOrder(Base):

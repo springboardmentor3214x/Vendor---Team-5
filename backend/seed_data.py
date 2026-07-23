@@ -14,6 +14,11 @@ from app.models.communication_log import CommunicationLog
 from app.models.service_rating import ServiceRating
 from app.models.vendor_ranking import VendorRanking
 from app.models.performance import PerformanceRecord
+from app.models.password_reset_token import PasswordResetToken
+from app.models.vendor_approval_history import VendorApprovalHistory
+from app.models.procurement_approval import ProcurementApproval
+from app.models.order_tracking import OrderTracking
+from app.models.procurement_status_history import ProcurementStatusHistory
 from datetime import datetime, timedelta
 
 db = SessionLocal()
@@ -66,6 +71,8 @@ if not sample_vendor:
         designation="Sales Manager",
         email="sample.vendor@example.com",
         phone_number="9876543210",
+        gst_number="36AAAAA0000A1Z5",
+        pan_number="ABCDE1234F",
         city="Hyderabad",
         state="Telangana",
         country="India",
@@ -87,6 +94,10 @@ if not sample_user:
         email="admin@vendoriq.com",
         hashed_password="placeholder_hash",
         role="Administrator",
+        mobile_number="9999999999",
+        employee_id="EMP001",
+        company_name="VendorIQ Admin Inc",
+        profile_picture_url="https://example.com/profiles/admin.png",
         is_active=True,
     )
     db.add(sample_user)
@@ -112,19 +123,60 @@ if not existing_contact:
 else:
     print("Vendor contact already exists.")
 
+# Seed one password reset token
+existing_token = db.query(PasswordResetToken).filter(PasswordResetToken.token == "sample_reset_token_xyz123").first()
+if not existing_token:
+    token = PasswordResetToken(
+        user_id=sample_user.id,
+        token="sample_reset_token_xyz123",
+        expires_at=datetime.utcnow() + timedelta(hours=24),
+        is_used=False
+    )
+    db.add(token)
+    db.commit()
+    print("Seeded 1 password reset token.")
+else:
+    print("Password reset token already exists.")
+
+# Seed one vendor approval history record
+existing_vah = db.query(VendorApprovalHistory).filter(VendorApprovalHistory.vendor_id == sample_vendor.id).first()
+if not existing_vah:
+    vah = VendorApprovalHistory(
+        vendor_id=sample_vendor.id,
+        approved_by=sample_user.id,
+        action="Approve",
+        remarks="Vendor credentials and GSTIN verified successfully.",
+        action_date=datetime.utcnow() - timedelta(days=25)
+    )
+    db.add(vah)
+    db.commit()
+    print("Seeded 1 vendor approval history record.")
+else:
+    print("Vendor approval history already exists.")
+
 # Seed one procurement request
 existing_request = db.query(ProcurementRequest).filter(ProcurementRequest.request_number == "REQ-2026-001").first()
 if not existing_request:
     procurement_request = ProcurementRequest(
         request_number="REQ-2026-001",
+        title="Monthly Steel Procurement",
         department="Production",
         item_description="Steel rods - 500 units",
+        product_name="Grade 50 Steel Rods",
+        product_category="Raw Materials",
         quantity=500,
+        unit_of_measurement="Units",
+        estimated_budget=125000.0,
+        required_delivery_date=datetime.utcnow() - timedelta(days=5),
+        priority="High",
+        business_justification="Necessary for Q3 factory production schedule.",
+        additional_remarks="Urgent requirement.",
         requested_by=sample_user.id,
         request_date=datetime.utcnow() - timedelta(days=20),
         approval_status="Approved",
         approved_by=sample_user.id,
         approved_date=datetime.utcnow() - timedelta(days=18),
+        vendor_id=sample_vendor.id,
     )
     db.add(procurement_request)
     db.commit()
@@ -132,6 +184,48 @@ if not existing_request:
 else:
     procurement_request = existing_request
     print("Procurement request already exists.")
+
+# Seed one procurement status history
+existing_psh = db.query(ProcurementStatusHistory).filter(ProcurementStatusHistory.procurement_request_id == procurement_request.id).first()
+if not existing_psh:
+    psh1 = ProcurementStatusHistory(
+        procurement_request_id=procurement_request.id,
+        old_status=None,
+        new_status="Pending",
+        changed_by=sample_user.id,
+        remarks="Draft submitted",
+        changed_at=datetime.utcnow() - timedelta(days=20)
+    )
+    psh2 = ProcurementStatusHistory(
+        procurement_request_id=procurement_request.id,
+        old_status="Pending",
+        new_status="Approved",
+        changed_by=sample_user.id,
+        remarks="Request approved by manager",
+        changed_at=datetime.utcnow() - timedelta(days=18)
+    )
+    db.add(psh1)
+    db.add(psh2)
+    db.commit()
+    print("Seeded 2 procurement status history records.")
+else:
+    print("Procurement status history already exists.")
+
+# Seed one procurement approval
+existing_pa = db.query(ProcurementApproval).filter(ProcurementApproval.procurement_request_id == procurement_request.id).first()
+if not existing_pa:
+    pa = ProcurementApproval(
+        procurement_request_id=procurement_request.id,
+        approved_by=sample_user.id,
+        status="Approved",
+        remarks="Budget approved, vendor assignment permitted.",
+        approved_at=datetime.utcnow() - timedelta(days=18)
+    )
+    db.add(pa)
+    db.commit()
+    print("Seeded 1 procurement approval record.")
+else:
+    print("Procurement approval record already exists.")
 
 # Seed one purchase order
 existing_po = db.query(PurchaseOrder).filter(PurchaseOrder.po_number == "PO-2026-001").first()
@@ -143,10 +237,15 @@ if not existing_po:
         quantity=500,
         unit_price=250.0,
         total_cost=125000.0,
+        tax_details=18.0,
+        shipping_address="Factory Warehouse Gate 2, Hyderabad",
         expected_delivery_date=datetime.utcnow() - timedelta(days=10),
         actual_delivery_date=datetime.utcnow() - timedelta(days=9),
         payment_terms="Net 30",
         po_status="Delivered",
+        created_by=sample_user.id,
+        approved_by=sample_user.id,
+        po_date=datetime.utcnow() - timedelta(days=17)
     )
     db.add(purchase_order)
     db.commit()
@@ -155,6 +254,24 @@ else:
     purchase_order = existing_po
     print("Purchase order already exists.")
 
+# Seed one order tracking record
+existing_ot = db.query(OrderTracking).filter(OrderTracking.purchase_order_id == purchase_order.id).first()
+if not existing_ot:
+    ot = OrderTracking(
+        purchase_order_id=purchase_order.id,
+        dispatch_date=datetime.utcnow() - timedelta(days=12),
+        expected_delivery_date=purchase_order.expected_delivery_date,
+        actual_delivery_date=purchase_order.actual_delivery_date,
+        delivery_status="Completed",
+        delay_days=0,
+        remarks="Delivered intact."
+    )
+    db.add(ot)
+    db.commit()
+    print("Seeded 1 order tracking record.")
+else:
+    print("Order tracking record already exists.")
+
 # Seed one invoice
 existing_invoice = db.query(Invoice).filter(Invoice.invoice_number == "INV-2026-001").first()
 if not existing_invoice:
@@ -162,9 +279,12 @@ if not existing_invoice:
         purchase_order_id=purchase_order.id,
         invoice_number="INV-2026-001",
         invoice_amount=125000.0,
+        tax_amount=22500.0,
+        total_amount=147500.0,
+        supporting_document_url="https://example.com/invoices/INV-2026-001.pdf",
         invoice_date=datetime.utcnow() - timedelta(days=9),
         due_date=datetime.utcnow() + timedelta(days=21),
-        payment_status="Pending",
+        payment_status="Verified",
     )
     db.add(invoice)
     db.commit()
@@ -300,7 +420,6 @@ if not existing_pr:
         average_service_rating_score=4.3,
         overall_performance_score=88.5,
         performance_status="Excellent",
-        evaluation_date=datetime.utcnow(),
         notes="Strong first evaluation cycle.",
     )
     db.add(pr)

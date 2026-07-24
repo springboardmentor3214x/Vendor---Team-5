@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { VendorService } from '../../services/vendor.service';
 
 @Component({
@@ -13,16 +13,18 @@ import { VendorService } from '../../services/vendor.service';
 })
 export class EditVendorComponent implements OnInit {
 
-  vendorId = 1; // Temporary. Replace with actual vendor ID during integration.
-
-  constructor(
-    private router: Router,
-    private vendorService: VendorService
-  ) {}
+  vendorId!: number;
 
   vendor: any = {};
 
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private vendorService: VendorService
+  ) {}
+
   ngOnInit(): void {
+    this.vendorId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadVendor();
   }
 
@@ -42,18 +44,16 @@ export class EditVendorComponent implements OnInit {
   }
 
   updateVendor(): void {
-
     this.vendorService.updateVendor(this.vendorId, this.vendor).subscribe({
       next: () => {
         alert('Vendor updated successfully.');
-        this.router.navigate(['/vendor-details']);
+        this.router.navigate(['/vendor-details', this.vendorId]);
       },
       error: (err) => {
         console.error(err);
         alert('Failed to update vendor.');
       }
     });
-
   }
 
   resetForm(): void {
@@ -61,7 +61,7 @@ export class EditVendorComponent implements OnInit {
   }
 
   back(): void {
-    this.router.navigate(['/vendor-details']);
+    this.router.navigate(['/vendor-details', this.vendorId]);
   }
 
 }

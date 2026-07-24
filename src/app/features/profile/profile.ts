@@ -15,8 +15,8 @@ import { FormsModule } from '@angular/forms';
 export class ProfileComponent {
 
   user = {
-    name: 'John Doe',
-    email: 'johndoe@example.com',
+    name: 'Bharathi ',
+    email: 'bharathiparimi@example.com',
     phone: '+91 9876543210',
     role: 'Administrator',
     joined: '15 Jan 2024'

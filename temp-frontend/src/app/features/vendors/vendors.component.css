@@ -1,6 +1,144 @@
 .page-card {
-  background: rgba(255, 255, 255, 0.96);
-  border-radius: 16px;
-  padding: 1.25rem;
-  box-shadow: 0 10px 24px rgba(6, 16, 31, 0.1);
+  background: #f8fafc;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+}
+
+.page-card h2 {
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.text-muted {
+  color: #64748b !important;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.form-control,
+.form-select {
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  padding: 10px 14px;
+  color: #0f172a;
+  background: #fff;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+}
+
+.btn-primary {
+  min-height: 46px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+  color: #fff;
+}
+
+.btn-outline-secondary,
+.btn-outline-primary,
+.btn-outline-danger {
+  min-height: 38px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.table thead th {
+  color: #475569;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom-width: 1px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-muted {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.detail-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.detail-item label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.detail-item div {
+  color: #0f172a;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }

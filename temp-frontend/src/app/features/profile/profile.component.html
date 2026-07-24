@@ -1,34 +1,94 @@
 <section class="page-card">
   <div class="mb-4">
     <h2 class="mb-1">Profile</h2>
-    <p class="text-muted mb-0">Manage your account details and contact information.</p>
+    <p class="text-muted mb-0">Manage your account details and password.</p>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="save()" class="row g-3">
-    <div class="col-md-6">
-      <label class="form-label">Full name</label>
-      <input class="form-control" formControlName="fullName" />
+  <div *ngIf="loading()" class="text-muted">Loading profile...</div>
+
+  <ng-container *ngIf="!loading() && profile() as user">
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <label class="form-label">Email</label>
+        <input class="form-control" [value]="user.email" readonly />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Role</label>
+        <input class="form-control" [value]="user.role" readonly />
+      </div>
+      <div class="col-md-6" *ngIf="user.employeeId">
+        <label class="form-label">Employee ID</label>
+        <input class="form-control" [value]="user.employeeId" readonly />
+      </div>
     </div>
 
-    <div class="col-md-6">
-      <label class="form-label">Company</label>
-      <input class="form-control" formControlName="companyName" />
-    </div>
+    <form [formGroup]="form" (ngSubmit)="save()" class="row g-3 mb-5">
+      <div class="col-md-6">
+        <label class="form-label">Full name</label>
+        <input class="form-control" formControlName="fullName" />
+        <div class="text-danger small mt-1" *ngIf="control('fullName')?.touched && control('fullName')?.invalid">
+          Full name is required.
+        </div>
+      </div>
 
-    <div class="col-md-6">
-      <label class="form-label">Mobile number</label>
-      <input class="form-control" formControlName="mobileNumber" />
-    </div>
+      <div class="col-md-6">
+        <label class="form-label">Company</label>
+        <input class="form-control" formControlName="companyName" />
+      </div>
 
-    <div class="col-md-6">
-      <label class="form-label">Profile picture</label>
-      <input class="form-control" formControlName="profilePicture" />
-    </div>
+      <div class="col-md-6">
+        <label class="form-label">Mobile number</label>
+        <input class="form-control" formControlName="mobileNumber" />
+      </div>
 
-    <div class="col-12 pt-2">
-      <button class="btn btn-primary" type="submit" [disabled]="saving()">
-        {{ saving() ? 'Saving...' : 'Save profile' }}
-      </button>
-    </div>
-  </form>
+      <div class="col-md-6">
+        <label class="form-label">Profile picture URL</label>
+        <input class="form-control" formControlName="profilePicture" />
+      </div>
+
+      <div class="col-12" *ngIf="errorMessage()">
+        <div class="alert alert-danger mb-0">{{ errorMessage() }}</div>
+      </div>
+
+      <div class="col-12" *ngIf="successMessage()">
+        <div class="alert alert-success mb-0">{{ successMessage() }}</div>
+      </div>
+
+      <div class="col-12 pt-2">
+        <button class="btn btn-primary" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Saving...' : 'Save profile' }}
+        </button>
+      </div>
+    </form>
+
+    <h3 class="h5 mb-3">Change password</h3>
+    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Current password</label>
+        <input class="form-control" type="password" formControlName="currentPassword" autocomplete="current-password" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">New password</label>
+        <input class="form-control" type="password" formControlName="newPassword" autocomplete="new-password" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Confirm password</label>
+        <input class="form-control" type="password" formControlName="confirmPassword" autocomplete="new-password" />
+      </div>
+
+      <div class="col-12" *ngIf="passwordError()">
+        <div class="alert alert-danger mb-0">{{ passwordError() }}</div>
+      </div>
+
+      <div class="col-12" *ngIf="passwordSuccess()">
+        <div class="alert alert-success mb-0">{{ passwordSuccess() }}</div>
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit" [disabled]="changingPassword()">
+          {{ changingPassword() ? 'Updating...' : 'Change password' }}
+        </button>
+      </div>
+    </form>
+  </ng-container>
 </section>

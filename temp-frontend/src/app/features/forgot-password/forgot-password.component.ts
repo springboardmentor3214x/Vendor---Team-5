@@ -2,18 +2,19 @@ import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { switchMap } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-forgot-password',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+  templateUrl: './forgot-password.component.html',
+  styleUrls: ['../register/register.component.css']
 })
-export class LoginComponent {
+export class ForgotPasswordComponent {
   readonly errorMessage = signal('');
+  readonly successMessage = signal('');
+  readonly resetToken = signal('');
   readonly isSubmitting = signal(false);
   readonly form: FormGroup;
 
@@ -23,39 +24,43 @@ export class LoginComponent {
     private readonly router: Router
   ) {
     this.form = this.fb.nonNullable.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required]]
+      email: ['', [Validators.required, Validators.email]]
     });
   }
 
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Enter a valid email and password.');
+      this.errorMessage.set('Enter a valid email address.');
       return;
     }
 
-    this.isSubmitting.set(true);
     this.errorMessage.set('');
+    this.successMessage.set('');
+    this.resetToken.set('');
+    this.isSubmitting.set(true);
 
-    const payload = {
-      email: this.form.getRawValue().email.trim().toLowerCase(),
-      password: this.form.getRawValue().password
-    };
-
-    this.authService
-      .login(payload)
-      .pipe(switchMap(() => this.authService.getProfile()))
-      .subscribe({
-        next: () => {
-          this.isSubmitting.set(false);
-          this.router.navigateByUrl('/dashboard');
-        },
-        error: (err) => {
-          this.isSubmitting.set(false);
-          this.errorMessage.set(this.readError(err, 'Login failed. Please check email and password.'));
+    this.authService.forgotPassword(this.form.getRawValue().email).subscribe({
+      next: (res) => {
+        this.isSubmitting.set(false);
+        this.successMessage.set(res.message || 'Password reset request processed.');
+        const token = res.reset_token ?? res.resetToken ?? '';
+        if (token) {
+          this.resetToken.set(token);
         }
-      });
+      },
+      error: (err) => {
+        this.isSubmitting.set(false);
+        this.errorMessage.set(this.readError(err, 'Unable to process forgot password request.'));
+      }
+    });
+  }
+
+  goToReset(): void {
+    const token = this.resetToken();
+    this.router.navigate(['/reset-password'], {
+      queryParams: token ? { token } : undefined
+    });
   }
 
   control(name: string) {

@@ -1,31 +1,109 @@
 <section class="page-card">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
       <h2 class="mb-1">Vendors</h2>
-      <p class="mb-0 text-muted">Read-only listing aligned to the FastAPI vendors route.</p>
+      <p class="mb-0 text-muted">Search, filter, and manage registered vendors.</p>
     </div>
+    <a class="btn btn-primary" routerLink="/vendors/new">Register vendor</a>
   </div>
 
-  <div class="table-responsive">
-    <table class="table table-striped align-middle" *ngIf="!loading()">
+  <form class="filter-grid mb-4" [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+    <div>
+      <label class="form-label">Search</label>
+      <input class="form-control" formControlName="search" placeholder="Company, contact, or email" />
+    </div>
+    <div>
+      <label class="form-label">Category</label>
+      <select class="form-select" formControlName="category">
+        <option value="">All categories</option>
+        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Vendor status</label>
+      <select class="form-select" formControlName="status">
+        <option value="">All statuses</option>
+        <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Approval status</label>
+      <select class="form-select" formControlName="approval_status">
+        <option value="">All approvals</option>
+        <option *ngFor="let status of approvalStatuses" [value]="status">{{ status }}</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" type="submit">Apply</button>
+      <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">Clear</button>
+    </div>
+  </form>
+
+  <div class="alert alert-danger" *ngIf="errorMessage()">{{ errorMessage() }}</div>
+  <div class="text-muted" *ngIf="loading()">Loading vendors...</div>
+
+  <div class="table-responsive" *ngIf="!loading()">
+    <table class="table align-middle">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Vendor</th>
-          <th>Status</th>
-          <th>Rating</th>
+          <th role="button" (click)="setSort('id')">ID</th>
+          <th role="button" (click)="setSort('company_name')">Company</th>
+          <th>Category</th>
+          <th>Contact</th>
+          <th role="button" (click)="setSort('vendor_status')">Status</th>
+          <th role="button" (click)="setSort('approval_status')">Approval</th>
+          <th role="button" (click)="setSort('reliability_score')">Score</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let vendor of vendors()">
+        <tr *ngFor="let vendor of pagedVendors()">
           <td>{{ vendor.id }}</td>
-          <td>{{ vendor.vendor_name }}</td>
-          <td><span class="badge text-bg-primary">{{ vendor.status }}</span></td>
-          <td>{{ vendor.rating ?? '—' }}</td>
+          <td>{{ vendor.company_name }}</td>
+          <td>{{ vendor.vendor_category || '—' }}</td>
+          <td>
+            <div>{{ vendor.contact_person_name }}</div>
+            <small class="text-muted">{{ vendor.email }}</small>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="statusClass(vendor.vendor_status)">
+              {{ vendor.vendor_status }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="statusClass(vendor.approval_status)">
+              {{ vendor.approval_status }}
+            </span>
+          </td>
+          <td>{{ vendor.reliability_score ?? 0 }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary me-2" [routerLink]="['/vendors', vendor.id]">View</a>
+            <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/vendors', vendor.id, 'edit']">Edit</a>
+          </td>
+        </tr>
+        <tr *ngIf="pagedVendors().length === 0">
+          <td colspan="8" class="text-muted text-center py-4">No vendors found.</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <div *ngIf="loading()" class="text-muted">Loading vendors...</div>
+  <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="!loading() && vendors().length > 0">
+    <small class="text-muted">
+      Page {{ page() }} of {{ totalPages() }} · {{ vendors().length }} vendors
+    </small>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="prevPage()" [disabled]="page() === 1">
+        Previous
+      </button>
+      <button
+        class="btn btn-outline-secondary btn-sm"
+        type="button"
+        (click)="nextPage()"
+        [disabled]="page() === totalPages()"
+      >
+        Next
+      </button>
+    </div>
+  </div>
 </section>

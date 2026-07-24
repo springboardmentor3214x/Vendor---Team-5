@@ -10,25 +10,31 @@
 
     <nav class="nav-list">
       <a
-        *ngFor="let item of navItems"
+        *ngFor="let item of visibleNavItems"
         [routerLink]="item.path"
         routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: false }"
+        [routerLinkActiveOptions]="{ exact: item.exact }"
       >
         {{ item.label }}
       </a>
     </nav>
 
-    <button class="btn btn-outline-light w-100 mt-auto" type="button" (click)="logout()">
-      Logout
-    </button>
+    <div class="mt-auto">
+      <div class="text-white-50 small mb-2" *ngIf="currentUser as user">
+        <div>{{ user.fullName }}</div>
+        <div>{{ user.role }}</div>
+      </div>
+      <button class="btn btn-outline-light w-100" type="button" (click)="logout()">
+        Logout
+      </button>
+    </div>
   </aside>
 
   <section class="content-pane">
     <header class="topbar">
       <div>
         <h1>Vendor Reliability System</h1>
-        <p>Operational visibility across vendors, contracts, procurement, and performance.</p>
+        <p>Authentication, roles, and vendor operations.</p>
       </div>
     </header>
 

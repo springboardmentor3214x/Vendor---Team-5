@@ -1,7 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, of, tap } from 'rxjs';
+import { Observable, map, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+
+export const ALLOWED_ROLES = [
+  'Administrator',
+  'Procurement Manager',
+  'Supply Chain Manager',
+  'Vendor',
+  'Finance Officer',
+  'Auditor'
+] as const;
+
+export type AppRole = (typeof ALLOWED_ROLES)[number];
 
 export interface LoginRequest {
   email: string;
@@ -10,10 +21,10 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   fullName: string;
-  employeeId: string;
-  companyName: string;
+  employeeId?: string | null;
+  companyName?: string | null;
   email: string;
-  mobileNumber: string;
+  mobileNumber?: string | null;
   password: string;
   confirmPassword: string;
   role: string;
@@ -22,17 +33,52 @@ export interface RegisterRequest {
 export interface AuthResponse {
   access_token: string;
   token_type: string;
+  role?: string;
   redirect_to?: string;
+  redirectTo?: string;
+}
+
+export interface MessageResponse {
+  message: string;
+  reset_token?: string;
+  resetToken?: string;
+}
+
+export interface UpdateProfileRequest {
+  fullName?: string;
+  companyName?: string | null;
+  mobileNumber?: string | null;
+  profilePicture?: string | null;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 interface CurrentUserResponse {
   id?: number;
   email: string;
-  full_name: string;
+  full_name?: string;
+  fullName?: string;
   role: string;
   company_name?: string | null;
+  companyName?: string | null;
   employee_id?: string | null;
+  employeeId?: string | null;
   mobile_number?: string | null;
+  mobileNumber?: string | null;
+  profile_picture?: string | null;
+  profilePicture?: string | null;
+  is_active?: boolean;
+  isActive?: boolean;
 }
 
 export interface UserProfile {
@@ -44,6 +90,7 @@ export interface UserProfile {
   employeeId?: string | null;
   mobileNumber?: string | null;
   profilePicture?: string | null;
+  isActive?: boolean;
 }
 
 @Injectable({
@@ -51,52 +98,64 @@ export interface UserProfile {
 })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = environment.apiUrl;
+  private readonly apiUrl = `${environment.apiUrl}/auth`;
 
-  register(payload: RegisterRequest): Observable<unknown> {
-    return this.http.post(`${this.apiUrl}/auth/register`, payload);
+  register(payload: RegisterRequest): Observable<UserProfile> {
+    return this.http
+      .post<CurrentUserResponse>(`${this.apiUrl}/register`, payload)
+      .pipe(map((user) => this.mapUser(user)));
   }
 
-  login(payload: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, {
-      email: payload.email.trim().toLowerCase(),
-      password: payload.password
-    }).pipe(
-      tap((response) => {
-        this.persistToken(response.access_token);
+  login(payload: LoginRequest): Observable<UserProfile> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/login`, {
+        email: payload.email.trim().toLowerCase(),
+        password: payload.password
+      })
+      .pipe(
+        tap((response) => {
+          this.persistToken(response.access_token);
+        }),
+        switchMap(() => this.getProfile())
+      );
+  }
+
+  me(): Observable<CurrentUserResponse> {
+    return this.http.get<CurrentUserResponse>(`${this.apiUrl}/me`);
+  }
+
+  getProfile(): Observable<UserProfile> {
+    return this.me().pipe(
+      map((user) => {
+        const profile = this.mapUser(user);
+        this.saveSession(this.getToken() ?? '', profile);
+        return profile;
       })
     );
   }
 
-  me(): Observable<CurrentUserResponse> {
-    return this.http.get<CurrentUserResponse>(`${this.apiUrl}/auth/me`);
+  updateProfile(payload: UpdateProfileRequest): Observable<UserProfile> {
+    return this.http.put<CurrentUserResponse>(`${this.apiUrl}/profile`, payload).pipe(
+      map((user) => {
+        const profile = this.mapUser(user);
+        this.saveSession(this.getToken() ?? '', profile);
+        return profile;
+      })
+    );
   }
 
-  getProfile(): Observable<UserProfile> {
-    return this.me().pipe(map((user) => this.mapUser(user)));
+  forgotPassword(email: string): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.apiUrl}/forgot-password`, {
+      email: email.trim().toLowerCase()
+    });
   }
 
-  updateProfile(payload: {
-    fullName: string;
-    companyName?: string;
-    mobileNumber?: string;
-    profilePicture?: string;
-  }): Observable<UserProfile> {
-    const current = this.getStoredUser();
+  resetPassword(payload: ResetPasswordRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.apiUrl}/reset-password`, payload);
+  }
 
-    const updated: UserProfile = {
-      id: current?.id,
-      email: current?.email ?? '',
-      role: current?.role ?? 'Vendor',
-      fullName: payload.fullName,
-      companyName: payload.companyName ?? '',
-      mobileNumber: payload.mobileNumber ?? '',
-      employeeId: current?.employeeId ?? '',
-      profilePicture: payload.profilePicture ?? ''
-    };
-
-    this.saveSession(this.getToken() ?? '', updated);
-    return of(updated);
+  changePassword(payload: ChangePasswordRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.apiUrl}/change-password`, payload);
   }
 
   persistToken(token: string): void {
@@ -104,13 +163,17 @@ export class AuthService {
   }
 
   saveSession(token: string, user: UserProfile): void {
-    if (token) localStorage.setItem('access_token', token);
+    if (token) {
+      localStorage.setItem('access_token', token);
+    }
     localStorage.setItem('user_profile', JSON.stringify(user));
   }
 
   getStoredUser(): UserProfile | null {
     const raw = localStorage.getItem('user_profile');
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
 
     try {
       return JSON.parse(raw) as UserProfile;
@@ -119,8 +182,25 @@ export class AuthService {
     }
   }
 
+  getUserRole(): string | null {
+    return this.getStoredUser()?.role ?? null;
+  }
+
+  hasRole(...roles: string[]): boolean {
+    const role = this.getUserRole();
+    return !!role && roles.includes(role);
+  }
+
   isAuthenticated(): boolean {
     return !!this.getToken();
+  }
+
+  isLoggedIn(): boolean {
+    return this.isAuthenticated();
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem('access_token');
   }
 
   logout(): void {
@@ -128,24 +208,17 @@ export class AuthService {
     localStorage.removeItem('user_profile');
   }
 
-  getToken(): string | null {
-    return localStorage.getItem('access_token');
-  }
-
-  isLoggedIn(): boolean {
-    return this.isAuthenticated();
-  }
-
   private mapUser(user: CurrentUserResponse): UserProfile {
     return {
       id: user.id,
       email: user.email,
-      fullName: user.full_name,
+      fullName: user.full_name ?? user.fullName ?? '',
       role: user.role,
-      companyName: user.company_name ?? '',
-      employeeId: user.employee_id ?? '',
-      mobileNumber: user.mobile_number ?? '',
-      profilePicture: ''
+      companyName: user.company_name ?? user.companyName ?? '',
+      employeeId: user.employee_id ?? user.employeeId ?? '',
+      mobileNumber: user.mobile_number ?? user.mobileNumber ?? '',
+      profilePicture: user.profile_picture ?? user.profilePicture ?? '',
+      isActive: user.is_active ?? user.isActive ?? true
     };
   }
 }

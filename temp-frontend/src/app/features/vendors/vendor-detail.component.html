@@ -1,0 +1,121 @@
+<section class="page-card">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h2 class="mb-1">Vendor details</h2>
+      <p class="mb-0 text-muted">Read-only vendor profile and approval status.</p>
+    </div>
+    <div class="action-row">
+      <a class="btn btn-outline-secondary" routerLink="/vendors">Back to list</a>
+      <a class="btn btn-outline-primary" *ngIf="vendor() as current" [routerLink]="['/vendors', current.id, 'edit']">
+        Edit
+      </a>
+    </div>
+  </div>
+
+  <div class="text-muted" *ngIf="loading()">Loading vendor details...</div>
+  <div class="alert alert-danger" *ngIf="errorMessage()">{{ errorMessage() }}</div>
+  <div class="alert alert-success" *ngIf="successMessage()">{{ successMessage() }}</div>
+
+  <ng-container *ngIf="!loading() && vendor() as vendor">
+    <div class="action-row mb-4">
+      <span class="status-badge" [ngClass]="statusClass(vendor.vendor_status)">
+        {{ vendor.vendor_status }}
+      </span>
+      <span class="status-badge" [ngClass]="statusClass(vendor.approval_status)">
+        {{ vendor.approval_status }}
+      </span>
+      <span class="status-badge badge-muted">Score: {{ vendor.reliability_score ?? 0 }}</span>
+    </div>
+
+    <div class="detail-grid mb-4">
+      <div class="detail-item">
+        <label>Company name</label>
+        <div>{{ vendor.company_name }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Category</label>
+        <div>{{ vendor.vendor_category || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Contact person</label>
+        <div>{{ vendor.contact_person_name }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Designation</label>
+        <div>{{ vendor.designation || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Email</label>
+        <div>{{ vendor.email }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Phone</label>
+        <div>{{ vendor.phone_number }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Alternate phone</label>
+        <div>{{ vendor.alternate_phone || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Website</label>
+        <div>{{ vendor.website || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>GST number</label>
+        <div>{{ vendor.gst_number || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>PAN number</label>
+        <div>{{ vendor.pan_number || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Registration number</label>
+        <div>{{ vendor.company_registration_number || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Payment terms</label>
+        <div>{{ vendor.payment_terms || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Address</label>
+        <div>
+          {{ vendor.address_line1 || '—' }}
+          <span *ngIf="vendor.address_line2"><br />{{ vendor.address_line2 }}</span>
+          <br />
+          {{ vendor.city || '' }}{{ vendor.city && vendor.state ? ', ' : '' }}{{ vendor.state || '' }}
+          {{ vendor.pincode || '' }}
+          <br />
+          {{ vendor.country || '' }}
+        </div>
+      </div>
+      <div class="detail-item">
+        <label>Bank account</label>
+        <div>{{ vendor.bank_account_number || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>IFSC code</label>
+        <div>{{ vendor.ifsc_code || '—' }}</div>
+      </div>
+      <div class="detail-item">
+        <label>Description</label>
+        <div>{{ vendor.description || '—' }}</div>
+      </div>
+    </div>
+
+    <div *ngIf="canApprove && vendor.approval_status === 'Pending'" [formGroup]="remarksForm">
+      <h3 class="h5 mb-3">Approval actions</h3>
+      <div class="mb-3">
+        <label class="form-label">Remarks (optional)</label>
+        <textarea class="form-control" rows="3" formControlName="remarks"></textarea>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-primary" type="button" (click)="approve()" [disabled]="acting()">
+          {{ acting() ? 'Processing...' : 'Approve vendor' }}
+        </button>
+        <button class="btn btn-outline-danger" type="button" (click)="reject()" [disabled]="acting()">
+          Reject vendor
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</section>

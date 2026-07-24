@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { VendorService } from '../../services/vendor.service';
 
 @Component({
@@ -17,7 +17,7 @@ export class VendorListComponent {
 
   vendors: any[] = [];
 
-  constructor(private vendorService: VendorService) {
+  constructor(private vendorService: VendorService, private router: Router) {
     this.loadVendors();
   }
 
@@ -37,12 +37,12 @@ export class VendorListComponent {
   }
 
   viewVendor(vendor: any) {
-    console.log('View Vendor', vendor);
-  }
+  this.router.navigate(['/vendor-details', vendor.id]);
+}
 
-  editVendor(vendor: any) {
-    console.log('Edit Vendor', vendor);
-  }
+editVendor(vendor: any) {
+  this.router.navigate(['/edit-vendor', vendor.id]);
+}
 
   deleteVendor(vendor: any) {
     const confirmDelete = confirm(

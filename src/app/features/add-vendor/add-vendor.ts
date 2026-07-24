@@ -40,7 +40,7 @@ export class AddVendorComponent {
     bankAccountNumber: '',
     ifscCode: '',
     paymentTerms: '',
-    status: 'pending'
+    vendorStatus: 'pending'
   };
 
   saveVendor() {
@@ -95,7 +95,7 @@ export class AddVendorComponent {
       bankAccountNumber: '',
       ifscCode: '',
       paymentTerms: '',
-      status: 'pending'
+      vendorStatus: 'pending'
     };
 
   }

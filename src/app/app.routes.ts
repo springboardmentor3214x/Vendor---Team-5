@@ -265,12 +265,12 @@ export const routes: Routes = [
      canActivate: [authGuard]
   },
   {
-    path: 'vendor-details',
+    path: 'vendor-details/:id',
     component: VendorDetailsComponent,
      canActivate: [authGuard]
   },
    {
-    path: 'edit-vendor',
+    path: 'edit-vendor/"id',
     component: EditVendorComponent,
      canActivate: [authGuard]
   },

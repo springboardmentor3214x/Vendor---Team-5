@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { VendorService } from '../../services/vendor.service';
 
 @Component({
@@ -17,16 +17,20 @@ import { VendorService } from '../../services/vendor.service';
 })
 export class VendorDetailsComponent implements OnInit {
 
-  vendorId = 1; // Replace with route parameter during integration
+  vendorId!: number;
 
   vendor: any = {};
 
   description = '';
   remarks = '';
 
-  constructor(private vendorService: VendorService) {}
+  constructor(
+    private vendorService: VendorService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
+    this.vendorId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadVendor();
   }
 

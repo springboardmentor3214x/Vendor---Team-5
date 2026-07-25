@@ -1,5 +1,9 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../services/auth.service';
 
 const PUBLIC_AUTH_PATHS = [
   '/auth/register',
@@ -9,10 +13,8 @@ const PUBLIC_AUTH_PATHS = [
 ];
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = localStorage.getItem('access_token');
-  if (!token) {
-    return next(req);
-  }
+  const authService = inject(AuthService);
+  const router = inject(Router);
 
   const isApiRequest = req.url.startsWith(environment.apiUrl);
   if (!isApiRequest) {
@@ -24,11 +26,24 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  const token = authService.getToken();
+  if (!token) {
+    return next(req);
+  }
+
   return next(
     req.clone({
       setHeaders: {
         Authorization: `Bearer ${token}`
       }
+    })
+  ).pipe(
+    catchError((error: { status?: number }) => {
+      if (error.status === 401) {
+        authService.logout();
+        router.navigateByUrl('/login');
+      }
+      return throwError(() => error);
     })
   );
 };

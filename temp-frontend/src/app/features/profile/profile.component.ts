@@ -68,6 +68,7 @@ export class ProfileComponent {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.errorMessage.set('Please fill all required profile fields.');
+      this.successMessage.set('');
       return;
     }
 
@@ -100,12 +101,14 @@ export class ProfileComponent {
     if (this.passwordForm.invalid) {
       this.passwordForm.markAllAsTouched();
       this.passwordError.set('Please fill all password fields correctly.');
+      this.passwordSuccess.set('');
       return;
     }
 
     const { currentPassword, newPassword, confirmPassword } = this.passwordForm.getRawValue();
     if (newPassword !== confirmPassword) {
       this.passwordError.set('Password and confirm password must match.');
+      this.passwordSuccess.set('');
       return;
     }
 

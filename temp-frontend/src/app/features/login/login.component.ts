@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { switchMap } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -43,10 +42,7 @@ export class LoginComponent {
       password: this.form.getRawValue().password
     };
 
-    this.authService
-      .login(payload)
-      .pipe(switchMap(() => this.authService.getProfile()))
-      .subscribe({
+    this.authService.login(payload).subscribe({
         next: () => {
           this.isSubmitting.set(false);
           this.router.navigateByUrl('/dashboard');

@@ -1,0 +1,19 @@
+<section class="detail-page">
+  <div *ngIf="successMessage()" class="message success-message" role="status">{{ successMessage() }}</div>
+  <a routerLink="/procurement/requests" class="back-link">← Back to procurement requests</a>
+  <div *ngIf="loading()" class="message loading-message">Loading procurement request…</div>
+  <div *ngIf="errorMessage()" class="message error-message" role="alert"><span>{{ errorMessage() }}</span><button type="button" class="btn btn-sm btn-outline-danger" (click)="retry()">Try again</button></div>
+  <ng-container *ngIf="request() as item">
+    <header class="detail-header"><div><p class="eyebrow">Procurement request</p><h2>{{ item.request_number }}</h2><p>{{ item.request_title }}</p></div><span class="status-badge" [class]="'status-badge ' + statusClass(item.approval_status)">{{ item.approval_status || 'Not set' }}</span></header>
+    <section *ngIf="canManageWorkflow" class="workflow-actions">
+      <div><strong>Workflow actions</strong><span *ngIf="item.approval_status === 'Pending'">Review this pending request.</span><span *ngIf="item.approval_status === 'Approved' && !item.vendor_id">Assign an approved vendor.</span><span *ngIf="item.vendor_id">A vendor is already assigned.</span><p *ngIf="item.approval_status === 'Sent Back'" class="workflow-note">This request was sent back for modification. Edit and resubmit are not available in the current supported workflow.</p></div>
+      <div><a *ngIf="item.approval_status === 'Pending'" [routerLink]="['/procurement/requests', item.id, 'approval']" class="btn btn-primary">Review approval</a><a *ngIf="item.approval_status === 'Approved' && !item.vendor_id" [routerLink]="['/procurement/requests', item.id, 'vendor-assignment']" class="btn btn-primary">Assign vendor</a><a *ngIf="item.approval_status === 'Approved' && item.vendor_id" [routerLink]="['/procurement/purchase-orders/new']" [queryParams]="{ requestId: item.id }" class="btn btn-primary">Generate PO</a></div>
+    </section>
+    <div class="detail-grid">
+      <article class="detail-card"><h3>Request details</h3><dl><div><dt>Department</dt><dd>{{ item.department_name }}</dd></div><div><dt>Priority</dt><dd>{{ item.priority || 'Not set' }}</dd></div><div><dt>Requested by</dt><dd>{{ item.requested_by ?? 'Not specified' }}</dd></div><div><dt>Assigned vendor</dt><dd>{{ item.vendor_id ?? 'Not assigned' }}</dd></div><div><dt>Request date</dt><dd>{{ item.request_date | date:'medium' }}</dd></div><div><dt>Required delivery</dt><dd>{{ item.required_delivery_date | date:'mediumDate' }}</dd></div></dl></article>
+      <article class="detail-card"><h3>Item and budget</h3><dl><div><dt>Product</dt><dd>{{ item.item_product_name || '—' }}</dd></div><div><dt>Category</dt><dd>{{ item.product_category || '—' }}</dd></div><div><dt>Quantity</dt><dd>{{ item.quantity_required ?? '—' }} {{ item.unit_of_measurement || '' }}</dd></div><div><dt>Estimated budget</dt><dd>{{ item.estimated_budget === null ? '—' : (item.estimated_budget | currency:'INR':'symbol':'1.0-0') }}</dd></div></dl></article>
+      <article class="detail-card full-width"><h3>Request description</h3><p>{{ item.item_description || 'No description provided.' }}</p><h4>Business justification</h4><p>{{ item.business_justification || 'No justification provided.' }}</p><div *ngIf="item.additional_remarks"><h4>Additional remarks</h4><p>{{ item.additional_remarks }}</p></div></article>
+      <article class="detail-card full-width"><h3>Approval metadata</h3><dl class="meta-grid"><div><dt>Approval remarks</dt><dd>{{ item.approval_remarks || 'No remarks recorded.' }}</dd></div><div><dt>Approved by</dt><dd>{{ item.approved_by ?? 'Not yet approved' }}</dd></div><div><dt>Approval date</dt><dd>{{ item.approved_date ? (item.approved_date | date:'medium') : 'Not yet approved' }}</dd></div><div><dt>Last updated</dt><dd>{{ item.updated_at | date:'medium' }}</dd></div></dl></article>
+    </div>
+  </ng-container>
+</section>

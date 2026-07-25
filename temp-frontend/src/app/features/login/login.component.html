@@ -1,23 +1,22 @@
 <section class="auth-shell">
   <div class="auth-card">
     <div class="text-center mb-4">
-      <span class="auth-logo">VR</span>
       <h2>Vendor Reliability</h2>
       <p>Sign in to the operations portal.</p>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate [attr.aria-busy]="isSubmitting()">
       <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <input id="email" type="email" class="form-control" formControlName="email" autocomplete="email" />
+        <label for="email" class="form-label">Email<span class="required-mark" aria-hidden="true">*</span></label>
+        <input id="email" type="email" class="form-control" formControlName="email" autocomplete="email" [disabled]="isSubmitting()" />
         <div class="field-error" *ngIf="control('email')?.touched && control('email')?.invalid">
           Enter a valid email address.
         </div>
       </div>
 
       <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input id="password" type="password" class="form-control" formControlName="password" autocomplete="current-password" />
+        <label for="password" class="form-label">Password<span class="required-mark" aria-hidden="true">*</span></label>
+        <input id="password" type="password" class="form-control" formControlName="password" autocomplete="current-password" [disabled]="isSubmitting()" />
         <div class="field-error" *ngIf="control('password')?.touched && control('password')?.invalid">
           Password is required.
         </div>
@@ -32,7 +31,7 @@
       </button>
     </form>
 
-    <div class="mt-3 text-center d-flex flex-column gap-2">
+    <div class="auth-footer">
       <a routerLink="/forgot-password">Forgot password?</a>
       <div>
         <span>New here? </span>

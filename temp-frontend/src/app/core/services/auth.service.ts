@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, switchMap, tap } from 'rxjs';
+import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export const ALLOWED_ROLES = [
@@ -134,6 +134,20 @@ export class AuthService {
     );
   }
 
+  ensureProfile(): Observable<UserProfile | null> {
+    const storedUser = this.getStoredUser();
+    if (storedUser) {
+      return of(storedUser);
+    }
+
+    return this.getProfile().pipe(
+      catchError(() => {
+        this.logout();
+        return of(null);
+      })
+    );
+  }
+
   updateProfile(payload: UpdateProfileRequest): Observable<UserProfile> {
     return this.http.put<CurrentUserResponse>(`${this.apiUrl}/profile`, payload).pipe(
       map((user) => {
@@ -178,6 +192,7 @@ export class AuthService {
     try {
       return JSON.parse(raw) as UserProfile;
     } catch {
+      localStorage.removeItem('user_profile');
       return null;
     }
   }
@@ -200,7 +215,14 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    if (!token || this.isTokenExpired(token)) {
+      if (token) {
+        this.logout();
+      }
+      return null;
+    }
+    return token;
   }
 
   logout(): void {
@@ -220,5 +242,22 @@ export class AuthService {
       profilePicture: user.profile_picture ?? user.profilePicture ?? '',
       isActive: user.is_active ?? user.isActive ?? true
     };
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) {
+        return true;
+      }
+
+      const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=');
+      const claims = JSON.parse(atob(paddedPayload)) as { exp?: unknown };
+
+      return typeof claims.exp !== 'number' || claims.exp * 1000 <= Date.now();
+    } catch {
+      return true;
+    }
   }
 }

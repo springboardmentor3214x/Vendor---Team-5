@@ -21,7 +21,9 @@ export class AppShellComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
-  readonly currentUser: UserProfile | null = this.authService.getStoredUser();
+  get currentUser(): UserProfile | null {
+    return this.authService.getStoredUser();
+  }
 
   private readonly navItems: NavItem[] = [
     {
@@ -42,6 +44,24 @@ export class AppShellComponent {
       path: '/vendors',
       exact: false,
       roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager']
+    },
+    {
+      label: 'Procurement',
+      path: '/procurement',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager']
+    },
+    {
+      label: 'Invoices',
+      path: '/procurement/invoices',
+      exact: false,
+      roles: ['Administrator', 'Procurement Manager', 'Finance Officer']
+    },
+    {
+      label: 'Performance',
+      path: '/performance',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Auditor']
     },
     {
       label: 'Profile',

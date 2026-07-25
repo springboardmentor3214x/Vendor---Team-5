@@ -6,8 +6,11 @@
     </div>
     <div class="action-row">
       <a class="btn btn-outline-secondary" routerLink="/vendors">Back to list</a>
-      <a class="btn btn-outline-primary" *ngIf="vendor() as current" [routerLink]="['/vendors', current.id, 'edit']">
+      <a class="btn btn-outline-primary" *ngIf="canEdit && vendor() as current" [routerLink]="['/vendors', current.id, 'edit']">
         Edit
+      </a>
+      <a class="btn btn-outline-primary" *ngIf="canViewPerformance && vendor() as current" [routerLink]="['/performance/vendors', current.id]">
+        View performance
       </a>
     </div>
   </div>
@@ -104,17 +107,55 @@
 
     <div *ngIf="canApprove && vendor.approval_status === 'Pending'" [formGroup]="remarksForm">
       <h3 class="h5 mb-3">Approval actions</h3>
+      <p class="text-muted">This vendor is pending review. Add an optional remark, then approve or reject the record.</p>
       <div class="mb-3">
         <label class="form-label">Remarks (optional)</label>
-        <textarea class="form-control" rows="3" formControlName="remarks"></textarea>
+        <textarea class="form-control" rows="3" formControlName="remarks" [disabled]="acting()"></textarea>
       </div>
       <div class="action-row">
         <button class="btn btn-primary" type="button" (click)="approve()" [disabled]="acting()">
-          {{ acting() ? 'Processing...' : 'Approve vendor' }}
+          {{ approvalAction() === 'approve' ? 'Approving...' : 'Approve vendor' }}
         </button>
         <button class="btn btn-outline-danger" type="button" (click)="reject()" [disabled]="acting()">
-          Reject vendor
+          {{ approvalAction() === 'reject' ? 'Rejecting...' : 'Reject vendor' }}
         </button>
+      </div>
+    </div>
+
+    <p class="text-muted mt-4" *ngIf="canApprove && vendor.approval_status !== 'Pending'">
+      This vendor has already been {{ vendor.approval_status.toLowerCase() }}. No further approval action is available.
+    </p>
+
+    <div class="detail-item mt-4" [formGroup]="documentForm">
+      <h3 class="h5 mb-2">Vendor documents</h3>
+      <p class="text-muted mb-3">
+        Upload a supporting document for this vendor. Uploaded documents cannot yet be listed or viewed here.
+      </p>
+      <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label" for="document-type">Document type<span class="required-mark" aria-hidden="true">*</span></label>
+          <select id="document-type" class="form-select" formControlName="document_type" [disabled]="uploading()">
+            <option value="">Select document type</option>
+            <option *ngFor="let type of documentTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label" for="document-file">File<span class="required-mark" aria-hidden="true">*</span></label>
+          <input
+            #documentFile
+            id="document-file"
+            class="form-control"
+            type="file"
+            (change)="onFileSelected($event)"
+            [disabled]="uploading()"
+          />
+          <small class="text-muted" *ngIf="selectedFileName()">Selected: {{ selectedFileName() }}</small>
+        </div>
+        <div class="col-md-2 d-grid">
+          <button class="btn btn-primary" type="button" (click)="uploadDocument()" [disabled]="uploading()">
+            {{ uploading() ? 'Uploading...' : 'Upload' }}
+          </button>
+        </div>
       </div>
     </div>
   </ng-container>

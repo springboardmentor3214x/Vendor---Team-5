@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Component, ElementRef, OnInit, ViewChild, signal } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import {
   VENDOR_APPROVER_ROLES,
+  VENDOR_DOCUMENT_TYPES,
   Vendor,
   VendorService
 } from '../../core/services/vendor.service';
@@ -20,9 +21,16 @@ export class VendorDetailComponent implements OnInit {
   readonly vendor = signal<Vendor | null>(null);
   readonly loading = signal(true);
   readonly acting = signal(false);
+  readonly approvalAction = signal<'approve' | 'reject' | null>(null);
+  readonly uploading = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
   readonly remarksForm: FormGroup;
+  readonly documentForm: FormGroup;
+  readonly selectedFileName = signal('');
+  readonly documentTypes = VENDOR_DOCUMENT_TYPES;
+
+  @ViewChild('documentFile') private documentFileInput?: ElementRef<HTMLInputElement>;
 
   private vendorId = 0;
 
@@ -35,10 +43,21 @@ export class VendorDetailComponent implements OnInit {
     this.remarksForm = this.fb.nonNullable.group({
       remarks: ['']
     });
+    this.documentForm = this.fb.nonNullable.group({
+      document_type: ['', Validators.required]
+    });
   }
 
   get canApprove(): boolean {
     return this.authService.hasRole(...VENDOR_APPROVER_ROLES);
+  }
+
+  get canEdit(): boolean {
+    return this.authService.hasRole('Administrator', 'Procurement Manager');
+  }
+
+  get canViewPerformance(): boolean {
+    return this.authService.hasRole('Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Auditor');
   }
 
   ngOnInit(): void {
@@ -75,6 +94,7 @@ export class VendorDetailComponent implements OnInit {
     }
 
     this.acting.set(true);
+    this.approvalAction.set('approve');
     this.errorMessage.set('');
     this.successMessage.set('');
 
@@ -84,10 +104,13 @@ export class VendorDetailComponent implements OnInit {
         next: (vendor) => {
           this.vendor.set(vendor);
           this.acting.set(false);
+          this.approvalAction.set(null);
+          this.remarksForm.reset();
           this.successMessage.set('Vendor approved successfully.');
         },
         error: (err) => {
           this.acting.set(false);
+          this.approvalAction.set(null);
           this.errorMessage.set(this.readError(err, 'Unable to approve vendor.'));
         }
       });
@@ -98,7 +121,12 @@ export class VendorDetailComponent implements OnInit {
       return;
     }
 
+    if (!window.confirm('Reject this vendor? This updates the vendor status to Rejected.')) {
+      return;
+    }
+
     this.acting.set(true);
+    this.approvalAction.set('reject');
     this.errorMessage.set('');
     this.successMessage.set('');
 
@@ -108,11 +136,50 @@ export class VendorDetailComponent implements OnInit {
         next: (vendor) => {
           this.vendor.set(vendor);
           this.acting.set(false);
+          this.approvalAction.set(null);
+          this.remarksForm.reset();
           this.successMessage.set('Vendor rejected successfully.');
         },
         error: (err) => {
           this.acting.set(false);
+          this.approvalAction.set(null);
           this.errorMessage.set(this.readError(err, 'Unable to reject vendor.'));
+        }
+      });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedFileName.set(input.files?.[0]?.name ?? '');
+  }
+
+  uploadDocument(): void {
+    const file = this.documentFileInput?.nativeElement.files?.[0];
+    if (this.documentForm.invalid || !file) {
+      this.documentForm.markAllAsTouched();
+      this.errorMessage.set('Select a document type and file before uploading.');
+      return;
+    }
+
+    this.uploading.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    this.vendorService
+      .uploadDocument(this.vendorId, this.documentForm.getRawValue().document_type, file)
+      .subscribe({
+        next: (response) => {
+          this.uploading.set(false);
+          this.successMessage.set(response.message || 'Document uploaded successfully.');
+          this.documentForm.reset();
+          this.selectedFileName.set('');
+          if (this.documentFileInput) {
+            this.documentFileInput.nativeElement.value = '';
+          }
+        },
+        error: (err) => {
+          this.uploading.set(false);
+          this.errorMessage.set(this.readError(err, 'Unable to upload document.'));
         }
       });
   }

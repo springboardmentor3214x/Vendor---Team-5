@@ -1,13 +1,14 @@
 <section class="page-card">
-  <div class="page-header d-flex justify-content-between align-items-center mb-4">
+  <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
-      <h2 class="mb-1">Dashboard</h2>
-      <p class="mb-0 text-muted">An overview of the core vendor reliability controls.</p>
+      <h2 class="mb-1">{{ view.title }}</h2>
+      <p class="mb-0 text-muted">{{ view.description }}</p>
     </div>
+    <a class="btn btn-primary" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }}</a>
   </div>
 
   <div class="row g-3">
-    <div class="col-md-6 col-xl-3" *ngFor="let card of overviewCards">
+    <div class="col-md-6 col-xl-4" *ngFor="let card of view.cards">
       <div class="stat-card">
         <span class="stat-label">{{ card.title }}</span>
         <strong class="stat-value">{{ card.value }}</strong>
@@ -18,7 +19,7 @@
   <div class="panel mt-4">
     <h4 class="panel-title">Operational highlights</h4>
     <ul class="highlights-list mb-0">
-      <li *ngFor="let item of highlights">{{ item }}</li>
+      <li *ngFor="let item of view.highlights">{{ item }}</li>
     </ul>
   </div>
 </section>

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 import {
   APPROVAL_STATUSES,
   VENDOR_CATEGORIES,
@@ -60,7 +61,8 @@ export class VendorsComponent implements OnInit {
 
   constructor(
     private readonly fb: FormBuilder,
-    private readonly vendorService: VendorService
+    private readonly vendorService: VendorService,
+    private readonly authService: AuthService
   ) {
     this.filterForm = this.fb.nonNullable.group({
       search: [''],
@@ -129,6 +131,28 @@ export class VendorsComponent implements OnInit {
 
   nextPage(): void {
     this.page.update((value) => Math.min(this.totalPages(), value + 1));
+  }
+
+  get canEdit(): boolean {
+    return this.authService.hasRole('Administrator', 'Procurement Manager');
+  }
+
+  hasActiveFilters(): boolean {
+    const { search, category, status, approval_status } = this.filterForm.getRawValue();
+    return !!(search.trim() || category || status || approval_status);
+  }
+
+  emptyMessage(): string {
+    return this.hasActiveFilters()
+      ? 'No vendors match the current filters.'
+      : 'No vendor records are available yet.';
+  }
+
+  sortDirection(key: SortKey): string {
+    if (this.sortKey() !== key) {
+      return '';
+    }
+    return this.sortAsc() ? '↑' : '↓';
   }
 
   statusClass(status: string): string {

@@ -22,28 +22,28 @@
       </div>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="save()" class="row g-3 mb-5">
+    <form [formGroup]="form" (ngSubmit)="save()" class="row g-3 mb-5" [attr.aria-busy]="saving()">
       <div class="col-md-6">
-        <label class="form-label">Full name</label>
-        <input class="form-control" formControlName="fullName" />
+        <label class="form-label" for="profile-full-name">Full name<span class="required-mark" aria-hidden="true">*</span></label>
+        <input id="profile-full-name" class="form-control" formControlName="fullName" [disabled]="saving()" autocomplete="name" />
         <div class="text-danger small mt-1" *ngIf="control('fullName')?.touched && control('fullName')?.invalid">
-          Full name is required.
+          Enter a full name with at least 2 characters.
         </div>
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">Company</label>
-        <input class="form-control" formControlName="companyName" />
+        <label class="form-label" for="profile-company">Company</label>
+        <input id="profile-company" class="form-control" formControlName="companyName" [disabled]="saving()" autocomplete="organization" />
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">Mobile number</label>
-        <input class="form-control" formControlName="mobileNumber" />
+        <label class="form-label" for="profile-mobile">Mobile number</label>
+        <input id="profile-mobile" class="form-control" type="tel" formControlName="mobileNumber" [disabled]="saving()" autocomplete="tel" />
       </div>
 
       <div class="col-md-6">
-        <label class="form-label">Profile picture URL</label>
-        <input class="form-control" formControlName="profilePicture" />
+        <label class="form-label" for="profile-picture">Profile picture URL</label>
+        <input id="profile-picture" class="form-control" formControlName="profilePicture" [disabled]="saving()" inputmode="url" />
       </div>
 
       <div class="col-12" *ngIf="errorMessage()">
@@ -62,18 +62,27 @@
     </form>
 
     <h3 class="h5 mb-3">Change password</h3>
-    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="row g-3">
+    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="row g-3" [attr.aria-busy]="changingPassword()">
       <div class="col-md-4">
-        <label class="form-label">Current password</label>
-        <input class="form-control" type="password" formControlName="currentPassword" autocomplete="current-password" />
+        <label class="form-label" for="current-password">Current password<span class="required-mark" aria-hidden="true">*</span></label>
+        <input id="current-password" class="form-control" type="password" formControlName="currentPassword" autocomplete="current-password" [disabled]="changingPassword()" />
+        <div class="text-danger small mt-1" *ngIf="passwordControl('currentPassword')?.touched && passwordControl('currentPassword')?.invalid">
+          Current password is required.
+        </div>
       </div>
       <div class="col-md-4">
-        <label class="form-label">New password</label>
-        <input class="form-control" type="password" formControlName="newPassword" autocomplete="new-password" />
+        <label class="form-label" for="new-password">New password<span class="required-mark" aria-hidden="true">*</span></label>
+        <input id="new-password" class="form-control" type="password" formControlName="newPassword" autocomplete="new-password" [disabled]="changingPassword()" />
+        <div class="text-danger small mt-1" *ngIf="passwordControl('newPassword')?.touched && passwordControl('newPassword')?.invalid">
+          Password must be at least 8 characters.
+        </div>
       </div>
       <div class="col-md-4">
-        <label class="form-label">Confirm password</label>
-        <input class="form-control" type="password" formControlName="confirmPassword" autocomplete="new-password" />
+        <label class="form-label" for="confirm-password">Confirm password<span class="required-mark" aria-hidden="true">*</span></label>
+        <input id="confirm-password" class="form-control" type="password" formControlName="confirmPassword" autocomplete="new-password" [disabled]="changingPassword()" />
+        <div class="text-danger small mt-1" *ngIf="passwordControl('confirmPassword')?.touched && passwordForm.value.newPassword !== passwordForm.value.confirmPassword">
+          Passwords do not match.
+        </div>
       </div>
 
       <div class="col-12" *ngIf="passwordError()">

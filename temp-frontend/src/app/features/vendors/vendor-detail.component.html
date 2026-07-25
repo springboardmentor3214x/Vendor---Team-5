@@ -105,7 +105,7 @@
       </div>
     </div>
 
-    <div *ngIf="canApprove && vendor.approval_status === 'Pending'" [formGroup]="remarksForm">
+    <div *ngIf="canApprove && vendor.approval_status === 'Pending' && vendorApprovalApiAvailable" [formGroup]="remarksForm">
       <h3 class="h5 mb-3">Approval actions</h3>
       <p class="text-muted">This vendor is pending review. Add an optional remark, then approve or reject the record.</p>
       <div class="mb-3">
@@ -122,11 +122,15 @@
       </div>
     </div>
 
+    <div *ngIf="canApprove && vendor.approval_status === 'Pending' && !vendorApprovalApiAvailable" class="alert alert-warning mt-4 mb-0" role="status">
+      Vendor approval is not available in the currently running backend. The backend needs approve/reject endpoints before this pending vendor can be actioned.
+    </div>
+
     <p class="text-muted mt-4" *ngIf="canApprove && vendor.approval_status !== 'Pending'">
       This vendor has already been {{ vendor.approval_status.toLowerCase() }}. No further approval action is available.
     </p>
 
-    <div class="detail-item mt-4" [formGroup]="documentForm">
+    <div *ngIf="vendorDocumentUploadApiAvailable; else documentUploadUnavailable" class="detail-item mt-4" [formGroup]="documentForm">
       <h3 class="h5 mb-2">Vendor documents</h3>
       <p class="text-muted mb-3">
         Upload a supporting document for this vendor. Uploaded documents cannot yet be listed or viewed here.
@@ -158,5 +162,10 @@
         </div>
       </div>
     </div>
+    <ng-template #documentUploadUnavailable>
+      <div class="alert alert-secondary mt-4 mb-0" role="status">
+        Vendor document upload is unavailable because the currently running backend does not expose the document-upload endpoint.
+      </div>
+    </ng-template>
   </ng-container>
 </section>

@@ -9,9 +9,10 @@
 
   <div class="row g-3">
     <div class="col-md-6 col-xl-4" *ngFor="let card of view.cards">
-      <div class="stat-card">
+      <div class="stat-card" [class]="'stat-card tone-' + card.tone">
         <span class="stat-label">{{ card.title }}</span>
-        <strong class="stat-value">{{ card.value }}</strong>
+        <p class="stat-description">{{ card.description }}</p>
+        <a class="btn btn-outline-primary btn-sm align-self-start" [routerLink]="card.path">{{ card.actionLabel }}</a>
       </div>
     </div>
   </div>

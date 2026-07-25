@@ -6,7 +6,7 @@ import { AppRole, AuthService } from '../../core/services/auth.service';
 interface DashboardView {
   title: string;
   description: string;
-  cards: { title: string; value: string; tone: string }[];
+  cards: { title: string; description: string; actionLabel: string; path: string; tone: string }[];
   highlights: string[];
   primaryAction: {
     label: string;
@@ -31,14 +31,14 @@ export class DashboardComponent {
   private readonly views: Record<AppRole, DashboardView> = {
     Administrator: {
       title: 'Administrator dashboard',
-      description: 'Oversee vendor operations and access the current management workspace.',
+      description: 'Access the vendor, procurement, and performance workspaces available to your role.',
       cards: [
-        { title: 'Vendor management', value: 'Available', tone: 'success' },
-        { title: 'Approval workflow', value: 'Available', tone: 'primary' },
-        { title: 'Profile controls', value: 'Ready', tone: 'info' }
+        { title: 'Vendor management', description: 'Review registered vendors and their current approval status.', actionLabel: 'Open vendors', path: '/vendors', tone: 'success' },
+        { title: 'Procurement workflow', description: 'Manage requests, purchase orders, tracking, and invoices.', actionLabel: 'Open procurement', path: '/procurement', tone: 'primary' },
+        { title: 'Performance monitoring', description: 'Review vendor performance records and rankings.', actionLabel: 'Open performance', path: '/performance', tone: 'info' }
       ],
       highlights: [
-        'Review vendor details and pending approval decisions from the vendor workspace.',
+        'Review vendor records; approval actions require the backend approval endpoint to be available.',
         'Use your profile page to keep account information and credentials current.',
         'Additional operational modules remain accessible as their frontend integration is completed.'
       ],
@@ -48,9 +48,9 @@ export class DashboardComponent {
       title: 'Procurement dashboard',
       description: 'Manage vendor records and progress pending supplier decisions.',
       cards: [
-        { title: 'Vendor workspace', value: 'Available', tone: 'success' },
-        { title: 'Approval actions', value: 'Available', tone: 'primary' },
-        { title: 'Profile controls', value: 'Ready', tone: 'info' }
+        { title: 'Vendor workspace', description: 'Review vendor records and statuses.', actionLabel: 'Open vendors', path: '/vendors', tone: 'success' },
+        { title: 'Procurement workflow', description: 'Manage requests and purchase orders.', actionLabel: 'Open procurement', path: '/procurement', tone: 'primary' },
+        { title: 'Performance monitoring', description: 'Review and record supplier performance.', actionLabel: 'Open performance', path: '/performance', tone: 'info' }
       ],
       highlights: [
         'Search vendor records by company, contact, and current status.',
@@ -63,9 +63,9 @@ export class DashboardComponent {
       title: 'Supply chain dashboard',
       description: 'Monitor vendor status and participate in the approval workflow.',
       cards: [
-        { title: 'Vendor workspace', value: 'Available', tone: 'success' },
-        { title: 'Status monitoring', value: 'Available', tone: 'primary' },
-        { title: 'Profile controls', value: 'Ready', tone: 'info' }
+        { title: 'Vendor workspace', description: 'Review vendor records and statuses.', actionLabel: 'Open vendors', path: '/vendors', tone: 'success' },
+        { title: 'Procurement monitoring', description: 'Monitor purchase orders and delivery tracking.', actionLabel: 'Open procurement', path: '/procurement', tone: 'primary' },
+        { title: 'Performance monitoring', description: 'Review vendor performance and rankings.', actionLabel: 'Open performance', path: '/performance', tone: 'info' }
       ],
       highlights: [
         'Use filters to focus on vendors by status and approval state.',
@@ -78,9 +78,8 @@ export class DashboardComponent {
       title: 'Vendor dashboard',
       description: 'Your role-based workspace for account and vendor-related activity.',
       cards: [
-        { title: 'Account profile', value: 'Available', tone: 'success' },
-        { title: 'Role access', value: 'Vendor', tone: 'primary' },
-        { title: 'Password controls', value: 'Ready', tone: 'info' }
+        { title: 'Account profile', description: 'Review your registered account details.', actionLabel: 'Open profile', path: '/profile', tone: 'success' },
+        { title: 'Password controls', description: 'Update your password from your profile.', actionLabel: 'Manage profile', path: '/profile', tone: 'primary' }
       ],
       highlights: [
         'Keep your company and contact information up to date in your profile.',
@@ -93,13 +92,12 @@ export class DashboardComponent {
       title: 'Finance dashboard',
       description: 'Your role-based workspace is ready for finance integrations.',
       cards: [
-        { title: 'Account profile', value: 'Available', tone: 'success' },
-        { title: 'Role access', value: 'Finance', tone: 'primary' },
-        { title: 'Password controls', value: 'Ready', tone: 'info' }
+        { title: 'Invoice workspace', description: 'Review invoices and backend-supported payment statuses.', actionLabel: 'Open invoices', path: '/procurement/invoices', tone: 'success' },
+        { title: 'Account profile', description: 'Review your registered account details.', actionLabel: 'Open profile', path: '/profile', tone: 'primary' }
       ],
       highlights: [
         'Maintain your account and contact details from the profile page.',
-        'Finance-specific workflow pages can be added when their API integration is available.',
+        'Use invoice actions only where the backend endpoint supports your workflow.',
         'Your current access remains limited to the permissions assigned to your role.'
       ],
       primaryAction: { label: 'Open profile', path: '/profile' }
@@ -108,13 +106,12 @@ export class DashboardComponent {
       title: 'Auditor dashboard',
       description: 'Your role-based workspace is ready for audit integrations.',
       cards: [
-        { title: 'Account profile', value: 'Available', tone: 'success' },
-        { title: 'Role access', value: 'Auditor', tone: 'primary' },
-        { title: 'Password controls', value: 'Ready', tone: 'info' }
+        { title: 'Performance monitoring', description: 'Review backend-returned performance records and rankings.', actionLabel: 'Open performance', path: '/performance', tone: 'success' },
+        { title: 'Account profile', description: 'Review your registered account details.', actionLabel: 'Open profile', path: '/profile', tone: 'primary' }
       ],
       highlights: [
         'Maintain your account and contact details from the profile page.',
-        'Audit-specific workflow pages can be added when their API integration is available.',
+        'Performance records remain read-only for your role in the frontend workflow.',
         'Your current access remains limited to the permissions assigned to your role.'
       ],
       primaryAction: { label: 'Open profile', path: '/profile' }

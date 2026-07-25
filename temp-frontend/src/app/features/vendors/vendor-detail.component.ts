@@ -29,6 +29,9 @@ export class VendorDetailComponent implements OnInit {
   readonly documentForm: FormGroup;
   readonly selectedFileName = signal('');
   readonly documentTypes = VENDOR_DOCUMENT_TYPES;
+  // The running API currently exposes neither approve/reject nor document-upload vendor routes.
+  readonly vendorApprovalApiAvailable = false;
+  readonly vendorDocumentUploadApiAvailable = false;
 
   @ViewChild('documentFile') private documentFileInput?: ElementRef<HTMLInputElement>;
 
@@ -200,6 +203,9 @@ export class VendorDetailComponent implements OnInit {
   }
 
   private readError(err: unknown, fallback: string): string {
+    if (err instanceof Error && err.message) {
+      return err.message;
+    }
     const detail = (err as { error?: { detail?: unknown } })?.error?.detail;
     if (typeof detail === 'string') {
       return detail;

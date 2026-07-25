@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 VALID_PRIORITIES = {"Low", "Medium", "High", "Critical"}
-VALID_APPROVAL_STATUSES = {"Pending", "Approved", "Rejected", "Cancelled"}
+VALID_APPROVAL_STATUSES = {"Pending", "Approved", "Rejected", "Sent Back", "Cancelled"}
 VALID_PO_STATUSES = {"Draft", "Issued", "Delivered", "Cancelled", "Completed"}
 VALID_DELIVERY_STATUSES = {"Awaiting Shipment", "In Transit", "Delivered", "Delayed", "Completed"}
 VALID_PAYMENT_STATUSES = {"Pending", "Verified", "Approved", "Paid", "Rejected"}
@@ -77,7 +77,7 @@ class ProcurementRequestOut(BaseModel):
     quantity: int = Field(alias="quantityRequired")
     unit_of_measurement: Optional[str] = Field(default=None, alias="unitOfMeasurement")
     estimated_budget: float = Field(alias="estimatedBudget")
-    required_delivery_date: date = Field(alias="requiredDeliveryDate")
+    required_delivery_date: datetime = Field(alias="requiredDeliveryDate")
     priority: str
     business_justification: str = Field(alias="businessJustification")
     additional_remarks: Optional[str] = Field(default=None, alias="additionalRemarks")

@@ -1,9 +1,12 @@
 from datetime import date, datetime
 
 from app.services.performance_service import (
+    calculate_average_communication_score,
     calculate_average_delivery_score,
     calculate_average_quality_score,
     calculate_average_response_time,
+    calculate_average_score,
+    calculate_average_service_rating_score,
     calculate_communication_score,
     calculate_delayed_delivery_count,
     calculate_delivery_delay,
@@ -98,6 +101,28 @@ def test_calculate_delayed_delivery_count():
 def test_calculate_average_delivery_score_is_distinct_from_on_time_delivery_rate():
     assert calculate_average_delivery_score([100, 80, 40]) == 73.33
     assert calculate_average_delivery_score([]) == 0.0
+
+
+def test_calculate_average_score_returns_zero_for_an_empty_list():
+    assert calculate_average_score([]) == 0
+
+
+def test_calculate_average_score_returns_a_rounded_average():
+    assert calculate_average_score([100, 80, 40]) == 73.33
+
+
+def test_score_averages_do_not_use_the_response_time_helper(monkeypatch):
+    def response_time_helper_used(_response_times):
+        raise AssertionError("Response-time helper must only average durations")
+
+    monkeypatch.setattr(
+        "app.services.performance_service.calculate_average_response_time",
+        response_time_helper_used,
+    )
+
+    assert calculate_average_delivery_score([100, 80, 40]) == 73.33
+    assert calculate_average_communication_score([100, 80, 60]) == 80.0
+    assert calculate_average_service_rating_score([100, 60, 80]) == 80.0
 
 
 def test_calculate_average_quality_score():

@@ -178,12 +178,19 @@ def calculate_delayed_delivery_count(delivery_statuses: list[str]) -> int:
     return delivery_statuses.count(DELAYED_DELIVERY_STATUS)
 
 
+def calculate_average_score(scores: list[float]) -> float:
+    """Return the rounded average for a collection of performance scores."""
+    if not scores:
+        return 0
+    return round(sum(scores) / len(scores), 2)
+
+
 def calculate_average_delivery_score(delivery_scores: list[float]) -> float:
     """Return the average delivery-timeliness score, distinct from the on-time rate."""
     if not delivery_scores:
         return 0.0
     _validate_scores(delivery_scores)
-    return round(sum(delivery_scores) / len(delivery_scores), 2)
+    return calculate_average_score(delivery_scores)
 
 
 def calculate_average_quality_score(quality_scores: list[float]) -> float:
@@ -191,7 +198,23 @@ def calculate_average_quality_score(quality_scores: list[float]) -> float:
     if not quality_scores:
         return 0.0
     _validate_scores(quality_scores)
-    return round(sum(quality_scores) / len(quality_scores), 2)
+    return calculate_average_score(quality_scores)
+
+
+def calculate_average_communication_score(communication_scores: list[float]) -> float:
+    """Return the average communication score."""
+    if not communication_scores:
+        return 0.0
+    _validate_scores(communication_scores)
+    return calculate_average_score(communication_scores)
+
+
+def calculate_average_service_rating_score(service_rating_scores: list[float]) -> float:
+    """Return the average service-rating score."""
+    if not service_rating_scores:
+        return 0.0
+    _validate_scores(service_rating_scores)
+    return calculate_average_score(service_rating_scores)
 
 
 def calculate_average_response_time(response_times: list[float]) -> float:

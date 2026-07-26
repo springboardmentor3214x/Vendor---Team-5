@@ -5,9 +5,13 @@ from app.utils.constants import (
     PURCHASE_ORDER_STATUS_DRAFT,
     PURCHASE_ORDER_STATUS_ISSUED,
     PURCHASE_ORDER_STATUS_DELIVERED,
+    PURCHASE_ORDER_STATUS_COMPLETED,
     PURCHASE_ORDER_STATUS_CANCELLED,
     ROLE_ADMIN,
-    ROLE_PROCUREMENT_MANAGER
+    ROLE_PROCUREMENT_MANAGER,
+    INVOICE_STATUS_VERIFIED,
+    INVOICE_STATUS_APPROVED,
+    INVOICE_STATUS_PAID,
 )
 
 
@@ -16,6 +20,7 @@ def generate_purchase_order_number(sequence_number: int) -> str:
     Generate purchase order number automatically.
     Example: PO-2026-0001
     """
+    _validate_sequence_number(sequence_number)
     return f"PO-2026-{sequence_number:04d}"
 
 
@@ -86,15 +91,43 @@ def is_delivery_delayed(
     actual_delivery_date: date | None = None
 ) -> bool:
     """Return whether the delivery date is later than the expected date."""
+    if expected_delivery_date is None:
+        raise ValueError("Expected delivery date is required")
     comparison_date = actual_delivery_date or date.today()
     return comparison_date > expected_delivery_date
 
 
-def can_complete_procurement(po_status: str, invoice_verified: bool) -> bool:
-    """Return whether delivered goods have a verified invoice."""
-    return po_status == PURCHASE_ORDER_STATUS_DELIVERED and invoice_verified
+def can_complete_procurement(po_status: str, invoice_status: str) -> bool:
+    """Return whether the PO and invoice have completion-eligible statuses."""
+    normalized_invoice_status = invoice_status.casefold()
+    return (
+        po_status in {
+            PURCHASE_ORDER_STATUS_DELIVERED,
+            PURCHASE_ORDER_STATUS_COMPLETED,
+        }
+        and normalized_invoice_status in {
+            INVOICE_STATUS_VERIFIED,
+            INVOICE_STATUS_APPROVED,
+            INVOICE_STATUS_PAID,
+        }
+    )
+
+
+def can_complete_procurement_with_invoice_status(
+    po_status: str,
+    invoice_status: str,
+) -> bool:
+    """Compatibility alias for the status-aware procurement completion check."""
+    return can_complete_procurement(po_status, invoice_status)
 
 
 def can_user_update_purchase_order(user_role: str) -> bool:
     """Return whether the user can update purchase order status."""
     return user_role in [ROLE_ADMIN, ROLE_PROCUREMENT_MANAGER]
+
+
+def _validate_sequence_number(sequence_number: int) -> None:
+    if isinstance(sequence_number, bool) or not isinstance(sequence_number, int):
+        raise ValueError("Sequence number must be a positive integer")
+    if sequence_number <= 0:
+        raise ValueError("Sequence number must be a positive integer")

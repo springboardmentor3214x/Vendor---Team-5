@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
-from app.schemas.vendor import VendorCategoryResponse, VendorCreate, VendorUpdate
+from app.schemas.vendor import (
+    VendorApprovalAction,
+    VendorCategoryResponse,
+    VendorCreate,
+    VendorUpdate,
+)
 
 
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
@@ -67,6 +72,46 @@ def update_vendor(vendor_id: int, payload: VendorUpdate, db: Session = Depends(g
     for field, value in vendor_data.items():
         setattr(vendor, field, value)
 
+    db.commit()
+    db.refresh(vendor)
+    return vendor
+
+
+@router.patch("/{vendor_id}/approve")
+def approve_vendor(
+    vendor_id: int,
+    payload: VendorApprovalAction,
+    db: Session = Depends(get_db),
+):
+    """Approve a pending vendor using the existing Vendor status fields."""
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    if vendor.approval_status != "Pending":
+        raise HTTPException(status_code=400, detail="Only pending vendors can be approved")
+
+    vendor.approval_status = "Approved"
+    vendor.vendor_status = "Active"
+    db.commit()
+    db.refresh(vendor)
+    return vendor
+
+
+@router.patch("/{vendor_id}/reject")
+def reject_vendor(
+    vendor_id: int,
+    payload: VendorApprovalAction,
+    db: Session = Depends(get_db),
+):
+    """Reject a pending vendor using the existing Vendor status fields."""
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    if vendor.approval_status != "Pending":
+        raise HTTPException(status_code=400, detail="Only pending vendors can be rejected")
+
+    vendor.approval_status = "Rejected"
+    vendor.vendor_status = "Rejected"
     db.commit()
     db.refresh(vendor)
     return vendor

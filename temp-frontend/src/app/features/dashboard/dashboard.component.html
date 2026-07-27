@@ -1,26 +1,31 @@
-<section class="page-card">
-  <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<section class="dashboard-shell">
+  <header class="dashboard-hero">
     <div>
-      <h2 class="mb-1">{{ view.title }}</h2>
-      <p class="mb-0 text-muted">{{ view.description }}</p>
+      <p class="eyebrow">Role workspace</p>
+      <h2>{{ view.title }}</h2>
+      <p>{{ view.description }}</p>
     </div>
-    <a class="btn btn-primary" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }}</a>
-  </div>
+    <a class="btn btn-primary primary-action" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }}</a>
+  </header>
 
-  <div class="row g-3">
-    <div class="col-md-6 col-xl-4" *ngFor="let card of view.cards">
-      <div class="stat-card" [class]="'stat-card tone-' + card.tone">
+  <div class="workspace-grid">
+    <article *ngFor="let card of view.cards; let index = index" class="workspace-card" [class]="'workspace-card tone-' + card.tone">
+      <div class="workspace-card-body">
+        <span class="card-index">0{{ index + 1 }}</span>
         <span class="stat-label">{{ card.title }}</span>
         <p class="stat-description">{{ card.description }}</p>
-        <a class="btn btn-outline-primary btn-sm align-self-start" [routerLink]="card.path">{{ card.actionLabel }}</a>
       </div>
-    </div>
+      <a class="workspace-action" [routerLink]="card.path">{{ card.actionLabel }} <span aria-hidden="true">→</span></a>
+    </article>
   </div>
 
-  <div class="panel mt-4">
-    <h4 class="panel-title">Operational highlights</h4>
-    <ul class="highlights-list mb-0">
+  <section class="highlights-panel">
+    <div>
+      <p class="eyebrow">At a glance</p>
+      <h3>Operational highlights</h3>
+    </div>
+    <ul class="highlights-list">
       <li *ngFor="let item of view.highlights">{{ item }}</li>
     </ul>
-  </div>
+  </section>
 </section>

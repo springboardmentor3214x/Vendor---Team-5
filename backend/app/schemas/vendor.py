@@ -62,6 +62,19 @@ class VendorUpdate(BaseModel):
     bank_account_number: str | None = Field(default=None, alias="bankAccountNumber")
     ifsc_code: str | None = Field(default=None, alias="ifscCode")
     payment_terms: str | None = Field(default=None, alias="paymentTerms")
+    vendor_status: str | None = Field(default=None, alias="vendorStatus")
+
+
+class VendorApprovalAction(BaseModel):
+    """Optional review note accepted by the vendor approval routes.
+
+    The current Vendor table has no remarks column, so this is accepted for
+    request compatibility only and is not presented as persisted history.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    remarks: str | None = None
 
 
 class VendorCategoryResponse(BaseModel):

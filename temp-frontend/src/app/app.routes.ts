@@ -165,6 +165,12 @@ export const routes: Routes = [
         data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager'] }
       },
       {
+        path: 'procurement/requests/:id/edit',
+        component: RequestFormComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager'] }
+      },
+      {
         path: 'procurement/requests/:id/approval',
         component: RequestApprovalComponent,
         canActivate: [roleGuard],

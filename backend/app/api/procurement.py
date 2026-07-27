@@ -34,6 +34,9 @@ from app.services.procurement_service import (
     approve_procurement_request,
     reject_procurement_request,
     cancel_procurement_request,
+    can_send_back_procurement_request,
+    can_edit_sent_back_request,
+    resubmit_procurement_request,
     generate_procurement_request_number,
     can_assign_vendor_to_request,
 )
@@ -143,12 +146,23 @@ def update_request(request_id: int, payload: ProcurementRequestUpdate, db: Sessi
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if request.approval_status != "Pending":
-        raise HTTPException(status_code=400, detail="Only pending requests can be edited")
+    if not can_edit_sent_back_request(request.approval_status):
+        raise HTTPException(status_code=400, detail="Only sent-back requests can be edited and resubmitted")
 
+    old_status = request.approval_status
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(request, field, value)
+
+    request.approval_status = resubmit_procurement_request(old_status)
+    log_status_change(
+        db,
+        request.id,
+        old_status,
+        request.approval_status,
+        request.requested_by,
+        "Request edited and resubmitted",
+    )
 
     db.commit()
     db.refresh(request)
@@ -224,11 +238,14 @@ def send_back_request(request_id: int, payload: ProcurementApprovalAction, db: S
         raise HTTPException(status_code=404, detail="Request not found")
 
     old_status = request.approval_status
-    request.approval_status = "Pending"
+    if not can_send_back_procurement_request(old_status):
+        raise HTTPException(status_code=400, detail="Only pending or approved requests can be sent back")
+
+    request.approval_status = "Sent Back"
     request.approval_remarks = payload.remarks
 
     log_approval_action(db, request_id, payload.approved_by, "Sent Back", payload.remarks)
-    log_status_change(db, request_id, old_status, "Pending", payload.approved_by, payload.remarks)
+    log_status_change(db, request_id, old_status, request.approval_status, payload.approved_by, payload.remarks)
 
     db.commit()
     db.refresh(request)
@@ -471,9 +488,10 @@ def check_completion(po_id: int, db: Session = Depends(get_db)):
         .order_by(Invoice.id.desc())
         .first()
     )
-    invoice_verified = latest_invoice is not None and latest_invoice.payment_status in {"Verified", "Approved", "Paid"}
+    invoice_status = latest_invoice.payment_status if latest_invoice is not None else ""
+    invoice_verified = invoice_status in {"Verified", "Approved", "Paid"}
 
-    is_complete = can_complete_procurement(po.po_status, invoice_verified)
+    is_complete = can_complete_procurement(po.po_status, invoice_status)
 
     if is_complete and po.po_status != "Completed":
         po.po_status = "Completed"

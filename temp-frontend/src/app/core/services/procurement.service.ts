@@ -139,6 +139,14 @@ export interface OrderTrackingUpdatePayload {
   remarks?: string | null;
 }
 
+export interface PurchaseOrderCompletionCheck {
+  po_id: number;
+  is_complete: boolean;
+  delivery_delayed: boolean;
+  invoice_verified: boolean;
+  po_status: string;
+}
+
 export interface Invoice {
   id: number;
   invoice_number: string;
@@ -191,6 +199,15 @@ export class ProcurementService {
   createRequest(payload: ProcurementRequestCreatePayload): Observable<ProcurementRequest> {
     return this.http
       .post<ApiRecord>(`${this.baseUrl}/procurement-requests`, payload)
+      .pipe(map((record) => this.mapRequest(record)));
+  }
+
+  updateRequest(
+    requestId: number,
+    payload: Partial<ProcurementRequestCreatePayload>
+  ): Observable<ProcurementRequest> {
+    return this.http
+      .patch<ApiRecord>(`${this.baseUrl}/procurement-requests/${requestId}`, payload)
       .pipe(map((record) => this.mapRequest(record)));
   }
 
@@ -252,6 +269,12 @@ export class ProcurementService {
 
   cancelPurchaseOrder(poId: number): Observable<PurchaseOrder> {
     return this.updatePurchaseOrderAction(poId, 'cancel');
+  }
+
+  checkPurchaseOrderCompletion(poId: number): Observable<PurchaseOrderCompletionCheck> {
+    return this.http.get<PurchaseOrderCompletionCheck>(
+      `${this.baseUrl}/purchase-orders/${poId}/completion-check`
+    );
   }
 
   getOrderTracking(poId: number): Observable<OrderTracking> {

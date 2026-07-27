@@ -1,0 +1,16 @@
+<section class="assignment-page">
+  <a routerLink="/procurement/requests" class="back-link">&larr; Back to procurement requests</a>
+  <div *ngIf="loading()" class="message loading-message">Loading approved vendors...</div>
+  <div *ngIf="errorMessage()" class="message error-message" role="alert">{{ errorMessage() }}</div>
+  <ng-container *ngIf="request() as item">
+    <header><p class="eyebrow">Vendor assignment</p><h2>{{ item.request_number }}</h2><p>{{ item.request_title }}</p></header>
+    <div *ngIf="item.approval_status !== 'Approved'" class="notice">Vendor assignment is available only after this request is approved. Current status: <strong>{{ item.approval_status || 'Not set' }}</strong>.</div>
+    <div *ngIf="item.vendor_id" class="notice success-notice">A vendor is already assigned to this request (vendor ID: <strong>{{ item.vendor_id }}</strong>). Reassignment is not offered in this workflow.</div>
+    <ng-container *ngIf="canAssign">
+      <p class="intro">Select one active, approved vendor returned by the backend. Category, past-performance, and delivery-rating data are not available from this endpoint.</p>
+      <div *ngIf="vendors().length; else noVendors" class="vendor-grid"><button type="button" *ngFor="let vendor of vendors()" class="vendor-card" [class.selected]="selectedVendorId() === vendor.id" (click)="selectVendor(vendor.id)"><span class="selection" aria-hidden="true"></span><strong>{{ vendor.company_name }}</strong><span>Contact: {{ vendor.contact_person_name }}</span><span>Reliability score: {{ vendor.reliability_score ?? 'Not available' }}</span><span>Vendor status: {{ vendor.vendor_status || 'Not set' }}</span><span>Approval: {{ vendor.approval_status || 'Not set' }}</span></button></div>
+      <ng-template #noVendors><div class="notice">No active approved vendors are available for assignment.</div></ng-template>
+      <footer class="actions"><a [routerLink]="['/procurement/requests', item.id]" class="btn btn-outline-secondary">Cancel</a><button type="button" class="btn btn-primary" [disabled]="!selectedVendorId() || assigning()" (click)="assign()">{{ assigning() ? 'Assigning...' : 'Assign selected vendor' }}</button></footer>
+    </ng-container>
+  </ng-container>
+</section>

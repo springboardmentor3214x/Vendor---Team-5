@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.api.auth import get_current_user
 from app.models.performance import PerformanceRecord
 from app.models.delivery_performance import DeliveryPerformance
 from app.models.product_quality_evaluation import ProductQualityEvaluation
@@ -11,6 +12,7 @@ from app.models.communication_log import CommunicationLog
 from app.models.service_rating import ServiceRating
 from app.models.vendor_ranking import VendorRanking
 from app.models.vendor import Vendor
+from app.models.user import User
 
 from app.schemas.performance import (
     DeliveryPerformanceCreate,
@@ -36,9 +38,14 @@ from app.services.performance_service import (
     calculate_service_rating_score,
     calculate_overall_performance_score,
     get_performance_status,
+    calculate_average_delivery_score,
     calculate_average_quality_score,
-    calculate_average_response_time,
+    calculate_average_communication_score,
+    calculate_average_service_rating_score,
     calculate_order_completion_rate,
+    can_user_recalculate_vendor_ranking,
+    validate_no_duplicate_performance_entry,
+    validate_performance_write_eligibility,
 )
 
 router = APIRouter(prefix="/performance", tags=["Performance"])
@@ -169,16 +176,22 @@ def performance_dashboard(db: Session = Depends(get_db)):
         "poor_count": poor_count,
         "total_completed_orders": total_completed,
         "total_delayed_deliveries": total_delayed,
-        "average_delivery_score": calculate_average_response_time(delivery_scores) if delivery_scores else 0.0,
+        "average_delivery_score": calculate_average_delivery_score(delivery_scores),
         "average_quality_score": calculate_average_quality_score(quality_scores) if quality_scores else 0.0,
-        "average_communication_score": calculate_average_response_time(response_scores) if response_scores else 0.0,
-        "average_service_rating_score": calculate_average_response_time(service_scores) if service_scores else 0.0,
+        "average_communication_score": calculate_average_communication_score(response_scores),
+        "average_service_rating_score": calculate_average_service_rating_score(service_scores),
         "completion_rate": completion_rate,
     }
 
 
 @router.post("/delivery", response_model=PerformanceActionResponse)
 def record_delivery_performance(payload: DeliveryPerformanceCreate, db: Session = Depends(get_db)):
+    try:
+        validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
+        validate_no_duplicate_performance_entry(db, DeliveryPerformance, payload.vendor_id, payload.purchase_order_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
     delay_days = calculate_delivery_delay(payload.expected_delivery_date, payload.actual_delivery_date)
     delivery_status = get_delivery_status(payload.expected_delivery_date, payload.actual_delivery_date)
     delivery_score = calculate_delivery_score(delay_days)
@@ -236,6 +249,12 @@ def list_delivery_performance(vendor_id: int, db: Session = Depends(get_db)):
 
 @router.post("/quality", response_model=PerformanceActionResponse)
 def record_quality_performance(payload: QualityPerformanceCreate, db: Session = Depends(get_db)):
+    try:
+        validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
+        validate_no_duplicate_performance_entry(db, ProductQualityEvaluation, payload.vendor_id, payload.purchase_order_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
     quality_score = calculate_quality_score(
         payload.material_quality,
         payload.packaging_quality,
@@ -290,6 +309,12 @@ def list_quality_performance(vendor_id: int, db: Session = Depends(get_db)):
 
 @router.post("/communication", response_model=PerformanceActionResponse)
 def record_communication_performance(payload: CommunicationPerformanceCreate, db: Session = Depends(get_db)):
+    try:
+        validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
+        validate_no_duplicate_performance_entry(db, CommunicationLog, payload.vendor_id, payload.purchase_order_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
     response_duration = int(
         calculate_response_duration_minutes(
             payload.message_sent_time,
@@ -341,6 +366,12 @@ def list_communication_logs(vendor_id: int, db: Session = Depends(get_db)):
 
 @router.post("/service-rating", response_model=PerformanceActionResponse)
 def record_service_rating(payload: ServiceRatingCreate, db: Session = Depends(get_db)):
+    try:
+        validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
+        validate_no_duplicate_performance_entry(db, ServiceRating, payload.vendor_id, payload.purchase_order_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
     service_rating_score = calculate_service_rating_score(
         payload.professionalism,
         payload.customer_support,
@@ -433,7 +464,15 @@ def vendor_rankings(db: Session = Depends(get_db)):
 
 
 @router.post("/rankings/recalculate", response_model=VendorRankingOut)
-def recalculate_rankings(db: Session = Depends(get_db)):
+def recalculate_rankings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not can_user_recalculate_vendor_ranking(current_user.role):
+        raise HTTPException(
+            status_code=403,
+            detail="Only Administrator or Procurement Manager can recalculate vendor rankings",
+        )
     records = db.query(PerformanceRecord).all()
     for record in records:
         refresh_vendor_ranking(db, record.vendor_id)

@@ -1,0 +1,31 @@
+<section class="dashboard-shell">
+  <header class="dashboard-hero">
+    <div>
+      <p class="eyebrow">Role workspace</p>
+      <h2>{{ view.title }}</h2>
+      <p>{{ view.description }}</p>
+    </div>
+    <a class="btn btn-primary primary-action" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }}</a>
+  </header>
+
+  <div class="workspace-grid">
+    <article *ngFor="let card of view.cards; let index = index" class="workspace-card" [class]="'workspace-card tone-' + card.tone">
+      <div class="workspace-card-body">
+        <span class="card-index">0{{ index + 1 }}</span>
+        <span class="stat-label">{{ card.title }}</span>
+        <p class="stat-description">{{ card.description }}</p>
+      </div>
+      <a class="workspace-action" [routerLink]="card.path">{{ card.actionLabel }} <span aria-hidden="true">→</span></a>
+    </article>
+  </div>
+
+  <section class="highlights-panel">
+    <div>
+      <p class="eyebrow">At a glance</p>
+      <h3>Operational highlights</h3>
+    </div>
+    <ul class="highlights-list">
+      <li *ngFor="let item of view.highlights">{{ item }}</li>
+    </ul>
+  </section>
+</section>

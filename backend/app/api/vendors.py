@@ -48,6 +48,14 @@ def list_vendors(db: Session = Depends(get_db)):
     return db.query(Vendor).all()
 
 
+@router.get("/{vendor_id}")
+def get_vendor(vendor_id: int, db: Session = Depends(get_db)):
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    return vendor
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_vendor(payload: VendorCreate, db: Session = Depends(get_db)):
     vendor_data = payload.model_dump(by_alias=False, exclude_unset=True)

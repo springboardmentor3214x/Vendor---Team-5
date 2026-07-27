@@ -474,8 +474,7 @@ def cancel_purchase_order_route(po_id: int, db: Session = Depends(get_db)):
     return po
 
 
-@router.get("/purchase-orders/{po_id}/completion-check")
-def check_completion(po_id: int, db: Session = Depends(get_db)):
+def _completion_check(po_id: int, db: Session, *, apply_completion: bool):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
@@ -493,7 +492,7 @@ def check_completion(po_id: int, db: Session = Depends(get_db)):
 
     is_complete = can_complete_procurement(po.po_status, invoice_status)
 
-    if is_complete and po.po_status != "Completed":
+    if apply_completion and is_complete and po.po_status != "Completed":
         po.po_status = "Completed"
         db.commit()
         db.refresh(po)
@@ -505,6 +504,18 @@ def check_completion(po_id: int, db: Session = Depends(get_db)):
         "invoice_verified": invoice_verified,
         "po_status": po.po_status,
     }
+
+
+@router.get("/purchase-orders/{po_id}/completion-check")
+def preview_completion(po_id: int, db: Session = Depends(get_db)):
+    """Return completion eligibility without changing the purchase order."""
+    return _completion_check(po_id, db, apply_completion=False)
+
+
+@router.post("/purchase-orders/{po_id}/completion-check")
+def complete_if_eligible(po_id: int, db: Session = Depends(get_db)):
+    """Apply the supported completion transition after an explicit user action."""
+    return _completion_check(po_id, db, apply_completion=True)
 
 
 # ---------------- Order Tracking ----------------
@@ -609,6 +620,9 @@ def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
+    if invoice.payment_status not in {"Pending", "Verified"}:
+        raise HTTPException(status_code=400, detail="Only pending or verified invoices can be rejected")
+
     invoice.payment_status = "Rejected"
     db.commit()
     db.refresh(invoice)
@@ -621,11 +635,15 @@ def update_payment_status(invoice_id: int, payload: PaymentStatusUpdate, db: Ses
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    if payload.payment_status not in VALID_PAYMENT_STATUSES:
-        raise HTTPException(status_code=400, detail="Invalid payment status")
-
-    if payload.payment_status not in {"Verified", "Approved", "Paid", "Rejected"} and invoice.payment_status == "Pending":
-        raise HTTPException(status_code=400, detail="Invoice must be verified before approval")
+    allowed_transitions = {
+        "Verified": {"Approved", "Rejected"},
+        "Approved": {"Paid"},
+    }
+    if payload.payment_status not in allowed_transitions.get(invoice.payment_status, set()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invoice cannot move from {invoice.payment_status} to {payload.payment_status}",
+        )
 
     invoice.payment_status = payload.payment_status
     if payload.payment_status == "Paid":

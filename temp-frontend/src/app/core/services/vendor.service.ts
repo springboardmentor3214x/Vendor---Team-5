@@ -186,17 +186,9 @@ export class VendorService {
   }
 
   getVendor(id: number): Observable<Vendor> {
-    // The current backend exposes the vendor collection but not GET /vendors/{id}.
-    // Resolve the selected record from that confirmed collection endpoint.
-    return this.listVendors().pipe(
-      map((vendors) => {
-        const vendor = vendors.find((item) => item.id === id);
-        if (!vendor) {
-          throw new Error('Vendor not found.');
-        }
-        return vendor;
-      })
-    );
+    return this.http
+      .get<VendorApiResponse>(`${this.baseUrl}/${id}`)
+      .pipe(map((vendor) => this.mapVendor(vendor)));
   }
 
   createVendor(payload: VendorCreatePayload): Observable<Vendor> {

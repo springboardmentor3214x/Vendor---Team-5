@@ -272,8 +272,8 @@ export class ProcurementService {
   }
 
   checkPurchaseOrderCompletion(poId: number): Observable<PurchaseOrderCompletionCheck> {
-    return this.http.get<PurchaseOrderCompletionCheck>(
-      `${this.baseUrl}/purchase-orders/${poId}/completion-check`
+    return this.http.post<PurchaseOrderCompletionCheck>(
+      `${this.baseUrl}/purchase-orders/${poId}/completion-check`, {}
     );
   }
 

@@ -10,6 +10,9 @@ from app.api import (
     reliability,
     reports,
     vendors,
+    certifications,
+    compliance,
+    documents,
 )
 from app.core.config import settings
 
@@ -35,6 +38,9 @@ app.include_router(contracts.router, tags=["Contracts"])
 app.include_router(notifications.router, tags=["Notifications"])
 app.include_router(reports.router, tags=["Reports"])
 app.include_router(reliability.router, tags=["Reliability"])
+app.include_router(certifications.router, tags=["Certifications"])
+app.include_router(compliance.router, tags=["Compliance"])
+app.include_router(documents.router, tags=["Documents"])
 
 @app.get("/")
 def read_root():

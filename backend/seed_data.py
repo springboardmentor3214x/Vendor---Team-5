@@ -20,6 +20,10 @@ from app.models.procurement_approval import ProcurementApproval
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_status_history import ProcurementStatusHistory
 from app.models.reliability import VendorReliability, PerformanceTrend, ProcurementRecommendation
+from app.models.contract import Contract
+from app.models.contract_renewal import ContractRenewal
+from app.models.certification import Certification
+from app.models.compliance import ComplianceRecord
 from datetime import datetime, timedelta
 
 db = SessionLocal()
@@ -144,7 +148,7 @@ existing_vah = db.query(VendorApprovalHistory).filter(VendorApprovalHistory.vend
 if not existing_vah:
     vah = VendorApprovalHistory(
         vendor_id=sample_vendor.id,
-        approved_by=sample_user.id,
+        acted_by=sample_user.id,
         action="Approve",
         remarks="Vendor credentials and GSTIN verified successfully.",
         action_date=datetime.utcnow() - timedelta(days=25)
@@ -487,6 +491,70 @@ if not existing_rec:
     db.add(rec)
     db.commit()
     print("Seeded procurement recommendation.")
+
+# Seed contract
+existing_contract = db.query(Contract).filter(Contract.contract_number == "CON-2026-001").first()
+if not existing_contract:
+    contract = Contract(
+        contract_number="CON-2026-001",
+        contract_title="Steel Supply Master Agreement",
+        vendor_id=sample_vendor.id,
+        contract_type="Supply",
+        procurement_category="Raw Materials",
+        start_date=datetime.utcnow() - timedelta(days=120),
+        end_date=datetime.utcnow() + timedelta(days=240),
+        contract_value=150000.0,
+        payment_terms="Net 30",
+        sla="Deliver within 7 days of PO",
+        warranty_details="1-year product warranty",
+        responsible_manager="John Doe",
+        status="Active",
+        compliance_verified=True,
+    )
+    db.add(contract)
+    db.commit()
+    print("Seeded 1 sample contract.")
+else:
+    print("Sample contract already exists.")
+
+# Seed certification
+existing_cert = db.query(Certification).filter(Certification.certificate_number == "ISO9001-83921").first()
+if not existing_cert:
+    cert = Certification(
+        vendor_id=sample_vendor.id,
+        certification_name="ISO 9001:2015 Quality Management System",
+        certificate_number="ISO9001-83921",
+        issuing_authority="TUV SUD",
+        issue_date=datetime.utcnow() - timedelta(days=365),
+        expiry_date=datetime.utcnow() + timedelta(days=365),
+        document_url="uploads/iso_9001_certificate.pdf"
+    )
+    db.add(cert)
+    db.commit()
+    print("Seeded 1 sample certification.")
+else:
+    print("Sample certification already exists.")
+
+# Seed compliance record
+existing_compliance = db.query(ComplianceRecord).filter(
+    ComplianceRecord.vendor_id == sample_vendor.id,
+    ComplianceRecord.compliance_type == "GST Registration"
+).first()
+if not existing_compliance:
+    admin_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
+    compliance = ComplianceRecord(
+        vendor_id=sample_vendor.id,
+        compliance_type="GST Registration",
+        status="Compliant",
+        verification_date=datetime.utcnow() - timedelta(days=10),
+        verified_by=admin_user.id if admin_user else None,
+        remarks="GST status active and verified against GST portal."
+    )
+    db.add(compliance)
+    db.commit()
+    print("Seeded 1 sample compliance record.")
+else:
+    print("Sample compliance record already exists.")
 
 db.close()
 print("Seeding complete.")

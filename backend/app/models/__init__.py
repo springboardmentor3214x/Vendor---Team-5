@@ -23,3 +23,6 @@ from app.models.procurement_approval import ProcurementApproval
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_status_history import ProcurementStatusHistory
 from app.models.reliability import VendorReliability, PerformanceTrend, ProcurementRecommendation
+from app.models.contract_renewal import ContractRenewal
+from app.models.certification import Certification
+from app.models.compliance import ComplianceRecord

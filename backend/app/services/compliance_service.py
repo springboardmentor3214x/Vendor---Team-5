@@ -7,7 +7,7 @@ from app.schemas.compliance import ComplianceRecordCreate
 
 
 def create_compliance_record(db: Session, payload: ComplianceRecordCreate) -> ComplianceRecord:
-    record = ComplianceRecord(**payload.dict())
+    record = ComplianceRecord(**payload.model_dump())
     db.add(record)
     db.commit()
     db.refresh(record)

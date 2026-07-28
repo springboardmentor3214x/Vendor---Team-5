@@ -22,7 +22,6 @@ router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 @router.post("/", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
 def create_contract(payload: ContractCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Role-Based Access: Admin or Procurement Manager can create contracts
     if current_user.role.name not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -39,16 +38,14 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db), curr
 
 @router.get("/", response_model=List[ContractResponse])
 def list_contracts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Role-Based Access: Vendors see only their contracts. Admins/Managers/Finance/Auditor see all.
     if current_user.role.name == "Vendor":
-        # Find vendor by matching user email
         from app.models.vendor import Vendor
         vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
         if not vendor:
             return []
-        return db.query(contract_service.Contract).filter(contract_service.Contract.vendor_id == vendor.id).all()
+        return db.query(contract_service.Contract).filter(contract_service.Contract.vendor_id == vendor.id).order_by(contract_service.Contract.id.desc()).all()
         
-    return contract_service.list_contracts(db)
+    return db.query(contract_service.Contract).order_by(contract_service.Contract.id.desc()).all()
 
 
 @router.get("/expiring", response_model=List[ContractResponse])
@@ -67,7 +64,6 @@ def get_contract(contract_id: int, db: Session = Depends(get_db), current_user: 
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
         
-    # Vendor restriction
     if current_user.role.name == "Vendor":
         from app.models.vendor import Vendor
         vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()

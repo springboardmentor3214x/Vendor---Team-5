@@ -8,7 +8,7 @@ from app.schemas.contract import ContractCreate, ContractUpdate, ContractRenewal
 
 
 def create_contract(db: Session, payload: ContractCreate) -> Contract:
-    contract = Contract(**payload.dict())
+    contract = Contract(**payload.model_dump())
     db.add(contract)
     db.commit()
     db.refresh(contract)
@@ -28,7 +28,7 @@ def update_contract(db: Session, contract_id: int, payload: ContractUpdate) -> O
     if not contract:
         return None
     
-    update_data = payload.dict(exclude_unset=True)
+    update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(contract, key, value)
         

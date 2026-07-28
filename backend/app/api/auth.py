@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -5,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
     ALGORITHM,
     SECRET_KEY,
     create_access_token,
@@ -12,14 +15,36 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User
-from app.schemas.auth import MessageResponse, Token, UserCreate, UserLogin, UserResponse
+from app.schemas.auth import (
+    ForgotPasswordRequest,
+    MessageResponse,
+    PasswordChangeRequest,
+    ResetPasswordConfirm,
+    Token,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    UserUpdate,
+)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+ALLOWED_ROLES = {
+    "Administrator",
+    "Procurement Manager",
+    "Supply Chain Manager",
+    "Vendor",
+    "Finance Officer",
+    "Auditor",
+}
 
 
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def get_current_user(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme),
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -28,8 +53,8 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str | None = payload.get("sub")
-        if email is None:
+        email = payload.get("sub")
+        if not email:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
@@ -38,7 +63,25 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     if user is None:
         raise credentials_exception
 
+    if hasattr(user, "is_active") and not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user account",
+        )
+
     return user
+
+
+def require_roles(*allowed_roles: str):
+    def role_checker(current_user: User = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action",
+            )
+        return current_user
+
+    return role_checker
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -50,9 +93,24 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered",
         )
 
+    if user.role not in ALLOWED_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role selected",
+        )
+
+    if user.password != user.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password and confirm password do not match",
+        )
+
     new_user = User(
         full_name=user.full_name,
+        employee_id=getattr(user, "employee_id", None),
+        company_name=getattr(user, "company_name", None),
         email=user.email,
+        mobile_number=getattr(user, "mobile_number", None),
         hashed_password=get_password_hash(user.password),
         role=user.role,
         is_active=True,
@@ -61,7 +119,6 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-
     return new_user
 
 
@@ -75,13 +132,37 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password",
         )
 
+    if hasattr(db_user, "is_active") and not db_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+        )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": db_user.email, "role": db_user.role}
+        data={
+            "sub": db_user.email,
+            "role": db_user.role,
+            "user_id": getattr(db_user, "id", None),
+            "full_name": getattr(db_user, "full_name", None),
+        },
+        expires_delta=access_token_expires,
     )
+
+    redirect_map = {
+        "Administrator": "/dashboard/admin",
+        "Procurement Manager": "/dashboard/procurement-manager",
+        "Supply Chain Manager": "/dashboard/supply-chain-manager",
+        "Vendor": "/dashboard/vendor",
+        "Finance Officer": "/dashboard/finance",
+        "Auditor": "/dashboard/auditor",
+    }
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
+        "role": db_user.role,
+        "redirect_to": redirect_map.get(db_user.role, "/dashboard"),
     }
 
 
@@ -90,6 +171,116 @@ def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@router.put("/profile", response_model=UserResponse)
+def update_profile(
+    payload: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+
+    if hasattr(current_user, "mobile_number") and payload.mobile_number is not None:
+        current_user.mobile_number = payload.mobile_number
+
+    if hasattr(current_user, "company_name") and payload.company_name is not None:
+        current_user.company_name = payload.company_name
+
+    if hasattr(current_user, "profile_picture") and payload.profile_picture is not None:
+        current_user.profile_picture = payload.profile_picture
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+
+    if not user:
+        return {
+            "message": "If the email is registered, a password reset link/token has been generated"
+        }
+
+    reset_token = create_access_token(
+        data={
+            "sub": user.email,
+            "purpose": "password_reset",
+        },
+        expires_delta=timedelta(minutes=30),
+    )
+
+    if hasattr(user, "reset_token"):
+        user.reset_token = reset_token
+    if hasattr(user, "reset_token_expiry"):
+        user.reset_token_expiry = None
+
+    db.commit()
+
+    return {
+        "message": "Password reset token generated successfully",
+        "reset_token": reset_token,
+    }
+
+
 @router.post("/reset-password", response_model=MessageResponse)
-def reset_password_placeholder():
-    return {"message": "Password reset placeholder endpoint"}
+def reset_password(payload: ResetPasswordConfirm, db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Invalid or expired reset token",
+    )
+
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password and confirm password do not match",
+        )
+
+    try:
+        decoded = jwt.decode(payload.token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = decoded.get("sub")
+        purpose = decoded.get("purpose")
+        if not email or purpose != "password_reset":
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise credentials_exception
+
+    user.hashed_password = get_password_hash(payload.new_password)
+
+    if hasattr(user, "reset_token"):
+        user.reset_token = None
+    if hasattr(user, "reset_token_expiry"):
+        user.reset_token_expiry = None
+
+    db.commit()
+
+    return {"message": "Password updated successfully"}
+
+
+@router.post("/change-password", response_model=MessageResponse)
+def change_password(
+    payload: PasswordChangeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password and confirm password do not match",
+        )
+
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    db.commit()
+
+    return {"message": "Password changed successfully"}

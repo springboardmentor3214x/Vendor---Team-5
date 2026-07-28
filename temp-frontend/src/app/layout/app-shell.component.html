@@ -1,0 +1,49 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div>
+        <strong>Vendor Reliability</strong>
+        <small>Operations Console</small>
+      </div>
+    </div>
+
+    <nav class="nav-list">
+      <a
+        *ngFor="let item of visibleNavItems"
+        class="nav-link"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.exact }"
+      >
+        {{ item.label }}
+      </a>
+    </nav>
+
+    <div class="sidebar-footer mt-auto">
+      <div class="user-summary" *ngIf="currentUser as user">
+        <span class="user-avatar">{{ user.fullName.slice(0, 1) || 'U' }}</span>
+        <div>
+          <div class="user-name">{{ user.fullName }}</div>
+          <div class="user-role">{{ user.role }}</div>
+        </div>
+      </div>
+      <button class="btn btn-outline-light logout-button w-100" type="button" (click)="logout()">
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <section class="content-pane">
+    <header class="topbar">
+      <div>
+        <h1>Vendor Reliability System</h1>
+        <p *ngIf="currentUser as user">{{ user.role }} workspace</p>
+        <p *ngIf="!currentUser">Authentication, roles, and vendor operations.</p>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <router-outlet></router-outlet>
+    </main>
+  </section>
+</div>

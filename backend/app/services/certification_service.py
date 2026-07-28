@@ -7,7 +7,7 @@ from app.schemas.certification import CertificationCreate, CertificationUpdate
 
 
 def add_certification(db: Session, payload: CertificationCreate) -> Certification:
-    cert = Certification(**payload.dict())
+    cert = Certification(**payload.model_dump())
     db.add(cert)
     db.commit()
     db.refresh(cert)
@@ -19,7 +19,7 @@ def update_certification(db: Session, certification_id: int, payload: Certificat
     if not cert:
         return None
     
-    update_data = payload.dict(exclude_unset=True)
+    update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(cert, key, value)
         

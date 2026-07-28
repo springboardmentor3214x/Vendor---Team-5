@@ -1,12 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
 
 
 class CommunicationBase(BaseModel):
-    sender_id: int
-    vendor_id: Optional[int] = None
-    procurement_request_id: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
+    sender_id: int = Field(alias="senderId")
+    vendor_id: Optional[int] = Field(default=None, alias="vendorId")
+    procurement_request_id: Optional[int] = Field(default=None, alias="procurementRequestId")
     subject: Optional[str] = None
     message: str
 

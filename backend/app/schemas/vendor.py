@@ -1,84 +1,110 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class VendorCategoryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    name: str
-    description: Optional[str] = None
-    is_active: bool
+class VendorPayload(BaseModel):
+    """Fields accepted from the vendor form (snake_case and camelCase)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    company_name: str = Field(alias="companyName")
+    category_id: int | None = Field(default=None, alias="categoryId")
+    # This is an input-only convenience field; Vendor stores category_id.
+    vendor_category: str | None = Field(default=None, alias="vendorCategory")
+    contact_person_name: str = Field(alias="contactPersonName")
+    designation: str | None = None
+    email: EmailStr
+    phone_number: str = Field(alias="phoneNumber")
+    alternate_phone: str | None = Field(default=None, alias="alternatePhone")
+    gst_number: str | None = Field(default=None, alias="gstNumber")
+    pan_number: str | None = Field(default=None, alias="panNumber")
+    company_registration_number: str | None = Field(default=None, alias="companyRegistrationNumber")
+    address_line1: str | None = Field(default=None, alias="addressLine1")
+    address_line2: str | None = Field(default=None, alias="addressLine2")
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+    pincode: str | None = None
+    website: str | None = None
+    description: str | None = None
+    bank_account_number: str | None = Field(default=None, alias="bankAccountNumber")
+    ifsc_code: str | None = Field(default=None, alias="ifscCode")
+    payment_terms: str | None = Field(default=None, alias="paymentTerms")
 
 
-class VendorContactCreate(BaseModel):
-    contact_person_name: str
-    designation: Optional[str] = None
-    email: Optional[str] = None
-    phone_number: Optional[str] = None
-    is_primary: bool = False
-
-
-class VendorContactOut(VendorContactCreate):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    vendor_id: int
-
-
-class VendorCreate(BaseModel):
-    company_name: str
-    category_id: int
-    contact_person_name: str
-    designation: Optional[str] = None
-    email: str
-    phone_number: str
-    alternate_phone: Optional[str] = None
-    gst_number: Optional[str] = None
-    pan_number: Optional[str] = None
-    company_registration_number: Optional[str] = None
-    address_line1: Optional[str] = None
-    address_line2: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    country: Optional[str] = None
-    pincode: Optional[str] = None
-    website: Optional[str] = None
-    description: Optional[str] = None
-    bank_account_number: Optional[str] = None
-    ifsc_code: Optional[str] = None
-    payment_terms: Optional[str] = None
+class VendorCreate(VendorPayload):
+    pass
 
 
 class VendorUpdate(BaseModel):
-    company_name: Optional[str] = None
-    category_id: Optional[int] = None
-    contact_person_name: Optional[str] = None
-    designation: Optional[str] = None
-    email: Optional[str] = None
-    phone_number: Optional[str] = None
-    alternate_phone: Optional[str] = None
-    gst_number: Optional[str] = None
-    pan_number: Optional[str] = None
-    company_registration_number: Optional[str] = None
-    address_line1: Optional[str] = None
-    address_line2: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    country: Optional[str] = None
-    pincode: Optional[str] = None
-    website: Optional[str] = None
-    description: Optional[str] = None
-    bank_account_number: Optional[str] = None
-    ifsc_code: Optional[str] = None
-    payment_terms: Optional[str] = None
+    model_config = ConfigDict(populate_by_name=True)
+
+    category_id: int | None = Field(default=None, alias="categoryId")
+    vendor_category: str | None = Field(default=None, alias="vendorCategory")
+    company_name: str | None = Field(default=None, alias="companyName")
+    contact_person_name: str | None = Field(default=None, alias="contactPersonName")
+    designation: str | None = None
+    email: EmailStr | None = None
+    phone_number: str | None = Field(default=None, alias="phoneNumber")
+    alternate_phone: str | None = Field(default=None, alias="alternatePhone")
+    gst_number: str | None = Field(default=None, alias="gstNumber")
+    pan_number: str | None = Field(default=None, alias="panNumber")
+    company_registration_number: str | None = Field(default=None, alias="companyRegistrationNumber")
+    address_line1: str | None = Field(default=None, alias="addressLine1")
+    address_line2: str | None = Field(default=None, alias="addressLine2")
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+    pincode: str | None = None
+    website: str | None = None
+    description: str | None = None
+    bank_account_number: str | None = Field(default=None, alias="bankAccountNumber")
+    ifsc_code: str | None = Field(default=None, alias="ifscCode")
+    payment_terms: str | None = Field(default=None, alias="paymentTerms")
+    vendor_status: str | None = Field(default=None, alias="vendorStatus")
 
 
-class VendorOut(VendorCreate):
-    model_config = ConfigDict(from_attributes=True)
+class VendorApprovalAction(BaseModel):
+    """Optional review note accepted by the vendor approval routes."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    remarks: str | None = None
+
+
+class VendorDocumentResponse(BaseModel):
+    """A stored vendor document, with a backend download URL for the UI."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
     id: int
-    vendor_status: str
-    approval_status: str
-    reliability_score: float
-    created_at: datetime
-    updated_at: datetime
-    category: Optional[VendorCategoryOut] = None
+    vendor_id: int = Field(alias="vendorId")
+    document_type: str = Field(alias="documentType")
+    file_name: str = Field(alias="fileName")
+    content_type: str | None = Field(default=None, alias="contentType")
+    uploaded_by: int | None = Field(default=None, alias="uploadedBy")
+    uploaded_at: datetime | None = Field(default=None, alias="uploadedAt")
+    download_url: str = Field(alias="downloadUrl")
+
+
+class VendorApprovalHistoryResponse(BaseModel):
+    """A persisted vendor approval decision returned in API-friendly casing."""
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    vendor_id: int = Field(alias="vendorId")
+    action: str
+    remarks: str | None = None
+    acted_by: int | None = Field(default=None, alias="actedBy")
+    action_date: datetime | None = Field(default=None, alias="actionDate")
+
+
+class VendorCategoryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    name: str
+    description: str | None = None
+    is_active: bool | None = Field(default=None, alias="isActive")

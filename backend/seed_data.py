@@ -143,7 +143,7 @@ existing_vah = db.query(VendorApprovalHistory).filter(VendorApprovalHistory.vend
 if not existing_vah:
     vah = VendorApprovalHistory(
         vendor_id=sample_vendor.id,
-        approved_by=sample_user.id,
+        acted_by=sample_user.id,
         action="Approve",
         remarks="Vendor credentials and GSTIN verified successfully.",
         action_date=datetime.utcnow() - timedelta(days=25)

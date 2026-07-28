@@ -66,15 +66,39 @@ class VendorUpdate(BaseModel):
 
 
 class VendorApprovalAction(BaseModel):
-    """Optional review note accepted by the vendor approval routes.
-
-    The current Vendor table has no remarks column, so this is accepted for
-    request compatibility only and is not presented as persisted history.
-    """
+    """Optional review note accepted by the vendor approval routes."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     remarks: str | None = None
+
+
+class VendorDocumentResponse(BaseModel):
+    """A stored vendor document, with a backend download URL for the UI."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: int
+    vendor_id: int = Field(alias="vendorId")
+    document_type: str = Field(alias="documentType")
+    file_name: str = Field(alias="fileName")
+    content_type: str | None = Field(default=None, alias="contentType")
+    uploaded_by: int | None = Field(default=None, alias="uploadedBy")
+    uploaded_at: datetime | None = Field(default=None, alias="uploadedAt")
+    download_url: str = Field(alias="downloadUrl")
+
+
+class VendorApprovalHistoryResponse(BaseModel):
+    """A persisted vendor approval decision returned in API-friendly casing."""
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    vendor_id: int = Field(alias="vendorId")
+    action: str
+    remarks: str | None = None
+    acted_by: int | None = Field(default=None, alias="actedBy")
+    action_date: datetime | None = Field(default=None, alias="actionDate")
 
 
 class VendorCategoryResponse(BaseModel):

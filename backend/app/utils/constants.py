@@ -1,0 +1,44 @@
+VENDOR_STATUS_PENDING = "pending"
+VENDOR_STATUS_APPROVED = "approved"
+VENDOR_STATUS_REJECTED = "rejected"
+
+PROCUREMENT_REQUEST_STATUS_PENDING = "Pending"
+PROCUREMENT_REQUEST_STATUS_APPROVED = "Approved"
+PROCUREMENT_REQUEST_STATUS_REJECTED = "Rejected"
+PROCUREMENT_REQUEST_STATUS_CANCELLED = "Cancelled"
+
+PURCHASE_ORDER_STATUS_DRAFT = "Draft"
+PURCHASE_ORDER_STATUS_ISSUED = "Issued"
+PURCHASE_ORDER_STATUS_DELIVERED = "Delivered"
+PURCHASE_ORDER_STATUS_CANCELLED = "Cancelled"
+
+RISK_LOW = "Low"
+RISK_MEDIUM = "Medium"
+RISK_HIGH = "High"
+
+VENDOR_CATEGORIES = [
+    "Raw Material Suppliers",
+    "Equipment Vendors",
+    "IT Vendors",
+    "Service Providers",
+    "Logistics Partners",
+    "Maintenance Vendors"
+]
+
+VENDOR_STATUS_ACTIVE = "active"
+VENDOR_STATUS_INACTIVE = "inactive"
+VENDOR_STATUS_SUSPENDED = "suspended"
+
+ROLE_ADMIN = "Administrator"
+ROLE_PROCUREMENT_MANAGER = "Procurement Manager"
+ROLE_VENDOR = "Vendor"
+ROLE_FINANCE_OFFICER = "Finance Officer"
+
+INVOICE_STATUS_PENDING = "pending"
+INVOICE_STATUS_VERIFIED = "verified"
+INVOICE_STATUS_APPROVED = "approved"
+INVOICE_STATUS_PAID = "paid"
+INVOICE_STATUS_REJECTED = "rejected"
+
+ALLOWED_DOCUMENT_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"]
+MAX_DOCUMENT_SIZE_MB = 5

@@ -35,6 +35,7 @@ from app.models.vendor_approval_history import VendorApprovalHistory
 from app.models.procurement_approval import ProcurementApproval
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_status_history import ProcurementStatusHistory
+from app.models.reliability import VendorReliability, PerformanceTrend, ProcurementRecommendation
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

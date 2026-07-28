@@ -19,6 +19,7 @@ from app.models.vendor_approval_history import VendorApprovalHistory
 from app.models.procurement_approval import ProcurementApproval
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_status_history import ProcurementStatusHistory
+from app.models.reliability import VendorReliability, PerformanceTrend, ProcurementRecommendation
 from datetime import datetime, timedelta
 
 db = SessionLocal()
@@ -427,6 +428,65 @@ if not existing_pr:
     print("Seeded 1 performance record.")
 else:
     print("Performance record already exists.")
+
+# Seed reliability details
+existing_rel = db.query(VendorReliability).filter(VendorReliability.vendor_id == sample_vendor.id).first()
+if not existing_rel:
+    rel = VendorReliability(
+        vendor_id=sample_vendor.id,
+        delivery_score=95.0,
+        quality_score=90.0,
+        communication_score=100.0,
+        compliance_score=100.0,
+        issue_resolution_score=80.0,
+        reliability_score=93.5,
+        risk_level="Low",
+        recommendation="Recommended vendor for procurement",
+    )
+    db.add(rel)
+    db.commit()
+    print("Seeded reliability details.")
+
+# Seed monthly trend data for past few months
+for m_offset in [2, 1, 0]:
+    month_val = (datetime.utcnow().month - m_offset - 1) % 12 + 1
+    year_val = datetime.utcnow().year if datetime.utcnow().month - m_offset > 0 else datetime.utcnow().year - 1
+    existing_trend = db.query(PerformanceTrend).filter(
+        PerformanceTrend.vendor_id == sample_vendor.id,
+        PerformanceTrend.year == year_val,
+        PerformanceTrend.month == month_val
+    ).first()
+    if not existing_trend:
+        # Vary scores slightly to make trends look realistic
+        score_modifier = -2.0 * m_offset
+        trend = PerformanceTrend(
+            vendor_id=sample_vendor.id,
+            year=year_val,
+            month=month_val,
+            reliability_score=93.5 + score_modifier,
+            delivery_score=95.0 + score_modifier,
+            quality_score=90.0 + score_modifier,
+            communication_score=100.0,
+            compliance_score=100.0,
+            issue_resolution_score=80.0 + score_modifier
+        )
+        db.add(trend)
+db.commit()
+print("Seeded monthly performance trend data.")
+
+# Seed procurement recommendation
+existing_rec = db.query(ProcurementRecommendation).filter(ProcurementRecommendation.vendor_id == sample_vendor.id).first()
+if not existing_rec:
+    rec = ProcurementRecommendation(
+        vendor_id=sample_vendor.id,
+        reliability_score=93.5,
+        risk_level="Low",
+        recommendation_status="Recommended",
+        reason="Vendor shows high delivery rate, strong product quality, and verified compliance.",
+    )
+    db.add(rec)
+    db.commit()
+    print("Seeded procurement recommendation.")
 
 db.close()
 print("Seeding complete.")

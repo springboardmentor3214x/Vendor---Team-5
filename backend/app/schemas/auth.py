@@ -1,9 +1,7 @@
 from typing import Optional
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 ALLOWED_ROLES = {"Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor", "Finance Officer", "Auditor"}
-
 
 class UserCreate(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
@@ -33,27 +31,10 @@ class UserCreate(BaseModel):
             raise ValueError("Mobile number must be between 10 and 15 digits")
         return cleaned
 
-    @field_validator("company_name")
-    @classmethod
-    def validate_company_name_for_vendor(cls, value: Optional[str], info) -> Optional[str]:
-        if info.data.get("role") == "Vendor" and not value:
-            raise ValueError("Company name is required for Vendor role")
-        return value
-
-    @field_validator("employee_id")
-    @classmethod
-    def validate_employee_id_for_internal_users(cls, value: Optional[str], info) -> Optional[str]:
-        role = info.data.get("role")
-        if role and role != "Vendor" and not value:
-            raise ValueError("Employee ID is required for internal users")
-        return value
-
-
 class UserLogin(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
     email: EmailStr
     password: str = Field(min_length=1)
-
 
 class UserUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
@@ -61,17 +42,6 @@ class UserUpdate(BaseModel):
     mobile_number: Optional[str] = Field(default=None, alias="mobileNumber")
     company_name: Optional[str] = Field(default=None, alias="companyName")
     profile_picture: Optional[str] = Field(default=None, alias="profilePicture")
-
-    @field_validator("mobile_number")
-    @classmethod
-    def validate_mobile_number(cls, value: Optional[str]) -> Optional[str]:
-        if value is None or value == "":
-            return None
-        cleaned = value.strip()
-        if len(cleaned) < 10 or len(cleaned) > 15:
-            raise ValueError("Mobile number must be between 10 and 15 digits")
-        return cleaned
-
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
@@ -85,30 +55,25 @@ class UserResponse(BaseModel):
     is_active: bool = Field(default=True, alias="isActive")
     profile_picture: Optional[str] = Field(default=None, alias="profilePicture")
 
-
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     role: Optional[str] = None
     redirect_to: Optional[str] = Field(default=None, alias="redirectTo")
 
-
 class MessageResponse(BaseModel):
     message: str
     reset_token: Optional[str] = Field(default=None, alias="resetToken")
 
-
 class ForgotPasswordRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
     email: EmailStr
-
 
 class ResetPasswordConfirm(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
     token: str
     new_password: str = Field(alias="newPassword", min_length=8)
     confirm_password: str = Field(alias="confirmPassword", min_length=8)
-
 
 class PasswordChangeRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")

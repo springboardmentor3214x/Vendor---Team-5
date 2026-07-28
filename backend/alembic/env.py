@@ -30,6 +30,11 @@ from app.models.product_quality_evaluation import ProductQualityEvaluation
 from app.models.communication_log import CommunicationLog
 from app.models.service_rating import ServiceRating
 from app.models.vendor_ranking import VendorRanking
+from app.models.password_reset_token import PasswordResetToken
+from app.models.vendor_approval_history import VendorApprovalHistory
+from app.models.procurement_approval import ProcurementApproval
+from app.models.order_tracking import OrderTracking
+from app.models.procurement_status_history import ProcurementStatusHistory
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

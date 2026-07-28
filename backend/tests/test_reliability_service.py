@@ -11,6 +11,8 @@ from app.services.reliability_service import (
     filter_recommended_vendors,
     generate_procurement_recommendation,
     rank_vendors_by_reliability,
+    recalculate_vendor_reliability,
+    recalculate_supplier_rankings,
     should_warn_for_high_risk_vendor,
 )
 import pytest
@@ -62,6 +64,73 @@ def test_reliability_score_renormalizes_available_weights():
 
 def test_reliability_score_returns_zero_when_all_components_are_missing():
     assert calculate_vendor_reliability_score() == 0
+
+
+class _Query:
+    def __init__(self, value):
+        self.value = value
+
+    def filter(self, *_args):
+        return self
+
+    def first(self):
+        return self.value
+
+    def all(self):
+        return self.value if isinstance(self.value, list) else []
+
+
+class _Session:
+    def __init__(self, vendor=None, reliability=None, vendors=None):
+        self.vendor = vendor
+        self.reliability = reliability
+        self.vendors = vendors
+        self.commits = 0
+        self.refreshed = []
+
+    def query(self, model):
+        from app.models.reliability import VendorReliability
+
+        if model is VendorReliability:
+            return _Query(self.reliability)
+        return _Query(self.vendors if self.vendors is not None else self.vendor)
+
+    def commit(self):
+        self.commits += 1
+
+    def refresh(self, value):
+        self.refreshed.append(value)
+
+
+def test_recalculate_vendor_reliability_accepts_vendor_id_and_db():
+    vendor = type("Vendor", (), {"id": 7, "reliability_score": 0.0})()
+    reliability = type("Reliability", (), {
+        "vendor_id": 7,
+        "delivery_score": 90.0,
+        "quality_score": None,
+        "communication_score": None,
+        "compliance_score": None,
+        "issue_resolution_score": None,
+    })()
+    db = _Session(vendor, reliability)
+
+    assert recalculate_vendor_reliability(7, db) == {
+        "vendor_id": 7,
+        "reliability_score": 90.0,
+        "risk_level": "Low Risk",
+        "recommendation": "Recommended for procurement",
+    }
+    assert db.commits == 1
+
+
+def test_recalculate_vendor_reliability_does_not_default_missing_data_to_100():
+    db = _Session(vendor=type("Vendor", (), {"id": 8, "reliability_score": 0.0})())
+
+    assert recalculate_vendor_reliability(8, db)["reliability_score"] == 0
+
+
+def test_recalculate_supplier_rankings_accepts_db_and_handles_no_vendors():
+    assert recalculate_supplier_rankings(_Session(vendors=[])) == []
 
 
 @pytest.mark.parametrize(("score", "expected"), [(90, "Low Risk"), (70, "Medium Risk"), (69, "High Risk")])

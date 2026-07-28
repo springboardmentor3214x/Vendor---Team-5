@@ -9,10 +9,8 @@ class VendorApprovalHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
 
-    action = Column(String(50), nullable=False)
-    # Allowed: Approved, Rejected, Pending, Suspended
-
+    action = Column(String(50), nullable=False)  # e.g., Approved, Rejected, Suspended, Activated
     remarks = Column(String(1000), nullable=True)
 
-    acted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    acted_at = Column(DateTime, default=datetime.utcnow)
+    acted_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    action_date = Column(DateTime, default=datetime.utcnow, index=True)

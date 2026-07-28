@@ -17,3 +17,4 @@ from app.models.product_quality_evaluation import ProductQualityEvaluation
 from app.models.communication_log import CommunicationLog
 from app.models.service_rating import ServiceRating
 from app.models.vendor_ranking import VendorRanking
+from app.models.vendor_approval_history import VendorApprovalHistory

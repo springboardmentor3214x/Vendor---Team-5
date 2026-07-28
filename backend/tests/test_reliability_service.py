@@ -87,6 +87,7 @@ class _Session:
         self.vendors = vendors
         self.commits = 0
         self.refreshed = []
+        self.added = []
 
     def query(self, model):
         from app.models.reliability import VendorReliability
@@ -98,39 +99,70 @@ class _Session:
     def commit(self):
         self.commits += 1
 
+    def add(self, value):
+        self.added.append(value)
+        self.reliability = value
+
     def refresh(self, value):
         self.refreshed.append(value)
 
 
-def test_recalculate_vendor_reliability_accepts_vendor_id_and_db():
+def test_recalculate_vendor_reliability_returns_full_persisted_record():
     vendor = type("Vendor", (), {"id": 7, "reliability_score": 0.0})()
     reliability = type("Reliability", (), {
+        "id": 1,
         "vendor_id": 7,
         "delivery_score": 90.0,
-        "quality_score": None,
-        "communication_score": None,
-        "compliance_score": None,
-        "issue_resolution_score": None,
+        "quality_score": 0.0,
+        "communication_score": 0.0,
+        "compliance_score": 0.0,
+        "issue_resolution_score": 0.0,
+        "updated_at": None,
     })()
     db = _Session(vendor, reliability)
 
-    assert recalculate_vendor_reliability(7, db) == {
-        "vendor_id": 7,
-        "reliability_score": 90.0,
-        "risk_level": "Low Risk",
-        "recommendation": "Recommended for procurement",
-    }
+    result = recalculate_vendor_reliability(7, db)
+
+    assert result is reliability
+    assert not isinstance(result, dict)
+    for field in (
+        "id", "vendor_id", "delivery_score", "quality_score",
+        "communication_score", "compliance_score", "issue_resolution_score",
+        "reliability_score", "risk_level", "updated_at",
+    ):
+        assert hasattr(result, field)
+    assert result.reliability_score == 27.0
+    assert result.risk_level == "High Risk"
     assert db.commits == 1
 
 
 def test_recalculate_vendor_reliability_does_not_default_missing_data_to_100():
     db = _Session(vendor=type("Vendor", (), {"id": 8, "reliability_score": 0.0})())
 
-    assert recalculate_vendor_reliability(8, db)["reliability_score"] == 0
+    result = recalculate_vendor_reliability(8, db)
+    assert result.reliability_score == 0
+    assert result.risk_level == "High Risk"
+    assert db.added == [result]
 
 
 def test_recalculate_supplier_rankings_accepts_db_and_handles_no_vendors():
     assert recalculate_supplier_rankings(_Session(vendors=[])) == []
+
+
+def test_recalculate_supplier_rankings_uses_reliability_rows_not_performance_ranking():
+    high = type("Reliability", (), {
+        "vendor_id": 2, "reliability_score": 92.0, "risk_level": "Low Risk",
+    })()
+    low = type("Reliability", (), {
+        "vendor_id": 1, "reliability_score": 67.0, "risk_level": "High Risk",
+    })()
+    db = _Session(reliability=[low, high])
+
+    rankings = recalculate_supplier_rankings(db)
+
+    assert [row["vendor_id"] for row in rankings] == [2, 1]
+    assert [row["reliability_score"] for row in rankings] == [92.0, 67.0]
+    assert [row["rank_position"] for row in rankings] == [1, 2]
 
 
 @pytest.mark.parametrize(("score", "expected"), [(90, "Low Risk"), (70, "Medium Risk"), (69, "High Risk")])

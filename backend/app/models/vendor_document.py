@@ -15,7 +15,5 @@ class VendorDocument(Base):
 
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)  # storage location/URL
-    content_type = Column(String(100), nullable=True)  # e.g. application/pdf, image/png
 
-    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)

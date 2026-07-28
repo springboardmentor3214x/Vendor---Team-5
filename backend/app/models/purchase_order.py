@@ -7,16 +7,14 @@ class PurchaseOrder(Base):
     __tablename__ = "purchase_orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    procurement_request_id = Column(Integer, ForeignKey("procurement_requests.id"), unique=True, nullable=False, index=True)
+    procurement_request_id = Column(Integer, ForeignKey("procurement_requests.id"), unique=True, nullable=False)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
     contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True)
 
-    po_number = Column(String(100), unique=True, nullable=False, index=True)
+    po_number = Column(String(100), unique=True, nullable=False)
     quantity = Column(Integer, default=1)
     unit_price = Column(Float, default=0.0)
     total_cost = Column(Float, default=0.0)
-    tax_details = Column(Float, default=0.0)
-    shipping_address = Column(String(500), nullable=True)
 
     expected_delivery_date = Column(DateTime, nullable=True)
     actual_delivery_date = Column(DateTime, nullable=True)
@@ -24,10 +22,6 @@ class PurchaseOrder(Base):
 
     po_status = Column(String(50), default="Draft", index=True)
     # Allowed: Draft, Issued, Delivered, Cancelled
-
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    po_date = Column(DateTime, default=datetime.utcnow)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -21,8 +21,8 @@ class Vendor(Base):
     alternate_phone = Column(String(20), nullable=True)
 
     # Legal / Registration
-    gst_number = Column(String(50), unique=True, nullable=True, index=True)
-    pan_number = Column(String(50), unique=True, nullable=True, index=True)
+    gst_number = Column(String(50), nullable=True)
+    pan_number = Column(String(50), nullable=True)
     company_registration_number = Column(String(100), nullable=True)
 
     # Address
@@ -44,7 +44,7 @@ class Vendor(Base):
     # Status
     vendor_status = Column(String(50), default="Pending", index=True)
     # Allowed: Active, Pending, Inactive, Suspended, Rejected
-    approval_status = Column(String(50), default="Pending", index=True)
+    approval_status = Column(String(50), default="Pending")
     # Allowed: Pending, Approved, Rejected
 
     reliability_score = Column(Float, default=0.0)

@@ -206,3 +206,25 @@ def compare_vendor_reliability(vendor_a: dict, vendor_b: dict) -> dict:
         "better_vendor_name": better_vendor["vendor_name"],
         "score_difference": round(abs(score_a - score_b), 2),
     }
+def recalculate_vendor_reliability(
+    delivery_score: float | None = None,
+    quality_score: float | None = None,
+    communication_score: float | None = None,
+    issue_resolution_score: float | None = None,
+    procurement_history_score: float | None = None,
+    contract_compliance_score: float | None = None,
+) -> float:
+    """
+    Compatibility wrapper for API/router imports.
+
+    Recalculates vendor reliability using the confirmed Module 5 scoring helper.
+    Missing component scores are excluded and available weights are re-normalized.
+    """
+    return calculate_vendor_reliability_score(
+        delivery_score=delivery_score,
+        quality_score=quality_score,
+        communication_score=communication_score,
+        issue_resolution_score=issue_resolution_score,
+        procurement_history_score=procurement_history_score,
+        contract_compliance_score=contract_compliance_score,
+    )

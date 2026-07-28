@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -13,6 +14,8 @@ from app.schemas.reliability import (
     VendorReliabilityOut,
     PerformanceTrendOut,
     ProcurementRecommendationOut,
+    ReliabilityRecalculationResult,
+    ReliabilityRiskItem,
     ReliabilityDashboardOut,
     VendorRankItem
 )
@@ -153,7 +156,7 @@ def trigger_recalculate(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.post("/recalculate-all")
+@router.post("/recalculate-all", response_model=ReliabilityRecalculationResult)
 def trigger_recalculate_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -169,7 +172,10 @@ def trigger_recalculate_all(
         except Exception:
             continue
 
-    return {"message": f"Successfully recalculated reliability score for {count} vendors."}
+    return {
+        "message": f"Successfully recalculated reliability score for {count} vendors.",
+        "recalculatedVendors": count,
+    }
 
 
 @router.get("/rankings", response_model=List[VendorRankItem])
@@ -219,7 +225,7 @@ def get_supplier_rankings(
     return result
 
 
-@router.get("/risk-levels")
+@router.get("/risk-levels", response_model=List[ReliabilityRiskItem])
 def get_procurement_risk_levels(
     risk_level: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -246,13 +252,15 @@ def get_procurement_risk_levels(
 
     result = []
     for item in data:
-        result.append({
-            "vendor_id": item[0],
-            "vendor_name": item[1],
-            "vendor_category": item[2],
-            "reliability_score": item[3],
-            "risk_level": item[4]
-        })
+        result.append(
+            ReliabilityRiskItem(
+                vendor_id=item[0],
+                vendor_name=item[1],
+                vendor_category=item[2],
+                reliability_score=item[3],
+                risk_level=item[4],
+            )
+        )
 
     return result
 
@@ -322,7 +330,3 @@ def get_procurement_recommendations(
         )
 
     return result
-
-
-# Helper function to compute SQL average functions
-from sqlalchemy import func

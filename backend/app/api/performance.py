@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -50,14 +50,6 @@ from app.services.performance_service import (
 )
 
 router = APIRouter(prefix="/performance", tags=["Performance"])
-
-
-@router.get("/")
-def performance_placeholder():
-    return {
-        "message": "Performance API placeholder",
-        "status": "ready",
-    }
 
 
 def get_or_create_record(db: Session, vendor_id: int) -> PerformanceRecord:

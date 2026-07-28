@@ -30,6 +30,7 @@ from app.services.performance_service import (
 )
 from app.models.performance import PerformanceRecord
 from app.models.purchase_order import PurchaseOrder
+from app.models.delivery_performance import DeliveryPerformance
 import pytest
 
 
@@ -294,7 +295,7 @@ def test_performance_write_accepts_delivered_or_completed_purchase_order(po_stat
 def test_duplicate_performance_entry_is_rejected():
     with pytest.raises(ValueError, match="Performance entry already exists"):
         validate_no_duplicate_performance_entry(
-            _PerformanceDb(entry=object()), PerformanceRecord, 1, 10
+            _PerformanceDb(entry=object()), DeliveryPerformance, 1, 10
         )
 
 

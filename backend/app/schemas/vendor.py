@@ -62,6 +62,43 @@ class VendorUpdate(BaseModel):
     bank_account_number: str | None = Field(default=None, alias="bankAccountNumber")
     ifsc_code: str | None = Field(default=None, alias="ifscCode")
     payment_terms: str | None = Field(default=None, alias="paymentTerms")
+    vendor_status: str | None = Field(default=None, alias="vendorStatus")
+
+
+class VendorApprovalAction(BaseModel):
+    """Optional review note accepted by the vendor approval routes."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    remarks: str | None = None
+
+
+class VendorDocumentResponse(BaseModel):
+    """A stored vendor document, with a backend download URL for the UI."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: int
+    vendor_id: int = Field(alias="vendorId")
+    document_type: str = Field(alias="documentType")
+    file_name: str = Field(alias="fileName")
+    content_type: str | None = Field(default=None, alias="contentType")
+    uploaded_by: int | None = Field(default=None, alias="uploadedBy")
+    uploaded_at: datetime | None = Field(default=None, alias="uploadedAt")
+    download_url: str = Field(alias="downloadUrl")
+
+
+class VendorApprovalHistoryResponse(BaseModel):
+    """A persisted vendor approval decision returned in API-friendly casing."""
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    vendor_id: int = Field(alias="vendorId")
+    action: str
+    remarks: str | None = None
+    acted_by: int | None = Field(default=None, alias="actedBy")
+    action_date: datetime | None = Field(default=None, alias="actionDate")
 
 
 class VendorCategoryResponse(BaseModel):

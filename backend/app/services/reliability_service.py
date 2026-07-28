@@ -33,24 +33,16 @@ def calculate_reliability_score(
     - Contract compliance: 20%
     - Issue resolution: 10%
     """
-    for score_component in (
-        on_time_delivery_rate,
-        quality_rating,
-        response_score,
-        contract_compliance,
-        issue_resolution_score,
-    ):
-        _validate_score(score_component)
-
-    score = (
-        on_time_delivery_rate * 0.30 +
-        quality_rating * 0.25 +
-        response_score * 0.15 +
-        contract_compliance * 0.20 +
-        issue_resolution_score * 0.10
+    # Preserve the legacy 20% contract weighting by representing it as the
+    # Module 5 contract and procurement-history slots (10% each).
+    return calculate_vendor_reliability_score(
+        delivery_score=on_time_delivery_rate,
+        quality_score=quality_rating,
+        communication_score=response_score,
+        issue_resolution_score=issue_resolution_score,
+        procurement_history_score=contract_compliance,
+        contract_compliance_score=contract_compliance,
     )
-
-    return round(score, 2)
 
 
 def get_risk_level(score: float) -> str:
@@ -80,34 +72,38 @@ def generate_vendor_recommendation(score: float) -> str:
 
 
 def calculate_vendor_reliability_score(
-    delivery_score: float,
-    quality_score: float,
-    communication_score: float,
-    issue_resolution_score: float,
-    procurement_history_score: float,
-    contract_compliance_score: float,
+    delivery_score: float | None = None,
+    quality_score: float | None = None,
+    communication_score: float | None = None,
+    issue_resolution_score: float | None = None,
+    procurement_history_score: float | None = None,
+    contract_compliance_score: float | None = None,
 ) -> float:
-    """Calculate the Module 5 reliability score out of 100."""
-    scores = (
-        delivery_score,
-        quality_score,
-        communication_score,
-        issue_resolution_score,
-        procurement_history_score,
-        contract_compliance_score,
-    )
-    for score in scores:
-        _validate_score(score)
+    """Calculate the available Module 5 components as a score out of 100.
 
-    return round(
-        delivery_score * 0.30
-        + quality_score * 0.25
-        + communication_score * 0.15
-        + issue_resolution_score * 0.10
-        + procurement_history_score * 0.10
-        + contract_compliance_score * 0.10,
-        2,
+    Missing components are excluded and the remaining weights are normalized,
+    so incomplete data never improves a vendor's score by defaulting to 100.
+    """
+    weighted_components = (
+        (delivery_score, 0.30),
+        (quality_score, 0.25),
+        (communication_score, 0.15),
+        (issue_resolution_score, 0.10),
+        (procurement_history_score, 0.10),
+        (contract_compliance_score, 0.10),
     )
+    available_components = []
+    for score, weight in weighted_components:
+        if score is not None:
+            _validate_score(score)
+            available_components.append((score, weight))
+
+    if not available_components:
+        return 0
+
+    weighted_score = sum(score * weight for score, weight in available_components)
+    available_weight = sum(weight for _, weight in available_components)
+    return round(weighted_score / available_weight, 2)
 
 
 def classify_procurement_risk(reliability_score: float) -> str:

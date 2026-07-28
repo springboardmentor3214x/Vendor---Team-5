@@ -44,8 +44,24 @@ def test_recommendation_for_good_vendor():
     assert generate_vendor_recommendation(85) == "Recommended vendor for procurement"
 
 
-def test_vendor_reliability_score_calculation():
+def test_vendor_reliability_score_calculation_uses_all_six_factors():
     assert calculate_vendor_reliability_score(90, 80, 70, 60, 90, 80) == 80.5
+
+
+def test_procurement_history_score_is_included_in_calculation():
+    assert calculate_vendor_reliability_score(procurement_history_score=70) == 70
+
+
+def test_missing_component_is_excluded_not_defaulted_to_100():
+    assert calculate_vendor_reliability_score(delivery_score=80) == 80
+
+
+def test_reliability_score_renormalizes_available_weights():
+    assert calculate_vendor_reliability_score(delivery_score=80, quality_score=90) == 84.55
+
+
+def test_reliability_score_returns_zero_when_all_components_are_missing():
+    assert calculate_vendor_reliability_score() == 0
 
 
 @pytest.mark.parametrize(("score", "expected"), [(90, "Low Risk"), (70, "Medium Risk"), (69, "High Risk")])
@@ -114,3 +130,8 @@ def test_vendor_comparison_and_tie():
 def test_invalid_score_raises_value_error():
     with pytest.raises(ValueError):
         calculate_vendor_reliability_score(101, 80, 70, 60, 90, 80)
+
+
+def test_score_below_zero_raises_value_error():
+    with pytest.raises(ValueError):
+        calculate_vendor_reliability_score(delivery_score=-1)

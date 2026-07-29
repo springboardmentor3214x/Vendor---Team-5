@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.models.reliability import VendorReliability
@@ -210,83 +212,96 @@ def compare_vendor_reliability(vendor_a: dict, vendor_b: dict) -> dict:
         "better_vendor_name": better_vendor["vendor_name"],
         "score_difference": round(abs(score_a - score_b), 2),
     }
-def recalculate_vendor_reliability(vendor_id: int, db: Session) -> dict:
-    """Recalculate a vendor's persisted reliability data for API callers.
+def recalculate_vendor_reliability(vendor_id: int, db: Session) -> VendorReliability:
+    """Persist and return a vendor's complete Module 5 reliability record.
 
-    The current persistence contract stores the five operational components on
-    ``VendorReliability``.  Its single ``compliance_score`` represents both
-    10% compliance inputs used by the six-factor scoring helper.  If no
-    reliability row exists, all components remain unavailable (``None``),
-    which safely produces a score of zero rather than treating them as 100.
+    ``VendorReliability`` is the API contract for the reliability endpoints.
+    This function therefore always returns that ORM object rather than a
+    derived summary.  The current database model has one compliance field;
+    it supplies both of the helper's 10% compliance-related inputs.
     """
-    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     reliability = (
         db.query(VendorReliability)
         .filter(VendorReliability.vendor_id == vendor_id)
         .first()
     )
 
+    if reliability is None:
+        reliability = VendorReliability(vendor_id=vendor_id)
+        db.add(reliability)
+
     def component(name: str) -> float | None:
-        return getattr(reliability, name, None) if reliability is not None else None
+        return getattr(reliability, name, None)
 
     compliance_score = component("compliance_score")
+    procurement_history_score = (
+        component("procurement_history_score")
+        if hasattr(reliability, "procurement_history_score")
+        else compliance_score
+    )
     score = calculate_vendor_reliability_score(
         delivery_score=component("delivery_score"),
         quality_score=component("quality_score"),
         communication_score=component("communication_score"),
         issue_resolution_score=component("issue_resolution_score"),
-        procurement_history_score=compliance_score,
+        procurement_history_score=procurement_history_score,
         contract_compliance_score=compliance_score,
     )
     risk_level = classify_procurement_risk(score)
     recommendation = generate_procurement_recommendation(score, risk_level)
 
-    updated_objects = []
-    for target, fields in (
-        (reliability, {
-            "reliability_score": score,
-            "risk_level": risk_level,
-            "recommendation": recommendation,
-        }),
-        (vendor, {"reliability_score": score}),
+    # New SQLAlchemy objects do not receive Python-side column defaults until
+    # flush.  Normalize persisted component fields now so the returned ORM
+    # object always satisfies the non-null response-model score fields.
+    for field in (
+        "delivery_score",
+        "quality_score",
+        "communication_score",
+        "compliance_score",
+        "issue_resolution_score",
+        "procurement_history_score",
     ):
-        if target is None:
-            continue
-        was_updated = False
-        for field, value in fields.items():
-            if hasattr(target, field):
-                setattr(target, field, value)
-                was_updated = True
-        if was_updated:
-            updated_objects.append(target)
+        if hasattr(reliability, field):
+            value = getattr(reliability, field)
+            setattr(reliability, field, 0.0 if value is None else value)
 
-    if updated_objects:
-        db.commit()
-        for target in updated_objects:
-            if hasattr(db, "refresh"):
-                db.refresh(target)
+    reliability.reliability_score = score
+    reliability.risk_level = risk_level
+    if hasattr(reliability, "recommendation"):
+        reliability.recommendation = recommendation
+    if hasattr(reliability, "updated_at"):
+        reliability.updated_at = datetime.utcnow()
 
-    return {
-        "vendor_id": vendor_id,
-        "reliability_score": score,
-        "risk_level": risk_level,
-        "recommendation": recommendation,
-    }
+    # Retain the legacy denormalized Vendor score when a vendor row exists,
+    # but it is not used as a Module 5 ranking source.
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    if vendor is not None and hasattr(vendor, "reliability_score"):
+        vendor.reliability_score = score
+
+    db.commit()
+    db.refresh(reliability)
+    return reliability
 
 
 def recalculate_supplier_rankings(db: Session) -> list[dict]:
-    """Recalculate and return all vendors in descending reliability order."""
-    vendors = db.query(Vendor).all()
-    if not vendors:
+    """Return dynamic Module 5 rankings from persisted reliability scores.
+
+    VendorRanking belongs to Module 4 performance ranking and is deliberately
+    not read or written here.  There is no dedicated reliability-ranking model
+    in this project, so ranking remains a dynamic response derived from
+    ``VendorReliability``.
+    """
+    reliability_rows = db.query(VendorReliability).all()
+    if not reliability_rows:
         return []
 
-    vendor_scores = []
-    for vendor in vendors:
-        result = recalculate_vendor_reliability(vendor.id, db)
-        vendor_scores.append({
-            "vendor_id": vendor.id,
-            "vendor_name": getattr(vendor, "company_name", str(vendor.id)),
-            "reliability_score": result["reliability_score"],
-            "risk_level": result["risk_level"],
-        })
+    vendor_scores = [
+        {
+            "vendor_id": row.vendor_id,
+            "vendor_name": getattr(row, "vendor_name", str(row.vendor_id)),
+            "reliability_score": row.reliability_score,
+            "risk_level": row.risk_level,
+        }
+        for row in reliability_rows
+    ]
     return rank_vendors_by_reliability(vendor_scores)

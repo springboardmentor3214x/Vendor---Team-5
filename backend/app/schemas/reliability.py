@@ -46,7 +46,7 @@ class VendorRankItem(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     vendor_id: int = Field(alias="vendorId")
     vendor_name: str = Field(alias="vendorName")
-    vendor_category: str = Field(alias="vendorCategory")
+    vendor_category: Optional[str] = Field(default=None, alias="vendorCategory")
     reliability_score: float = Field(alias="reliabilityScore")
     risk_level: str = Field(alias="riskLevel")
     rank_position: int = Field(alias="rankPosition")
@@ -64,7 +64,7 @@ class ReliabilityRiskItem(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     vendor_id: int = Field(alias="vendorId")
     vendor_name: str = Field(alias="vendorName")
-    vendor_category: str = Field(alias="vendorCategory")
+    vendor_category: Optional[str] = Field(default=None, alias="vendorCategory")
     reliability_score: float = Field(alias="reliabilityScore")
     risk_level: str = Field(alias="riskLevel")
 

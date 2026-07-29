@@ -36,6 +36,12 @@ ALLOWED_ROLES = {
 }
 
 
+def normalize_user_role(current_user: User) -> str | None:
+    """Return a role name for either string-backed or relationship-backed users."""
+    role = getattr(current_user, "role", None)
+    return getattr(role, "name", role)
+
+
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,7 +66,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 
 def require_roles(*allowed_roles: str):
     def role_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role not in allowed_roles:
+        if normalize_user_role(current_user) not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have permission to perform this action",

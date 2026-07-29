@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from datetime import datetime
 from app.core.database import Base
+from app.models.procurement_recommendation import ProcurementRecommendation
 
 
 class VendorReliability(Base):
@@ -38,17 +39,3 @@ class PerformanceTrend(Base):
     issue_resolution_score = Column(Float, default=0.0)
 
     created_at = Column(DateTime, default=datetime.utcnow)
-
-
-class ProcurementRecommendation(Base):
-    __tablename__ = "procurement_recommendations"
-
-    id = Column(Integer, primary_key=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), unique=True, nullable=False, index=True)
-
-    reliability_score = Column(Float, default=0.0)
-    risk_level = Column(String(50), default="Medium", index=True)
-    recommendation_status = Column(String(100), default="Monitor")  # Recommended, Monitor, Not Recommended
-    reason = Column(String(500), nullable=True)
-
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

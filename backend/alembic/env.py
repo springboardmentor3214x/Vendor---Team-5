@@ -18,6 +18,13 @@ from app.models.vendor_document import VendorDocument
 from app.models.vendor_category import VendorCategory
 from app.models.vendor_contact import VendorContact
 from app.models.contract import Contract
+from app.models.contract_renewal import ContractRenewal
+from app.models.certification import Certification
+from app.models.vendor_certification import VendorCertification
+from app.models.compliance import ComplianceRecord as Compliance
+from app.models.compliance_record import ComplianceRecord
+from app.models.notification import Notification
+from app.models.report_log import ReportLog
 from app.models.contract_document import ContractDocument
 from app.models.procurement_request import ProcurementRequest
 from app.models.purchase_order import PurchaseOrder
@@ -35,10 +42,11 @@ from app.models.vendor_approval_history import VendorApprovalHistory
 from app.models.procurement_approval import ProcurementApproval
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_status_history import ProcurementStatusHistory
-from app.models.reliability import VendorReliability, PerformanceTrend, ProcurementRecommendation
-from app.models.contract_renewal import ContractRenewal
-from app.models.certification import Certification
-from app.models.compliance import ComplianceRecord
+from app.models.vendor_reliability_score import VendorReliabilityScore
+from app.models.reliability_history import ReliabilityHistory
+from app.models.procurement_risk_level import ProcurementRiskLevel
+from app.models.procurement_recommendation import ProcurementRecommendation
+from app.models.supplier_reliability_ranking import SupplierReliabilityRanking
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -52,11 +60,6 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:

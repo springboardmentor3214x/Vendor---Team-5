@@ -1,0 +1,50 @@
+.page-card {
+  background: #f8fafc;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+}
+
+.page-card h2 {
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.text-muted {
+  color: #64748b !important;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.form-control {
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  padding: 12px 14px;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.form-control:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+}
+
+.btn-primary {
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: linear-gradient(135deg, #1d4ed8, #115e59);
+}

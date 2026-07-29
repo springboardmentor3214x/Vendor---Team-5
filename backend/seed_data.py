@@ -19,6 +19,11 @@ from app.models.vendor_approval_history import VendorApprovalHistory
 from app.models.procurement_approval import ProcurementApproval
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_status_history import ProcurementStatusHistory
+from app.models.reliability import VendorReliability, PerformanceTrend, ProcurementRecommendation
+from app.models.contract import Contract
+from app.models.contract_renewal import ContractRenewal
+from app.models.certification import Certification
+from app.models.compliance import ComplianceRecord
 from datetime import datetime, timedelta
 
 db = SessionLocal()
@@ -143,7 +148,7 @@ existing_vah = db.query(VendorApprovalHistory).filter(VendorApprovalHistory.vend
 if not existing_vah:
     vah = VendorApprovalHistory(
         vendor_id=sample_vendor.id,
-        approved_by=sample_user.id,
+        acted_by=sample_user.id,
         action="Approve",
         remarks="Vendor credentials and GSTIN verified successfully.",
         action_date=datetime.utcnow() - timedelta(days=25)
@@ -427,6 +432,129 @@ if not existing_pr:
     print("Seeded 1 performance record.")
 else:
     print("Performance record already exists.")
+
+# Seed reliability details
+existing_rel = db.query(VendorReliability).filter(VendorReliability.vendor_id == sample_vendor.id).first()
+if not existing_rel:
+    rel = VendorReliability(
+        vendor_id=sample_vendor.id,
+        delivery_score=95.0,
+        quality_score=90.0,
+        communication_score=100.0,
+        compliance_score=100.0,
+        issue_resolution_score=80.0,
+        reliability_score=93.5,
+        risk_level="Low",
+        recommendation="Recommended vendor for procurement",
+    )
+    db.add(rel)
+    db.commit()
+    print("Seeded reliability details.")
+
+# Seed monthly trend data for past few months
+for m_offset in [2, 1, 0]:
+    month_val = (datetime.utcnow().month - m_offset - 1) % 12 + 1
+    year_val = datetime.utcnow().year if datetime.utcnow().month - m_offset > 0 else datetime.utcnow().year - 1
+    existing_trend = db.query(PerformanceTrend).filter(
+        PerformanceTrend.vendor_id == sample_vendor.id,
+        PerformanceTrend.year == year_val,
+        PerformanceTrend.month == month_val
+    ).first()
+    if not existing_trend:
+        # Vary scores slightly to make trends look realistic
+        score_modifier = -2.0 * m_offset
+        trend = PerformanceTrend(
+            vendor_id=sample_vendor.id,
+            year=year_val,
+            month=month_val,
+            reliability_score=93.5 + score_modifier,
+            delivery_score=95.0 + score_modifier,
+            quality_score=90.0 + score_modifier,
+            communication_score=100.0,
+            compliance_score=100.0,
+            issue_resolution_score=80.0 + score_modifier
+        )
+        db.add(trend)
+db.commit()
+print("Seeded monthly performance trend data.")
+
+# Seed procurement recommendation
+existing_rec = db.query(ProcurementRecommendation).filter(ProcurementRecommendation.vendor_id == sample_vendor.id).first()
+if not existing_rec:
+    rec = ProcurementRecommendation(
+        vendor_id=sample_vendor.id,
+        reliability_score=93.5,
+        risk_level="Low",
+        recommendation_status="Recommended",
+        reason="Vendor shows high delivery rate, strong product quality, and verified compliance.",
+    )
+    db.add(rec)
+    db.commit()
+    print("Seeded procurement recommendation.")
+
+# Seed contract
+existing_contract = db.query(Contract).filter(Contract.contract_number == "CON-2026-001").first()
+if not existing_contract:
+    contract = Contract(
+        contract_number="CON-2026-001",
+        contract_title="Steel Supply Master Agreement",
+        vendor_id=sample_vendor.id,
+        contract_type="Supply",
+        procurement_category="Raw Materials",
+        start_date=datetime.utcnow() - timedelta(days=120),
+        end_date=datetime.utcnow() + timedelta(days=240),
+        contract_value=150000.0,
+        payment_terms="Net 30",
+        sla="Deliver within 7 days of PO",
+        warranty_details="1-year product warranty",
+        responsible_manager="John Doe",
+        status="Active",
+        compliance_verified=True,
+    )
+    db.add(contract)
+    db.commit()
+    print("Seeded 1 sample contract.")
+else:
+    print("Sample contract already exists.")
+
+# Seed certification
+existing_cert = db.query(Certification).filter(Certification.certificate_number == "ISO9001-83921").first()
+if not existing_cert:
+    cert = Certification(
+        vendor_id=sample_vendor.id,
+        certification_name="ISO 9001:2015 Quality Management System",
+        certificate_number="ISO9001-83921",
+        issuing_authority="TUV SUD",
+        issue_date=datetime.utcnow() - timedelta(days=365),
+        expiry_date=datetime.utcnow() + timedelta(days=365),
+        document_url="uploads/iso_9001_certificate.pdf"
+    )
+    db.add(cert)
+    db.commit()
+    print("Seeded 1 sample certification.")
+else:
+    print("Sample certification already exists.")
+
+# Seed compliance record
+existing_compliance = db.query(ComplianceRecord).filter(
+    ComplianceRecord.vendor_id == sample_vendor.id,
+    ComplianceRecord.compliance_type == "GST Registration"
+).first()
+if not existing_compliance:
+    admin_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
+    compliance = ComplianceRecord(
+        vendor_id=sample_vendor.id,
+        compliance_type="GST Registration",
+        status="Compliant",
+        verification_date=datetime.utcnow() - timedelta(days=10),
+        verified_by=admin_user.id if admin_user else None,
+        remarks="GST status active and verified against GST portal."
+    )
+    db.add(compliance)
+    db.commit()
+    print("Seeded 1 sample compliance record.")
+else:
+    print("Sample compliance record already exists.")
 
 db.close()
 print("Seeding complete.")

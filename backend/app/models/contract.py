@@ -21,12 +21,16 @@ class Contract(Base):
     contract_value = Column(Float, default=0.0)
     payment_terms = Column(String(255), nullable=True)
     sla_details = Column(Text, nullable=True)
+    sla = Column(String(500), nullable=True)
     warranty_details = Column(Text, nullable=True)
 
     responsible_manager_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    responsible_manager = Column(String(255), nullable=True)
+    document_url = Column(String(500), nullable=True)
+    signed_document_path = Column(String(500), nullable=True)
+
     status = Column(String(50), default="Draft", index=True)  # Draft, Active, Expired, Renewed, Terminated
     compliance_verified = Column(Boolean, default=False)
-    signed_document_path = Column(String(500), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

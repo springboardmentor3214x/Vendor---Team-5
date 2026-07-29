@@ -2,7 +2,9 @@ from app.models.vendor import Vendor
 from app.models.vendor_document import VendorDocument
 from app.models.contract import Contract
 from app.models.contract_renewal import ContractRenewal
+from app.models.certification import Certification
 from app.models.vendor_certification import VendorCertification
+from app.models.compliance import ComplianceRecord as Compliance
 from app.models.compliance_record import ComplianceRecord
 from app.models.notification import Notification
 from app.models.report_log import ReportLog

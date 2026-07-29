@@ -2,18 +2,45 @@ import csv
 import io
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.api.auth import get_current_user
+from app.core.database import get_db
+from app.models.user import User
+from app.services import report_service
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
+_REPORT_ROLES = {
+    "Administrator",
+    "Procurement Manager",
+    "Supply Chain Manager",
+    "Finance Officer",
+    "Auditor",
+}
+
+
+def _role_name(current_user: User) -> str | None:
+    role = getattr(current_user, "role", None)
+    return getattr(role, "name", role)
+
+
+def _require_report_access(current_user: User) -> None:
+    if _role_name(current_user) not in _REPORT_ROLES:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
 
 @router.get("/")
-def list_reports():
+def list_reports(current_user: User = Depends(get_current_user)):
+    _require_report_access(current_user)
     return {"items": [
-        {"key": "vendor-performance", "title": "Vendor Performance Report", "format": "csv", "status": "ready"},
-        {"key": "procurement", "title": "Procurement Summary Report", "format": "csv", "status": "ready"},
+        {"key": "vendor-performance", "title": "Vendor Performance Report", "format": "csv", "status": "placeholder"},
+        {"key": "procurement", "title": "Procurement Summary Report", "format": "csv", "status": "placeholder"},
+        {"key": "contracts", "title": "Contract Report", "format": "csv", "status": "ready"},
         {"key": "compliance", "title": "Compliance Status Report", "format": "csv", "status": "ready"},
+        {"key": "vendor-documents", "title": "Vendor Document Report", "format": "csv", "status": "ready"},
     ], "generated_at": datetime.utcnow()}
 
 
@@ -27,24 +54,42 @@ def csv_download_response(rows: list[dict], filename: str) -> StreamingResponse:
 
 
 @router.get("/vendor-performance")
-def export_vendor_performance_report():
-    return csv_download_response([
-        {"vendor_id": 1, "vendor_name": "ABC Supplies", "overall_score": 88.5, "performance_status": "Excellent"},
-        {"vendor_id": 2, "vendor_name": "Prime Industrial", "overall_score": 74.0, "performance_status": "Good"},
-    ], "vendor_performance_report.csv")
+def export_vendor_performance_report(current_user: User = Depends(get_current_user)):
+    _require_report_access(current_user)
+    return csv_download_response([], "vendor_performance_report.csv")
 
 
 @router.get("/procurement")
-def export_procurement_report():
-    return csv_download_response([
-        {"request_id": 101, "department": "Operations", "status": "Approved", "total_amount": 25000.0},
-        {"request_id": 102, "department": "Maintenance", "status": "Pending", "total_amount": 9800.0},
-    ], "procurement_report.csv")
+def export_procurement_report(current_user: User = Depends(get_current_user)):
+    _require_report_access(current_user)
+    return csv_download_response([], "procurement_report.csv")
+
+
+@router.get("/contracts")
+def export_contract_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_report_access(current_user)
+    report = report_service.export_report_data(db, "contract", format="csv")
+    return csv_download_response(report["rows"], "contract_report.csv")
 
 
 @router.get("/compliance")
-def export_compliance_report():
-    return csv_download_response([
-        {"vendor_id": 1, "vendor_name": "ABC Supplies", "compliance_verified": True, "contract_status": "Active"},
-        {"vendor_id": 2, "vendor_name": "Prime Industrial", "compliance_verified": False, "contract_status": "Expiring Soon"},
-    ], "compliance_report.csv")
+def export_compliance_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_report_access(current_user)
+    report = report_service.export_report_data(db, "compliance", format="csv")
+    return csv_download_response(report["rows"], "compliance_report.csv")
+
+
+@router.get("/vendor-documents")
+def export_vendor_document_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_report_access(current_user)
+    report = report_service.export_report_data(db, "vendor_document", format="csv")
+    return csv_download_response(report["rows"], "vendor_document_report.csv")

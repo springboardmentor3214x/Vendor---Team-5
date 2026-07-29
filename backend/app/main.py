@@ -5,6 +5,7 @@ from app.api import (
     auth,
     communications,
     contracts,
+    dashboard,
     notifications,
     performance,
     procurement,
@@ -39,6 +40,7 @@ app.include_router(procurement.router, prefix=API_PREFIX)
 app.include_router(performance.router, prefix=API_PREFIX)
 app.include_router(reliability.router, prefix=API_PREFIX)
 app.include_router(contracts.router, prefix=API_PREFIX)
+app.include_router(dashboard.router, prefix=API_PREFIX)
 app.include_router(communications.router, prefix=API_PREFIX)
 app.include_router(notifications.router, prefix=API_PREFIX)
 app.include_router(reports.router, prefix=API_PREFIX)

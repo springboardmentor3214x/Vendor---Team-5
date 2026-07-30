@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -7,19 +8,17 @@ from app.api.auth import get_current_user
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
-from app.models.vendor_ranking import VendorRanking
 from app.models.reliability import VendorReliability, PerformanceTrend, ProcurementRecommendation
 from app.schemas.reliability import (
     VendorReliabilityOut,
     PerformanceTrendOut,
     ProcurementRecommendationOut,
+    ReliabilityRecalculationResult,
+    ReliabilityRiskItem,
     ReliabilityDashboardOut,
     VendorRankItem
 )
-from app.services.reliability_service import (
-    recalculate_vendor_reliability,
-    recalculate_supplier_rankings
-)
+from app.services.reliability_service import recalculate_vendor_reliability
 from app.utils.constants import ROLE_ADMIN, ROLE_PROCUREMENT_MANAGER, ROLE_VENDOR
 
 router = APIRouter(prefix="/reliability", tags=["Reliability"])
@@ -52,6 +51,21 @@ def check_vendor_access(vendor_id: int, current_user: User, db: Session):
     )
 
 
+def _reliability_ranking_query(db: Session):
+    """Return Module 5 ranking data from persisted reliability scores only."""
+    return (
+        db.query(
+            VendorReliability.vendor_id,
+            Vendor.company_name,
+            VendorCategory.name,
+            VendorReliability.reliability_score,
+            VendorReliability.risk_level,
+        )
+        .join(Vendor, Vendor.id == VendorReliability.vendor_id)
+        .outerjoin(VendorCategory, VendorCategory.id == Vendor.category_id)
+    )
+
+
 @router.get("/dashboard", response_model=ReliabilityDashboardOut)
 def get_reliability_dashboard(
     db: Session = Depends(get_db),
@@ -76,36 +90,29 @@ def get_reliability_dashboard(
         VendorReliability.reliability_score < 50
     ).scalar() or 0
 
-    # Get top 5 ranked vendors
-    top_rankings_query = (
-        db.query(
-            VendorRanking.vendor_id,
-            Vendor.company_name,
-            VendorCategory.name,
-            VendorRanking.overall_performance_score,
-            VendorRanking.rank_position
+    # Module 5 rankings are dynamic and derived from reliability_score, not
+    # the separate Module 4 VendorRanking performance table.
+    top_rankings = (
+        _reliability_ranking_query(db)
+        .order_by(
+            VendorReliability.reliability_score.desc(),
+            VendorReliability.vendor_id.asc(),
         )
-        .join(Vendor, Vendor.id == VendorRanking.vendor_id)
-        .join(VendorCategory, VendorCategory.id == Vendor.category_id)
-        .join(VendorReliability, VendorReliability.vendor_id == VendorRanking.vendor_id)
-        .order_by(VendorRanking.rank_position.asc())
         .limit(5)
         .all()
     )
 
-    top_ranked = []
-    for item in top_rankings_query:
-        rel = db.query(VendorReliability).filter(VendorReliability.vendor_id == item[0]).first()
-        top_ranked.append(
-            VendorRankItem(
-                vendor_id=item[0],
-                vendor_name=item[1],
-                vendor_category=item[2],
-                reliability_score=item[3],
-                risk_level=rel.risk_level if rel else "Medium",
-                rank_position=item[4]
-            )
+    top_ranked = [
+        VendorRankItem(
+            vendor_id=item[0],
+            vendor_name=item[1],
+            vendor_category=item[2],
+            reliability_score=item[3],
+            risk_level=item[4],
+            rank_position=position,
         )
+        for position, item in enumerate(top_rankings, start=1)
+    ]
 
     # Total vendors evaluated is the count of rows in vendor_reliability table
     total_vendors = db.query(func.count(VendorReliability.id)).scalar() or 0
@@ -153,7 +160,7 @@ def trigger_recalculate(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.post("/recalculate-all")
+@router.post("/recalculate-all", response_model=ReliabilityRecalculationResult)
 def trigger_recalculate_all(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -169,7 +176,10 @@ def trigger_recalculate_all(
         except Exception:
             continue
 
-    return {"message": f"Successfully recalculated reliability score for {count} vendors."}
+    return {
+        "message": f"Successfully recalculated reliability score for {count} vendors.",
+        "recalculatedVendors": count,
+    }
 
 
 @router.get("/rankings", response_model=List[VendorRankItem])
@@ -180,46 +190,30 @@ def get_supplier_rankings(
 ):
     check_manager_or_admin(current_user)
 
-    query = (
-        db.query(
-            VendorRanking.vendor_id,
-            Vendor.company_name,
-            VendorCategory.name,
-            VendorRanking.overall_performance_score,
-            VendorRanking.rank_position,
-            VendorReliability.risk_level,
-            Vendor.category_id
-        )
-        .join(Vendor, Vendor.id == VendorRanking.vendor_id)
-        .join(VendorCategory, VendorCategory.id == Vendor.category_id)
-        .join(VendorReliability, VendorReliability.vendor_id == VendorRanking.vendor_id)
-    )
+    query = _reliability_ranking_query(db)
 
-    if category_id:
+    if category_id is not None:
         query = query.filter(Vendor.category_id == category_id)
 
-    # Always order by rank position ascending (reliability score descending)
-    rankings_data = query.order_by(VendorRanking.rank_position.asc()).all()
+    rankings_data = query.order_by(
+        VendorReliability.reliability_score.desc(),
+        VendorReliability.vendor_id.asc(),
+    ).all()
 
-    result = []
-    # If filtered by category, we re-index the rank to be sequential for display,
-    # but let's return the absolute rank position as stored.
-    for item in rankings_data:
-        result.append(
-            VendorRankItem(
-                vendor_id=item[0],
-                vendor_name=item[1],
-                vendor_category=item[2],
-                reliability_score=item[3],
-                risk_level=item[5],
-                rank_position=item[4]
-            )
+    return [
+        VendorRankItem(
+            vendor_id=item[0],
+            vendor_name=item[1],
+            vendor_category=item[2],
+            reliability_score=item[3],
+            risk_level=item[4],
+            rank_position=position,
         )
+        for position, item in enumerate(rankings_data, start=1)
+    ]
 
-    return result
 
-
-@router.get("/risk-levels")
+@router.get("/risk-levels", response_model=List[ReliabilityRiskItem])
 def get_procurement_risk_levels(
     risk_level: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -227,32 +221,24 @@ def get_procurement_risk_levels(
 ):
     check_manager_or_admin(current_user)
 
-    query = (
-        db.query(
-            VendorReliability.vendor_id,
-            Vendor.company_name,
-            VendorCategory.name,
-            VendorReliability.reliability_score,
-            VendorReliability.risk_level
-        )
-        .join(Vendor, Vendor.id == VendorReliability.vendor_id)
-        .join(VendorCategory, VendorCategory.id == Vendor.category_id)
-    )
+    query = _reliability_ranking_query(db)
 
-    if risk_level:
+    if risk_level is not None:
         query = query.filter(VendorReliability.risk_level == risk_level)
 
     data = query.all()
 
     result = []
     for item in data:
-        result.append({
-            "vendor_id": item[0],
-            "vendor_name": item[1],
-            "vendor_category": item[2],
-            "reliability_score": item[3],
-            "risk_level": item[4]
-        })
+        result.append(
+            ReliabilityRiskItem(
+                vendor_id=item[0],
+                vendor_name=item[1],
+                vendor_category=item[2],
+                reliability_score=item[3],
+                risk_level=item[4],
+            )
+        )
 
     return result
 
@@ -296,10 +282,10 @@ def get_procurement_recommendations(
             ProcurementRecommendation.updated_at
         )
         .join(Vendor, Vendor.id == ProcurementRecommendation.vendor_id)
-        .join(VendorCategory, VendorCategory.id == Vendor.category_id)
+        .outerjoin(VendorCategory, VendorCategory.id == Vendor.category_id)
     )
 
-    if category_id:
+    if category_id is not None:
         query = query.filter(Vendor.category_id == category_id)
 
     # Return recommendations sorted by reliability score descending
@@ -322,7 +308,3 @@ def get_procurement_recommendations(
         )
 
     return result
-
-
-# Helper function to compute SQL average functions
-from sqlalchemy import func

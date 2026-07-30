@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, normalize_user_role
 from app.schemas.contract import (
     ContractCreate,
     ContractUpdate,
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
 @router.post("/", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
 def create_contract(payload: ContractCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name not in ["Administrator", "Procurement Manager"]:
+    if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Administrators or Procurement Managers can create contracts"
@@ -38,7 +38,7 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db), curr
 
 @router.get("/", response_model=List[ContractResponse])
 def list_contracts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name == "Vendor":
+    if normalize_user_role(current_user) == "Vendor":
         from app.models.vendor import Vendor
         vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
         if not vendor:
@@ -50,7 +50,7 @@ def list_contracts(db: Session = Depends(get_db), current_user: User = Depends(g
 
 @router.get("/expiring", response_model=List[ContractResponse])
 def get_expiring_contracts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name not in ["Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"]:
+    if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"
@@ -64,7 +64,7 @@ def get_contract(contract_id: int, db: Session = Depends(get_db), current_user: 
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
         
-    if current_user.role.name == "Vendor":
+    if normalize_user_role(current_user) == "Vendor":
         from app.models.vendor import Vendor
         vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
         if not vendor or contract.vendor_id != vendor.id:
@@ -75,7 +75,7 @@ def get_contract(contract_id: int, db: Session = Depends(get_db), current_user: 
 
 @router.patch("/{contract_id}", response_model=ContractResponse)
 def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name not in ["Administrator", "Procurement Manager"]:
+    if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Administrators or Procurement Managers can update contracts"
@@ -95,7 +95,7 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
 
 @router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_contract(contract_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name not in ["Administrator"]:
+    if normalize_user_role(current_user) not in ["Administrator"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Administrators can delete contracts"
@@ -114,7 +114,7 @@ def delete_contract(contract_id: int, db: Session = Depends(get_db), current_use
 
 @router.post("/{contract_id}/renew", response_model=ContractResponse)
 def renew_contract(contract_id: int, payload: ContractRenewalCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name not in ["Administrator", "Procurement Manager"]:
+    if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Administrators or Procurement Managers can renew contracts"
@@ -134,7 +134,7 @@ def renew_contract(contract_id: int, payload: ContractRenewalCreate, db: Session
 
 @router.patch("/{contract_id}/status", response_model=ContractResponse)
 def update_contract_status(contract_id: int, status_str: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name not in ["Administrator", "Procurement Manager"]:
+    if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied"

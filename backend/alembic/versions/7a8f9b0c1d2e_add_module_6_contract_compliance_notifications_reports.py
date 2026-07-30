@@ -103,21 +103,6 @@ def upgrade() -> None:
         op.create_index(op.f('ix_compliance_records_id'), 'compliance_records', ['id'], unique=False)
         op.create_index(op.f('ix_compliance_records_vendor_id'), 'compliance_records', ['vendor_id'], unique=False)
         op.create_index(op.f('ix_compliance_records_verified_by'), 'compliance_records', ['verified_by'], unique=False)
-    else:
-        cr_cols = [c['name'] for c in inspector.get_columns('compliance_records')]
-        cr_indexes = [idx['name'] for idx in inspector.get_indexes('compliance_records')]
-        with op.batch_alter_table('compliance_records') as batch_op:
-            if 'contract_id' not in cr_cols:
-                batch_op.add_column(sa.Column('contract_id', sa.Integer(), nullable=True))
-                batch_op.create_foreign_key('fk_compliance_records_contract_id', 'contracts', ['contract_id'], ['id'])
-                if 'ix_compliance_records_contract_id' not in cr_indexes:
-                    batch_op.create_index('ix_compliance_records_contract_id', ['contract_id'], unique=False)
-            if 'compliance_status' not in cr_cols:
-                batch_op.add_column(sa.Column('compliance_status', sa.String(length=50), nullable=True))
-                if 'ix_compliance_records_compliance_status' not in cr_indexes:
-                    batch_op.create_index('ix_compliance_records_compliance_status', ['compliance_status'], unique=False)
-            if 'status' not in cr_cols:
-                batch_op.add_column(sa.Column('status', sa.String(length=50), nullable=True))
 
     # 4. Notifications table
     if not inspector.has_table('notifications'):

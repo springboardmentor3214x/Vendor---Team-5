@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, normalize_user_role
 from app.schemas.compliance import ComplianceRecordCreate, ComplianceRecordOut, ComplianceVerify
 from app.services import compliance_service
 
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/compliance", tags=["Compliance"])
 @router.post("/verify", response_model=ComplianceRecordOut)
 def verify_compliance_record(payload: ComplianceRecordCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Only Admin and Procurement Manager can verify/add compliance records
-    if current_user.role.name not in ["Administrator", "Procurement Manager"]:
+    if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     record = compliance_service.create_compliance_record(db, payload)
@@ -30,7 +30,7 @@ def verify_compliance_record(payload: ComplianceRecordCreate, db: Session = Depe
 
 @router.patch("/{compliance_id}/status", response_model=ComplianceRecordOut)
 def update_compliance_status(compliance_id: int, payload: ComplianceVerify, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name not in ["Administrator", "Procurement Manager"]:
+    if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return compliance_service.verify_compliance(
@@ -44,7 +44,7 @@ def update_compliance_status(compliance_id: int, payload: ComplianceVerify, db: 
 
 @router.get("/vendor/{vendor_id}", response_model=List[ComplianceRecordOut])
 def get_vendor_compliance_history(vendor_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role.name == "Vendor":
+    if normalize_user_role(current_user) == "Vendor":
         from app.models.vendor import Vendor
         vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
         if not vendor or vendor_id != vendor.id:

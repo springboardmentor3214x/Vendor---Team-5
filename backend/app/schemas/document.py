@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
 
@@ -13,6 +13,14 @@ class VendorDocumentBase(BaseModel):
 
 class VendorDocumentCreate(VendorDocumentBase):
     pass
+
+
+class VendorDocumentUpdate(BaseModel):
+    """Metadata that can be safely changed without replacing the stored file."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    document_type: Optional[str] = Field(default=None, alias="documentType")
 
 
 class VendorDocumentOut(VendorDocumentBase):

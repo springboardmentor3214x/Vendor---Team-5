@@ -30,7 +30,7 @@ from app.schemas.procurement import (
     ApprovedVendorOut,
 )
 
-from app.services.reliability_service import recalculate_vendor_reliability
+from app.api.reliability_refresh import refresh_after_procurement_update
 from app.services.procurement_service import (
     approve_procurement_request,
     reject_procurement_request,
@@ -421,10 +421,7 @@ def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate,
 
     db.commit()
     db.refresh(po)
-    try:
-        recalculate_vendor_reliability(po.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {po.vendor_id}: {e}")
+    refresh_after_procurement_update(po.vendor_id, db)
     return po
 
 
@@ -472,10 +469,7 @@ def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(po)
-    try:
-        recalculate_vendor_reliability(po.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {po.vendor_id}: {e}")
+    refresh_after_procurement_update(po.vendor_id, db)
     return po
 
 
@@ -490,10 +484,7 @@ def cancel_purchase_order_route(po_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(e))
     db.commit()
     db.refresh(po)
-    try:
-        recalculate_vendor_reliability(po.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {po.vendor_id}: {e}")
+    refresh_after_procurement_update(po.vendor_id, db)
     return po
 
 
@@ -519,10 +510,7 @@ def _completion_check(po_id: int, db: Session, *, apply_completion: bool):
         po.po_status = "Completed"
         db.commit()
         db.refresh(po)
-        try:
-            recalculate_vendor_reliability(po.vendor_id, db)
-        except Exception as exc:
-            print(f"Error recalculating reliability for vendor {po.vendor_id}: {exc}")
+        refresh_after_procurement_update(po.vendor_id, db)
     return {
         "po_id": po_id,
         "is_complete": is_complete,
@@ -570,10 +558,7 @@ def update_order_tracking(po_id: int, payload: OrderTrackingUpdate, db: Session 
     db.refresh(tracking)
     purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if purchase_order:
-        try:
-            recalculate_vendor_reliability(purchase_order.vendor_id, db)
-        except Exception as exc:
-            print(f"Error recalculating reliability for vendor {purchase_order.vendor_id}: {exc}")
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
     return tracking
 
 
@@ -627,6 +612,9 @@ def verify_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     invoice.payment_status = "Verified"
     db.commit()
     db.refresh(invoice)
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if purchase_order:
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
     return invoice
 
 
@@ -640,6 +628,9 @@ def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     invoice.payment_status = "Rejected"
     db.commit()
     db.refresh(invoice)
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if purchase_order:
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
     return invoice
 
 
@@ -656,4 +647,7 @@ def update_payment_status(invoice_id: int, payload: PaymentStatusUpdate, db: Ses
         invoice.paid_date = datetime.utcnow()
     db.commit()
     db.refresh(invoice)
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if purchase_order:
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
     return invoice

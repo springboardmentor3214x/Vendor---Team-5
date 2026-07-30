@@ -10,6 +10,7 @@ from app.models.vendor_document import VendorDocument
 from app.api.auth import get_current_user, normalize_user_role
 from app.schemas.document import VendorDocumentOut, VendorDocumentUpdate
 from app.services import document_service
+from app.api.reliability_refresh import refresh_after_compliance_update
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -50,6 +51,7 @@ def upload_document(
     db.add(doc)
     db.commit()
     db.refresh(doc)
+    refresh_after_compliance_update(doc.vendor_id, db)
     return doc
 
 
@@ -134,6 +136,7 @@ def update_document_metadata(
     )
     if not updated_document:
         raise HTTPException(status_code=404, detail="Document not found")
+    refresh_after_compliance_update(updated_document.vendor_id, db)
     return updated_document
 
 
@@ -151,6 +154,7 @@ def delete_document(document_id: int, db: Session = Depends(get_db), current_use
     elif normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    vendor_id = doc.vendor_id
     # Delete physical file
     if os.path.exists(doc.file_path):
         try:
@@ -160,4 +164,5 @@ def delete_document(document_id: int, db: Session = Depends(get_db), current_use
 
     db.delete(doc)
     db.commit()
+    refresh_after_compliance_update(vendor_id, db)
     return None

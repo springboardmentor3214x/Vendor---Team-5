@@ -7,6 +7,7 @@ from app.models.user import User
 from app.api.auth import get_current_user, normalize_user_role
 from app.schemas.certification import CertificationCreate, CertificationUpdate, CertificationOut
 from app.services import certification_service
+from app.api.reliability_refresh import refresh_after_compliance_update
 
 router = APIRouter(prefix="/certifications", tags=["Certifications"])
 
@@ -22,7 +23,9 @@ def add_certification(payload: CertificationCreate, db: Session = Depends(get_db
     elif normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    return certification_service.add_certification(db, payload)
+    certification = certification_service.add_certification(db, payload)
+    refresh_after_compliance_update(certification.vendor_id, db)
+    return certification
 
 
 @router.patch("/{certification_id}", response_model=CertificationOut)
@@ -39,7 +42,9 @@ def update_certification(certification_id: int, payload: CertificationUpdate, db
     elif normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    return certification_service.update_certification(db, certification_id, payload)
+    updated_certification = certification_service.update_certification(db, certification_id, payload)
+    refresh_after_compliance_update(updated_certification.vendor_id, db)
+    return updated_certification
 
 
 @router.delete("/{certification_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -56,7 +61,9 @@ def delete_certification(certification_id: int, db: Session = Depends(get_db), c
     elif normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    vendor_id = cert.vendor_id
     certification_service.delete_certification(db, certification_id)
+    refresh_after_compliance_update(vendor_id, db)
 
 
 @router.get("/vendor/{vendor_id}", response_model=List[CertificationOut])

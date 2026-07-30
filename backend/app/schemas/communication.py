@@ -13,7 +13,9 @@ class CommunicationBase(BaseModel):
 
 
 class CommunicationCreate(CommunicationBase):
-    pass
+    # The API always derives the persisted sender from the JWT user.  Keep the
+    # legacy input optional so existing clients that send senderId do not break.
+    sender_id: Optional[int] = Field(default=None, alias="senderId")
 
 
 class CommunicationResponse(CommunicationBase):

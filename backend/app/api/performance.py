@@ -28,7 +28,7 @@ from app.schemas.performance import (
     PerformanceRecordOut,
     VendorRankingOut,
 )
-from app.services.reliability_service import recalculate_vendor_reliability
+from app.api.reliability_refresh import refresh_after_performance_write
 from app.services.performance_service import (
     calculate_delivery_delay,
     get_delivery_status,
@@ -109,11 +109,29 @@ def get_or_create_record(db: Session, vendor_id: int) -> PerformanceRecord:
     return record
 
 
-def sync_overall_score(record: PerformanceRecord) -> None:
+def _communication_score_for_vendor(db: Session, vendor_id: int) -> float:
+    """Derive a 0-100 communication score from real communication records.
+
+    ``average_response_time`` is deliberately retained as minutes; it must not
+    be used as a performance score.
+    """
+    response_minutes = [
+        row[0]
+        for row in db.query(CommunicationLog.response_duration_minutes)
+        .filter(CommunicationLog.vendor_id == vendor_id)
+        .all()
+        if row[0] is not None
+    ]
+    return calculate_average_communication_score(
+        [calculate_communication_score(minutes) for minutes in response_minutes]
+    ) if response_minutes else 0.0
+
+
+def sync_overall_score(db: Session, record: PerformanceRecord) -> None:
     record.overall_performance_score = calculate_overall_performance_score(
         record.on_time_delivery_rate or 0.0,
         record.average_quality_score or 0.0,
-        record.average_response_time or 0.0,
+        _communication_score_for_vendor(db, record.vendor_id),
         record.average_service_rating_score or 0.0,
     )
     record.performance_status = get_performance_status(record.overall_performance_score)
@@ -134,7 +152,7 @@ def refresh_vendor_ranking(db: Session, vendor_id: int) -> None:
             vendor_id=vendor_id,
             delivery_score=record.on_time_delivery_rate or 0.0,
             quality_score=record.average_quality_score or 0.0,
-            communication_score=record.average_response_time or 0.0,
+            communication_score=_communication_score_for_vendor(db, vendor_id),
             service_rating_score=record.average_service_rating_score or 0.0,
             overall_performance_score=record.overall_performance_score or 0.0,
             rank_position=0,
@@ -143,7 +161,7 @@ def refresh_vendor_ranking(db: Session, vendor_id: int) -> None:
     else:
         ranking.delivery_score = record.on_time_delivery_rate or 0.0
         ranking.quality_score = record.average_quality_score or 0.0
-        ranking.communication_score = record.average_response_time or 0.0
+        ranking.communication_score = _communication_score_for_vendor(db, vendor_id)
         ranking.service_rating_score = record.average_service_rating_score or 0.0
         ranking.overall_performance_score = record.overall_performance_score or 0.0
 
@@ -173,7 +191,7 @@ def performance_dashboard(
 
     delivery_scores = [r.on_time_delivery_rate or 0.0 for r in records]
     quality_scores = [r.average_quality_score or 0.0 for r in records]
-    response_scores = [r.average_response_time or 0.0 for r in records]
+    communication_scores = [_communication_score_for_vendor(db, r.vendor_id) for r in records]
     service_scores = [r.average_service_rating_score or 0.0 for r in records]
 
     excellent_count = sum(1 for r in records if get_performance_status(r.overall_performance_score or 0.0) == "Excellent")
@@ -200,7 +218,7 @@ def performance_dashboard(
         "total_delayed_deliveries": total_delayed,
         "average_delivery_score": calculate_average_delivery_score(delivery_scores),
         "average_quality_score": calculate_average_quality_score(quality_scores) if quality_scores else 0.0,
-        "average_communication_score": calculate_average_communication_score(response_scores),
+        "average_communication_score": calculate_average_communication_score(communication_scores),
         "average_service_rating_score": calculate_average_service_rating_score(service_scores),
         "completion_rate": completion_rate,
     }
@@ -248,15 +266,12 @@ def record_delivery_performance(
     record.delayed_delivery_count = new_delayed_count
     record.evaluation_date = payload.actual_delivery_date
     record.notes = f"PO {payload.purchase_order_id}: Delivery {delivery_status}, delay {delay_days} days"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,
@@ -322,15 +337,12 @@ def record_quality_performance(
     record.average_quality_score = quality_score
     record.evaluation_date = datetime.utcnow()
     record.notes = f"PO {payload.purchase_order_id}: Quality score generated with defects={payload.product_defects}"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,
@@ -393,15 +405,12 @@ def record_communication_performance(
     record.average_response_time = float(response_duration)
     record.evaluation_date = datetime.utcnow()
     record.notes = f"PO {payload.purchase_order_id}: Response duration {response_duration} minutes"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,
@@ -468,15 +477,12 @@ def record_service_rating(
     record.average_service_rating_score = service_rating_score
     record.evaluation_date = datetime.utcnow()
     record.notes = f"PO {payload.purchase_order_id}: Service rating recorded"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,

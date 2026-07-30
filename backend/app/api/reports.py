@@ -36,8 +36,8 @@ def _require_report_access(current_user: User) -> None:
 def list_reports(current_user: User = Depends(get_current_user)):
     _require_report_access(current_user)
     return {"items": [
-        {"key": "vendor-performance", "title": "Vendor Performance Report", "format": "csv", "status": "placeholder"},
-        {"key": "procurement", "title": "Procurement Summary Report", "format": "csv", "status": "placeholder"},
+        {"key": "vendor-performance", "title": "Vendor Performance Report", "format": "csv", "status": "ready"},
+        {"key": "procurement", "title": "Procurement Summary Report", "format": "csv", "status": "ready"},
         {"key": "contracts", "title": "Contract Report", "format": "csv", "status": "ready"},
         {"key": "compliance", "title": "Compliance Status Report", "format": "csv", "status": "ready"},
         {"key": "vendor-documents", "title": "Vendor Document Report", "format": "csv", "status": "ready"},
@@ -54,15 +54,23 @@ def csv_download_response(rows: list[dict], filename: str) -> StreamingResponse:
 
 
 @router.get("/vendor-performance")
-def export_vendor_performance_report(current_user: User = Depends(get_current_user)):
+def export_vendor_performance_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     _require_report_access(current_user)
-    return csv_download_response([], "vendor_performance_report.csv")
+    report = report_service.export_report_data(db, "vendor_performance", format="csv")
+    return csv_download_response(report["rows"], "vendor_performance_report.csv")
 
 
 @router.get("/procurement")
-def export_procurement_report(current_user: User = Depends(get_current_user)):
+def export_procurement_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     _require_report_access(current_user)
-    return csv_download_response([], "procurement_report.csv")
+    report = report_service.export_report_data(db, "procurement_summary", format="csv")
+    return csv_download_response(report["rows"], "procurement_report.csv")
 
 
 @router.get("/contracts")

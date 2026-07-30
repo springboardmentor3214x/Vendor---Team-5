@@ -7,6 +7,7 @@ from app.models.user import User
 from app.api.auth import get_current_user, normalize_user_role
 from app.schemas.compliance import ComplianceRecordCreate, ComplianceRecordOut, ComplianceVerify
 from app.services import compliance_service
+from app.api.reliability_refresh import refresh_after_compliance_update
 
 router = APIRouter(prefix="/compliance", tags=["Compliance"])
 
@@ -19,13 +20,15 @@ def verify_compliance_record(payload: ComplianceRecordCreate, db: Session = Depe
 
     record = compliance_service.create_compliance_record(db, payload)
     # Perform immediate verification setup
-    return compliance_service.verify_compliance(
+    verified_record = compliance_service.verify_compliance(
         db, 
         compliance_id=record.id, 
         status=payload.status, 
         verified_by=current_user.id, 
         remarks=payload.remarks
     )
+    refresh_after_compliance_update(verified_record.vendor_id, db)
+    return verified_record
 
 
 @router.patch("/{compliance_id}/status", response_model=ComplianceRecordOut)
@@ -33,13 +36,15 @@ def update_compliance_status(compliance_id: int, payload: ComplianceVerify, db: 
     if normalize_user_role(current_user) not in ["Administrator", "Procurement Manager"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    return compliance_service.verify_compliance(
+    updated_record = compliance_service.verify_compliance(
         db,
         compliance_id=compliance_id,
         status=payload.status,
         verified_by=current_user.id,
         remarks=payload.remarks
     )
+    refresh_after_compliance_update(updated_record.vendor_id, db)
+    return updated_record
 
 
 @router.get("/vendor/{vendor_id}", response_model=List[ComplianceRecordOut])

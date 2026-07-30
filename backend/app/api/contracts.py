@@ -15,7 +15,7 @@ from app.schemas.contract import (
     ContractRenewalOut
 )
 from app.services import contract_service
-from app.services.reliability_service import recalculate_vendor_reliability
+from app.api.reliability_refresh import refresh_after_compliance_update
 
 router = APIRouter(prefix="/contracts", tags=["Contracts"])
 
@@ -29,10 +29,7 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db), curr
         )
     
     contract = contract_service.create_contract(db, payload)
-    try:
-        recalculate_vendor_reliability(contract.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {contract.vendor_id}: {e}")
+    refresh_after_compliance_update(contract.vendor_id, db)
     return contract
 
 
@@ -85,10 +82,7 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
         
-    try:
-        recalculate_vendor_reliability(contract.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {contract.vendor_id}: {e}")
+    refresh_after_compliance_update(contract.vendor_id, db)
         
     return contract
 
@@ -106,10 +100,7 @@ def delete_contract(contract_id: int, db: Session = Depends(get_db), current_use
         raise HTTPException(status_code=404, detail="Contract not found")
         
     contract_service.delete_contract(db, contract_id)
-    try:
-        recalculate_vendor_reliability(contract.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {contract.vendor_id}: {e}")
+    refresh_after_compliance_update(contract.vendor_id, db)
 
 
 @router.post("/{contract_id}/renew", response_model=ContractResponse)
@@ -124,10 +115,7 @@ def renew_contract(contract_id: int, payload: ContractRenewalCreate, db: Session
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
         
-    try:
-        recalculate_vendor_reliability(contract.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {contract.vendor_id}: {e}")
+    refresh_after_compliance_update(contract.vendor_id, db)
         
     return contract
 
@@ -144,9 +132,6 @@ def update_contract_status(contract_id: int, status_str: str, db: Session = Depe
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
         
-    try:
-        recalculate_vendor_reliability(contract.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {contract.vendor_id}: {e}")
+    refresh_after_compliance_update(contract.vendor_id, db)
         
     return contract

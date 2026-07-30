@@ -1,10 +1,12 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.core.database import get_db
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, normalize_user_role
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
@@ -22,13 +24,14 @@ from app.services.reliability_service import recalculate_vendor_reliability
 from app.utils.constants import ROLE_ADMIN, ROLE_PROCUREMENT_MANAGER, ROLE_VENDOR
 
 router = APIRouter(prefix="/reliability", tags=["Reliability"])
+logger = logging.getLogger(__name__)
 
 
 def check_manager_or_admin(current_user: User):
     """
     Ensure the user is an Admin, Procurement Manager, or Supply Chain Manager.
     """
-    if current_user.role not in [ROLE_ADMIN, ROLE_PROCUREMENT_MANAGER, "Supply Chain Manager"]:
+    if normalize_user_role(current_user) not in [ROLE_ADMIN, ROLE_PROCUREMENT_MANAGER, "Supply Chain Manager"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: requires administrator or procurement manager role."
@@ -39,9 +42,10 @@ def check_vendor_access(vendor_id: int, current_user: User, db: Session):
     """
     Allow manager/admin, or allow the vendor themselves if email matches.
     """
-    if current_user.role in [ROLE_ADMIN, ROLE_PROCUREMENT_MANAGER, "Supply Chain Manager"]:
+    role = normalize_user_role(current_user)
+    if role in [ROLE_ADMIN, ROLE_PROCUREMENT_MANAGER, "Supply Chain Manager"]:
         return
-    if current_user.role == ROLE_VENDOR:
+    if role == ROLE_VENDOR:
         vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
         if vendor and vendor.email == current_user.email:
             return
@@ -174,6 +178,7 @@ def trigger_recalculate_all(
             recalculate_vendor_reliability(vendor.id, db)
             count += 1
         except Exception:
+            logger.exception("Reliability recalculation failed for vendor %s", vendor.id)
             continue
 
     return {

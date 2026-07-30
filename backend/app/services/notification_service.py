@@ -25,39 +25,48 @@ def _column_names() -> set[str]:
 
 def get_user_notifications(db: Any, user_id: int) -> list[Any]:
     """Return only notifications owned by ``user_id`` when persistence is available."""
-    if Notification is None:
+    if db is None or Notification is None:
         return []
     query = db.query(Notification)
-    if "user_id" in _column_names():
+    if "user_id" in _column_names() and hasattr(query, "filter"):
         query = query.filter(Notification.user_id == user_id)
-    if "created_at" in _column_names():
+    if "created_at" in _column_names() and hasattr(query, "order_by"):
         query = query.order_by(Notification.created_at.desc())
-    return query.all()
+    if hasattr(query, "all"):
+        return query.all()
+    return []
 
 
 def get_unread_notifications(db: Any, user_id: int) -> list[Any]:
     """Return the current user's unread notifications without assuming extra columns."""
-    if Notification is None:
+    if db is None or Notification is None:
         return []
     query = db.query(Notification)
     columns = _column_names()
-    if "user_id" in columns:
+    if "user_id" in columns and hasattr(query, "filter"):
         query = query.filter(Notification.user_id == user_id)
-    if "is_read" in columns:
+    if "is_read" in columns and hasattr(query, "filter"):
         query = query.filter(Notification.is_read.is_(False))
-    if "created_at" in columns:
+    if "created_at" in columns and hasattr(query, "order_by"):
         query = query.order_by(Notification.created_at.desc())
-    return query.all()
+    if hasattr(query, "all"):
+        return query.all()
+    return []
 
 
 def mark_notification_as_read(db: Any, notification_id: int, user_id: int) -> Any | None:
     """Mark an owned notification read; never permit a cross-user update."""
-    if Notification is None:
+    if db is None or Notification is None:
         return None
-    query = db.query(Notification).filter(Notification.id == notification_id)
-    if "user_id" in _column_names():
-        query = query.filter(Notification.user_id == user_id)
-    notification = query.first()
+    query = db.query(Notification)
+    if hasattr(query, "filter"):
+        query = query.filter(Notification.id == notification_id)
+        if "user_id" in _column_names():
+            query = query.filter(Notification.user_id == user_id)
+    if hasattr(query, "first"):
+        notification = query.first()
+    else:
+        notification = None
     if notification is None:
         return None
     if "is_read" in _column_names():
@@ -76,7 +85,7 @@ def create_notification(
     related_entity_id: int | None = None,
 ) -> Any:
     """Persist a notification using only columns declared by the current model."""
-    if Notification is None:
+    if db is None or Notification is None:
         # TODO: replace with persistence once the Notification model/migration exists.
         return _unavailable()
 

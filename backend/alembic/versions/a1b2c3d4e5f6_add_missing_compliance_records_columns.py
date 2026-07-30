@@ -45,6 +45,23 @@ def upgrade() -> None:
             if 'status' not in cr_cols:
                 batch_op.add_column(sa.Column('status', sa.String(length=50), nullable=True))
 
+    if inspector.has_table('procurement_recommendations'):
+        pr_cols = [c['name'] for c in inspector.get_columns('procurement_recommendations')]
+        pr_indexes = [idx['name'] for idx in inspector.get_indexes('procurement_recommendations')]
+
+        with op.batch_alter_table('procurement_recommendations') as batch_op:
+            if 'category_id' not in pr_cols:
+                batch_op.add_column(sa.Column('category_id', sa.Integer(), nullable=True))
+                batch_op.create_foreign_key('fk_procurement_recommendations_category_id', 'vendor_categories', ['category_id'], ['id'])
+                if 'ix_procurement_recommendations_category_id' not in pr_indexes:
+                    batch_op.create_index('ix_procurement_recommendations_category_id', ['category_id'], unique=False)
+            if 'recommendation_score' not in pr_cols:
+                batch_op.add_column(sa.Column('recommendation_score', sa.Float(), nullable=True))
+            if 'generated_at' not in pr_cols:
+                batch_op.add_column(sa.Column('generated_at', sa.DateTime(), nullable=True))
+                if 'ix_procurement_recommendations_generated_at' not in pr_indexes:
+                    batch_op.create_index('ix_procurement_recommendations_generated_at', ['generated_at'], unique=False)
+
 
 def downgrade() -> None:
     pass

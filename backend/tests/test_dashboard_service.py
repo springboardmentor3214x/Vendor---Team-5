@@ -26,6 +26,15 @@ def test_module6_dashboard_handles_an_empty_database():
     }
 
 
+def test_module6_dashboard_handles_an_unavailable_database():
+    assert get_module6_dashboard_summary(None, user_id=1) == {
+        "contracts": {"total_contracts": 0, "active_contracts": 0, "expired_contracts": 0, "expiring_soon_contracts": 0},
+        "compliance": {"total_compliance_records": 0, "compliant_count": 0, "non_compliant_count": 0, "pending_count": 0, "expired_count": 0},
+        "documents": {"total_documents": 0, "total_certifications": 0, "expired_certifications": 0, "expiring_soon_certifications": 0},
+        "notifications": {"total_notifications": 0, "unread_notifications": 0},
+    }
+
+
 def test_contract_dashboard_aggregates_real_model_shaped_records():
     today = date.today()
     contracts = [

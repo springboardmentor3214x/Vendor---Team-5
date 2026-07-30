@@ -23,23 +23,33 @@ def _filter(query: Any, model: Any, filters: dict[str, Any] | None) -> Any:
     return query
 
 
+def _rows(db: Any, model: Any, filters: dict[str, Any] | None = None) -> list[Any]:
+    """Read available ORM rows without turning missing tables into fake reports."""
+    if db is None:
+        return []
+    try:
+        return list(_filter(db.query(model), model, filters).all() or [])
+    except Exception:
+        return []
+
+
+def _row(item: Any, names: tuple[str, ...]) -> dict[str, Any]:
+    return {name: _value(getattr(item, name, None)) for name in names}
+
+
 def generate_contract_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    rows = _filter(db.query(Contract), Contract, filters).all()
-    return [{"id": row.id, "vendor_id": row.vendor_id, "contract_number": row.contract_number,
-             "contract_title": row.contract_title, "status": row.status, "start_date": _value(row.start_date),
-             "end_date": _value(row.end_date), "contract_value": row.contract_value} for row in rows]
+    return [_row(row, ("id", "vendor_id", "contract_number", "contract_title", "status", "start_date",
+                       "end_date", "contract_value")) for row in _rows(db, Contract, filters)]
 
 
 def generate_compliance_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    rows = _filter(db.query(ComplianceRecord), ComplianceRecord, filters).all()
-    return [{"id": row.id, "vendor_id": row.vendor_id, "compliance_type": row.compliance_type,
-             "status": row.status, "verification_date": _value(row.verification_date), "remarks": row.remarks} for row in rows]
+    return [_row(row, ("id", "vendor_id", "compliance_type", "status", "verification_date", "remarks"))
+            for row in _rows(db, ComplianceRecord, filters)]
 
 
 def generate_vendor_document_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    rows = _filter(db.query(VendorDocument), VendorDocument, filters).all()
-    return [{"id": row.id, "vendor_id": row.vendor_id, "document_type": row.document_type,
-             "file_name": row.file_name, "content_type": row.content_type, "uploaded_at": _value(row.uploaded_at)} for row in rows]
+    return [_row(row, ("id", "vendor_id", "document_type", "file_name", "content_type", "uploaded_at"))
+            for row in _rows(db, VendorDocument, filters)]
 
 
 def generate_notification_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:

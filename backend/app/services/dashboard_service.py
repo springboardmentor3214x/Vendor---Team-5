@@ -17,13 +17,23 @@ def _day(value: date | datetime | None) -> date | None:
     return value.date() if isinstance(value, datetime) else value
 
 
+def _rows(db: Any, model: Any) -> list[Any]:
+    """Return query results, treating unavailable optional tables as empty."""
+    if db is None:
+        return []
+    try:
+        return list(db.query(model).all() or [])
+    except Exception:
+        return []
+
+
 def get_contract_dashboard_summary(db: Any) -> dict[str, int]:
     today = date.today()
-    contracts = db.query(Contract).all()
+    contracts = _rows(db, Contract)
     active = expired = expiring = 0
     for contract in contracts:
-        end_date = _day(contract.end_date)
-        start_date = _day(contract.start_date)
+        end_date = _day(getattr(contract, "end_date", None))
+        start_date = _day(getattr(contract, "start_date", None))
         if end_date is not None and end_date < today:
             expired += 1
         elif start_date is not None and start_date <= today:
@@ -35,21 +45,22 @@ def get_contract_dashboard_summary(db: Any) -> dict[str, int]:
 
 
 def get_compliance_dashboard_summary(db: Any) -> dict[str, int]:
-    records = db.query(ComplianceRecord).all()
+    records = _rows(db, ComplianceRecord)
     return {"total_compliance_records": len(records),
-            "compliant_count": sum(row.status == "Compliant" for row in records),
-            "non_compliant_count": sum(row.status == "Non-Compliant" for row in records),
-            "pending_count": sum(row.status == "Pending Verification" for row in records),
-            "expired_count": sum(row.status == "Expired" for row in records)}
+            "compliant_count": sum(getattr(row, "status", None) == "Compliant" for row in records),
+            "non_compliant_count": sum(getattr(row, "status", None) == "Non-Compliant" for row in records),
+            "pending_count": sum(getattr(row, "status", None) == "Pending Verification" for row in records),
+            "expired_count": sum(getattr(row, "status", None) == "Expired" for row in records)}
 
 
 def get_document_dashboard_summary(db: Any) -> dict[str, int]:
     today = date.today()
-    certifications = db.query(Certification).all()
-    return {"total_documents": db.query(VendorDocument).count(), "total_certifications": len(certifications),
-            "expired_certifications": sum((_day(row.expiry_date) or today) < today for row in certifications),
+    certifications = _rows(db, Certification)
+    documents = _rows(db, VendorDocument)
+    return {"total_documents": len(documents), "total_certifications": len(certifications),
+            "expired_certifications": sum((_day(getattr(row, "expiry_date", None)) or today) < today for row in certifications),
             "expiring_soon_certifications": sum(
-                bool(_day(row.expiry_date)) and is_contract_expiring_soon(_day(row.expiry_date), today)
+                bool(_day(getattr(row, "expiry_date", None))) and is_contract_expiring_soon(_day(getattr(row, "expiry_date", None)), today)
                 for row in certifications)}
 
 

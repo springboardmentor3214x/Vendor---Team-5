@@ -1,4 +1,5 @@
 from app.services import report_service
+import pytest
 
 
 class EmptyQuery:
@@ -28,6 +29,13 @@ def test_export_prepares_data_without_writing_files():
         "report_type": "contract", "format": "csv", "rows": [],
         "metadata": {"row_count": 0, "status": "prepared"},
     }
+
+
+def test_export_rejects_unsupported_report_types_and_formats():
+    with pytest.raises(ValueError, match="Unsupported report type"):
+        report_service.export_report_data(EmptyDb(), "vendor_performance")
+    with pytest.raises(ValueError, match="Unsupported export format"):
+        report_service.export_report_data(EmptyDb(), "contract", "json")
 
 
 def test_contract_report_uses_database_record_values():

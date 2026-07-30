@@ -2,8 +2,23 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.models.reliability import VendorReliability
+from app.models.certification import Certification
+from app.models.communication_log import CommunicationLog
+from app.models.compliance import ComplianceRecord
+from app.models.contract import Contract
+from app.models.delivery_performance import DeliveryPerformance
+from app.models.invoice import Invoice
+from app.models.order_tracking import OrderTracking
+from app.models.product_quality_evaluation import ProductQualityEvaluation
+from app.models.procurement_request import ProcurementRequest
+from app.models.purchase_order import PurchaseOrder
+from app.models.reliability import PerformanceTrend, ProcurementRecommendation, VendorReliability
+from app.models.service_rating import ServiceRating
+from app.models.vendor_document import VendorDocument
 from app.models.vendor import Vendor
+from app.services.performance_service import (
+    calculate_communication_score, calculate_delivery_score, calculate_quality_score,
+)
 from app.utils.constants import RISK_LOW, RISK_MEDIUM, RISK_HIGH
 
 
@@ -212,14 +227,134 @@ def compare_vendor_reliability(vendor_a: dict, vendor_b: dict) -> dict:
         "better_vendor_name": better_vendor["vendor_name"],
         "score_difference": round(abs(score_a - score_b), 2),
     }
-def recalculate_vendor_reliability(vendor_id: int, db: Session) -> VendorReliability:
-    """Persist and return a vendor's complete Module 5 reliability record.
+def _all(db: Session, model: type) -> list:
+    """Read an optional model safely; this also keeps services usable in tests."""
+    try:
+        return list(db.query(model).all() or [])
+    except Exception:
+        return []
 
-    ``VendorReliability`` is the API contract for the reliability endpoints.
-    This function therefore always returns that ORM object rather than a
-    derived summary.  The current database model has one compliance field;
-    it supplies both of the helper's 10% compliance-related inputs.
-    """
+
+def _vendor_rows(db: Session, model: type, vendor_id: int) -> list:
+    return [row for row in _all(db, model) if getattr(row, "vendor_id", None) == vendor_id]
+
+
+def _average(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 2) if values else None
+
+
+def _delivery_component(db: Session, vendor_id: int, purchase_orders: list) -> float | None:
+    scores = []
+    for row in _vendor_rows(db, DeliveryPerformance, vendor_id):
+        delay = getattr(row, "delay_days", None)
+        status = getattr(row, "delivery_status", None)
+        if delay is not None:
+            scores.append(calculate_delivery_score(int(delay)))
+        elif status in {"Early Delivery", "On-Time Delivery"}:
+            scores.append(100.0)
+        elif status == "Delayed Delivery":
+            scores.append(40.0)
+    po_ids = {getattr(row, "id", None) for row in purchase_orders}
+    for row in _all(db, OrderTracking):
+        if getattr(row, "purchase_order_id", None) not in po_ids:
+            continue
+        delay, status = getattr(row, "delay_days", None), getattr(row, "delivery_status", None)
+        if delay is not None and status in {"Delivered", "Completed", "Delayed"}:
+            scores.append(calculate_delivery_score(int(delay)))
+        elif status in {"Delivered", "Completed"}:
+            scores.append(100.0)
+        elif status == "Delayed":
+            scores.append(40.0)
+    return _average(scores)
+
+
+def _quality_component(db: Session, vendor_id: int) -> float | None:
+    scores = []
+    for row in _vendor_rows(db, ProductQualityEvaluation, vendor_id):
+        overall = getattr(row, "overall_quality_rating", None)
+        if overall is not None:
+            scores.append(max(0.0, min(100.0, float(overall) * 20)))
+            continue
+        ratings = [getattr(row, name, None) for name in ("material_quality", "packaging_quality", "quantity_accuracy", "specification_compliance")]
+        if all(value is not None for value in ratings):
+            scores.append(calculate_quality_score(*ratings, product_defects=getattr(row, "product_defects", 0) or 0))
+    return _average(scores)
+
+
+def _communication_components(db: Session, vendor_id: int) -> tuple[float | None, float | None]:
+    communication, issue_resolution = [], []
+    for row in _vendor_rows(db, CommunicationLog, vendor_id):
+        duration = getattr(row, "response_duration_minutes", None)
+        status = getattr(row, "communication_status", None)
+        if duration is not None:
+            communication.append(calculate_communication_score(float(duration)))
+        elif status in {"No Response", "Escalated"}:
+            communication.append(0.0)
+    for row in _vendor_rows(db, ServiceRating, vendor_id):
+        response = getattr(row, "communication_effectiveness", None)
+        issue = getattr(row, "issue_resolution", None)
+        if response is not None:
+            communication.append(max(0.0, min(100.0, float(response) * 20)))
+        if issue is not None:
+            issue_resolution.append(max(0.0, min(100.0, float(issue) * 20)))
+    return _average(communication), _average(issue_resolution)
+
+
+def _procurement_history_component(db: Session, vendor_id: int, purchase_orders: list) -> float | None:
+    """Score successful procurement activity only; it is deliberately not compliance."""
+    rates = []
+    if purchase_orders:
+        rates.append(100 * sum(getattr(row, "po_status", "") in {"Delivered", "Completed"} for row in purchase_orders) / len(purchase_orders))
+    requests = _vendor_rows(db, ProcurementRequest, vendor_id)
+    if requests:
+        rates.append(100 * sum(getattr(row, "approval_status", "") == "Approved" for row in requests) / len(requests))
+    po_ids = {getattr(row, "id", None) for row in purchase_orders}
+    invoices = [row for row in _all(db, Invoice) if getattr(row, "purchase_order_id", None) in po_ids]
+    if invoices:
+        rates.append(100 * sum(getattr(row, "payment_status", "") in {"Verified", "Approved", "Paid"} for row in invoices) / len(invoices))
+    return _average(rates)
+
+
+def _compliance_component(db: Session, vendor_id: int) -> float | None:
+    rates = []
+    contracts = _vendor_rows(db, Contract, vendor_id)
+    if contracts:
+        rates.append(100 * sum(bool(getattr(row, "compliance_verified", False)) for row in contracts) / len(contracts))
+    records = _vendor_rows(db, ComplianceRecord, vendor_id)
+    if records:
+        rates.append(100 * sum(getattr(row, "status", "") == "Compliant" for row in records) / len(records))
+    now = datetime.utcnow()
+    certifications = _vendor_rows(db, Certification, vendor_id)
+    if certifications:
+        rates.append(100 * sum(getattr(row, "expiry_date", None) is not None and getattr(row, "expiry_date") >= now for row in certifications) / len(certifications))
+    documents = _vendor_rows(db, VendorDocument, vendor_id)
+    if documents:
+        # The document model has no verification/status field; existence is the only supported signal.
+        rates.append(100.0)
+    return _average(rates)
+
+
+def _upsert_derived_rows(db: Session, vendor_id: int, reliability: VendorReliability, score: float, risk_level: str, recommendation: str) -> None:
+    now = datetime.utcnow()
+    trend = next((row for row in _vendor_rows(db, PerformanceTrend, vendor_id)
+                  if getattr(row, "year", None) == now.year and getattr(row, "month", None) == now.month), None)
+    if trend is None:
+        trend = PerformanceTrend(vendor_id=vendor_id, year=now.year, month=now.month)
+        db.add(trend)
+    for field in ("reliability_score", "delivery_score", "quality_score", "communication_score", "compliance_score", "issue_resolution_score"):
+        setattr(trend, field, getattr(reliability, field, 0.0) or 0.0)
+    recommendation_row = next((row for row in _vendor_rows(db, ProcurementRecommendation, vendor_id)), None)
+    if recommendation_row is None:
+        recommendation_row = ProcurementRecommendation(vendor_id=vendor_id)
+        db.add(recommendation_row)
+    recommendation_row.reliability_score = score
+    recommendation_row.risk_level = risk_level
+    recommendation_row.recommendation_status = {LOW_RISK: "Recommended", MEDIUM_RISK: "Monitor", HIGH_RISK: "Not Recommended"}[risk_level]
+    recommendation_row.reason = recommendation
+
+
+def recalculate_vendor_reliability(vendor_id: int, db: Session) -> VendorReliability:
+    """Aggregate available vendor facts, persist the supported reliability record, and return it."""
     reliability = (
         db.query(VendorReliability)
         .filter(VendorReliability.vendor_id == vendor_id)
@@ -230,39 +365,30 @@ def recalculate_vendor_reliability(vendor_id: int, db: Session) -> VendorReliabi
         reliability = VendorReliability(vendor_id=vendor_id)
         db.add(reliability)
 
-    def component(name: str) -> float | None:
-        return getattr(reliability, name, None)
-
-    compliance_score = component("compliance_score")
-    procurement_history_score = (
-        component("procurement_history_score")
-        if hasattr(reliability, "procurement_history_score")
-        else compliance_score
-    )
+    purchase_orders = _vendor_rows(db, PurchaseOrder, vendor_id)
+    delivery_score = _delivery_component(db, vendor_id, purchase_orders)
+    quality_score = _quality_component(db, vendor_id)
+    communication_score, issue_resolution_score = _communication_components(db, vendor_id)
+    procurement_history_score = _procurement_history_component(db, vendor_id, purchase_orders)
+    compliance_score = _compliance_component(db, vendor_id)
     score = calculate_vendor_reliability_score(
-        delivery_score=component("delivery_score"),
-        quality_score=component("quality_score"),
-        communication_score=component("communication_score"),
-        issue_resolution_score=component("issue_resolution_score"),
+        delivery_score=delivery_score,
+        quality_score=quality_score,
+        communication_score=communication_score,
+        issue_resolution_score=issue_resolution_score,
         procurement_history_score=procurement_history_score,
         contract_compliance_score=compliance_score,
     )
     risk_level = classify_procurement_risk(score)
     recommendation = generate_procurement_recommendation(score, risk_level)
 
-    # New SQLAlchemy objects do not receive Python-side column defaults until
-    # flush.  Normalize persisted component fields now so the returned ORM
-    # object always satisfies the non-null response-model score fields.
-    for field in (
-        "delivery_score",
-        "quality_score",
-        "communication_score",
-        "compliance_score",
-        "issue_resolution_score",
-        "procurement_history_score",
-    ):
+    # SQL columns are non-null in the current API schema.  Zero is persisted
+    # only as a representation of unavailable data; it is not fed back into scoring.
+    for field, value in (("delivery_score", delivery_score), ("quality_score", quality_score),
+                         ("communication_score", communication_score), ("compliance_score", compliance_score),
+                         ("issue_resolution_score", issue_resolution_score),
+                         ("procurement_history_score", procurement_history_score)):
         if hasattr(reliability, field):
-            value = getattr(reliability, field)
             setattr(reliability, field, 0.0 if value is None else value)
 
     reliability.reliability_score = score
@@ -278,9 +404,31 @@ def recalculate_vendor_reliability(vendor_id: int, db: Session) -> VendorReliabi
     if vendor is not None and hasattr(vendor, "reliability_score"):
         vendor.reliability_score = score
 
+    _upsert_derived_rows(db, vendor_id, reliability, score, risk_level, recommendation)
     db.commit()
     db.refresh(reliability)
     return reliability
+
+
+def refresh_vendor_reliability_after_performance_write(vendor_id: int, db: Session) -> VendorReliability:
+    """Service-side trigger for delivery, quality, communication, or service-rating writes.
+
+    Recalculation persists the month trend; the ranking call keeps the dynamic
+    supplier-ranking view synchronized without introducing a second ranking table.
+    """
+    reliability = recalculate_vendor_reliability(vendor_id, db)
+    recalculate_supplier_rankings(db)
+    return reliability
+
+
+def refresh_vendor_reliability_after_procurement_update(vendor_id: int, db: Session) -> VendorReliability:
+    """Service-side trigger for delivered/completed PO and tracking updates."""
+    return recalculate_vendor_reliability(vendor_id, db)
+
+
+def refresh_vendor_reliability_after_compliance_update(vendor_id: int, db: Session) -> VendorReliability:
+    """Service-side trigger for contract, compliance, certification, and document writes."""
+    return recalculate_vendor_reliability(vendor_id, db)
 
 
 def recalculate_supplier_rankings(db: Session) -> list[dict]:

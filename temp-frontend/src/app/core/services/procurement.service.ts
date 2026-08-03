@@ -168,7 +168,7 @@ type ApiRecord = Record<string, unknown>;
 @Injectable({ providedIn: 'root' })
 export class ProcurementService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = environment.apiUrl;
+  private readonly baseUrl = `${environment.apiUrl}/procurement`;
 
   listRequests(params: ProcurementRequestListParams = {}): Observable<ProcurementRequest[]> {
     let httpParams = new HttpParams();

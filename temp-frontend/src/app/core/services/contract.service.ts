@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -19,7 +19,7 @@ export class ContractService {
   updateContract(id: number, payload: ContractUpdatePayload): Observable<Contract> { return this.http.patch<ApiRecord>(`${this.baseUrl}/${id}`, payload).pipe(map((item) => this.contract(item))); }
   deleteContract(id: number): Observable<void> { return this.http.delete<void>(`${this.baseUrl}/${id}`); }
   renewContract(id: number, payload: RenewalPayload): Observable<Contract> { return this.http.post<ApiRecord>(`${this.baseUrl}/${id}/renew`, payload).pipe(map((item) => this.contract(item))); }
-  updateContractStatus(id: number, status: string): Observable<Contract> { return this.http.patch<ApiRecord>(`${this.baseUrl}/${id}/status`, { status }).pipe(map((item) => this.contract(item))); }
+  updateContractStatus(id: number, status: string): Observable<Contract> { return this.http.patch<ApiRecord>(`${this.baseUrl}/${id}/status`, null, { params: new HttpParams().set('status_str', status) }).pipe(map((item) => this.contract(item))); }
   expiring(): Observable<Contract[]> { return this.http.get<ApiRecord[]>(`${this.baseUrl}/expiring`).pipe(map((items) => items.map((item) => this.contract(item)))); }
   private contract(item: ApiRecord): Contract { return { id: this.number(item, 'id'), vendorId: this.number(item, 'vendorId', 'vendor_id'), contractTitle: this.text(item, 'contractTitle', 'contract_title'), contractType: this.optionalText(item, 'contractType', 'contract_type'), startDate: this.text(item, 'startDate', 'start_date'), endDate: this.optionalText(item, 'endDate', 'end_date'), contractValue: this.number(item, 'contractValue', 'contract_value'), status: this.text(item, 'status'), complianceVerified: this.boolean(item, 'complianceVerified', 'compliance_verified'), createdAt: this.optionalText(item, 'createdAt', 'created_at'), updatedAt: this.optionalText(item, 'updatedAt', 'updated_at') }; }
   private value(item: ApiRecord, ...keys: string[]): unknown { return keys.map((key) => item[key]).find((value) => value !== undefined && value !== null); }

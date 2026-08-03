@@ -64,6 +64,48 @@ export class AppShellComponent {
       roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Auditor']
     },
     {
+      label: 'Reliability',
+      path: '/reliability',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Auditor']
+    },
+    {
+      label: 'Contract Repository',
+      path: '/contracts',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer']
+    },
+    {
+      label: 'Compliance',
+      path: '/contracts/compliance',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Auditor']
+    },
+    {
+      label: 'Certifications',
+      path: '/contracts/certifications',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Auditor']
+    },
+    {
+      label: 'Vendor Documents',
+      path: '/contracts/documents',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Auditor']
+    },
+    {
+      label: 'Contract Notifications',
+      path: '/contracts/notifications',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer']
+    },
+    {
+      label: 'Reports',
+      path: '/reports',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Finance Officer', 'Auditor']
+    },
+    {
       label: 'Profile',
       path: '/profile',
       exact: true,

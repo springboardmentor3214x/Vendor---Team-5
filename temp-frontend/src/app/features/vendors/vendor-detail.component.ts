@@ -29,8 +29,8 @@ export class VendorDetailComponent implements OnInit {
   readonly documentForm: FormGroup;
   readonly selectedFileName = signal('');
   readonly documentTypes = VENDOR_DOCUMENT_TYPES;
-  // Approve/reject is supported. Document upload remains unavailable in the current API.
-  readonly vendorApprovalApiAvailable = true;
+  // The running API currently exposes neither approve/reject nor document-upload vendor routes.
+  readonly vendorApprovalApiAvailable = false;
   readonly vendorDocumentUploadApiAvailable = false;
 
   @ViewChild('documentFile') private documentFileInput?: ElementRef<HTMLInputElement>;

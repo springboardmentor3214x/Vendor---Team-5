@@ -38,11 +38,6 @@ export class RequestDetailComponent {
     return ['Administrator', 'Procurement Manager'].includes(this.authService.getStoredUser()?.role ?? '');
   }
 
-  get canEditSentBackRequest(): boolean {
-    return ['Administrator', 'Procurement Manager', 'Supply Chain Manager']
-      .includes(this.authService.getStoredUser()?.role ?? '');
-  }
-
   retry(): void {
     const requestId = Number(this.route.snapshot.paramMap.get('id'));
     if (Number.isInteger(requestId) && requestId > 0) {

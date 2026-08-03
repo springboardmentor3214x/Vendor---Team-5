@@ -23,7 +23,17 @@ import { ResetPasswordComponent } from './features/reset-password/reset-password
 import { VendorDetailComponent } from './features/vendors/vendor-detail.component';
 import { VendorFormComponent } from './features/vendors/vendor-form.component';
 import { VendorsComponent } from './features/vendors/vendors.component';
+import { ReliabilityComponent } from './features/reliability/reliability.component';
+import { ReportsComponent } from './features/reports/reports.component';
 import { AppShellComponent } from './layout/app-shell.component';
+import { ContractRepositoryComponent } from './features/contracts/contract-repository/contract-repository.component';
+import { ContractFormComponent } from './features/contracts/contract-form/contract-form.component';
+import { ContractDetailsComponent } from './features/contracts/contract-details/contract-details.component';
+import { ContractRenewalDashboardComponent } from './features/contracts/contract-renewal-dashboard/contract-renewal-dashboard.component';
+import { CertificationManagementComponent } from './features/contracts/certification-management/certification-management.component';
+import { VendorDocumentationComponent } from './features/contracts/vendor-documentation/vendor-documentation.component';
+import { ComplianceDashboardComponent } from './features/contracts/compliance-dashboard/compliance-dashboard.component';
+import { ContractNotificationsComponent } from './features/contracts/contract-notifications/contract-notifications.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -117,6 +127,18 @@ export const routes: Routes = [
         data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Auditor'] }
       },
       {
+        path: 'reliability',
+        component: ReliabilityComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Auditor'] }
+      },
+      {
+        path: 'reports',
+        component: ReportsComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Finance Officer', 'Auditor'] }
+      },
+      {
         path: 'procurement/invoices/new',
         loadComponent: () => import('./features/procurement/invoice-form.component').then((module) => module.InvoiceFormComponent),
         canActivate: [roleGuard],
@@ -165,12 +187,6 @@ export const routes: Routes = [
         data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager'] }
       },
       {
-        path: 'procurement/requests/:id/edit',
-        component: RequestFormComponent,
-        canActivate: [roleGuard],
-        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager'] }
-      },
-      {
         path: 'procurement/requests/:id/approval',
         component: RequestApprovalComponent,
         canActivate: [roleGuard],
@@ -202,10 +218,15 @@ export const routes: Routes = [
           roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager']
         }
       },
-      {
-        path: 'contracts',
-        redirectTo: 'dashboard'
-      },
+      { path: 'contracts/new', component: ContractFormComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager'] } },
+      { path: 'contracts/renewals', component: ContractRenewalDashboardComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer'] } },
+      { path: 'contracts/certifications', component: CertificationManagementComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor'] } },
+      { path: 'contracts/documents', component: VendorDocumentationComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor'] } },
+      { path: 'contracts/compliance', component: ComplianceDashboardComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor'] } },
+      { path: 'contracts/notifications', component: ContractNotificationsComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer'] } },
+      { path: 'contracts/:id/edit', component: ContractFormComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager'] } },
+      { path: 'contracts/:id', component: ContractDetailsComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer'] } },
+      { path: 'contracts', component: ContractRepositoryComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer'] } },
       {
         path: 'analytics',
         redirectTo: 'dashboard'

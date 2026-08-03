@@ -1,8 +1,7 @@
 <section class="form-page">
-  <header><p class="eyebrow">Procurement</p><h2>{{ editing() ? 'Edit and resubmit request' : 'Create procurement request' }}</h2><p *ngIf="editing()">Update the sent-back request, then submit it back to the pending approval queue.</p><p *ngIf="!editing()">Fields marked <span class="required-mark">*</span> are required. The system generates the request number after submission.</p></header>
-  <div *ngIf="loading()" class="loading-message">Loading sent-back request...</div>
+  <header><p class="eyebrow">Procurement</p><h2>Create procurement request</h2><p>Fields marked <span class="required-mark">*</span> are required. The system generates the request number after submission.</p></header>
   <div *ngIf="errorMessage()" class="error-message" role="alert">{{ errorMessage() }}</div>
-  <form *ngIf="!loading()" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <section class="form-card"><h3>Request information</h3><div class="form-grid">
       <label class="full-width">Request title <span class="required-mark">*</span><input formControlName="requestTitle" [class.invalid]="hasError('requestTitle', 'required') || hasError('requestTitle', 'minlength')" maxlength="255"><small *ngIf="hasError('requestTitle', 'required')">Enter a request title.</small><small *ngIf="hasError('requestTitle', 'minlength')">Use at least 3 characters.</small></label>
       <label>Department <span class="required-mark">*</span><input formControlName="departmentName"><small *ngIf="hasError('departmentName', 'required')">Enter the department name.</small></label>

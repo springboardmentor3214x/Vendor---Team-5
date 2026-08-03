@@ -1,0 +1,6 @@
+<section class="reports-page">
+  <header class="page-header"><div><p class="eyebrow">Reports</p><h2>Operational reports</h2><p>Download CSV reports from the DB-backed backend report endpoints.</p></div><button type="button" class="btn btn-outline-primary" (click)="loadReports()" [disabled]="loading()">{{ loading() ? 'Refreshing...' : 'Refresh reports' }}</button></header>
+  <div *ngIf="loading()" class="message loading-message" aria-live="polite">Loading available reports...</div>
+  <div *ngIf="errorMessage()" class="message error-message" role="alert"><span>{{ errorMessage() }}</span><button type="button" class="btn btn-sm btn-outline-danger" (click)="loadReports()">Try again</button></div>
+  <ng-container *ngIf="!loading()"><div class="report-catalog" *ngIf="catalog() as catalog"><span>{{ catalog.items.length }} report definitions returned by the backend</span><span *ngIf="catalog.generatedAt">Generated {{ catalog.generatedAt | date:'medium' }}</span></div><div class="report-grid"><article class="report-card" *ngFor="let report of reportCards"><div><h3>{{ report.title }}</h3><p>{{ report.description }}</p></div><button type="button" class="btn btn-primary" (click)="export(report.key)" [disabled]="exporting() === report.key">{{ exporting() === report.key ? 'Preparing...' : 'Download CSV' }}</button></article></div></ng-container>
+</section>

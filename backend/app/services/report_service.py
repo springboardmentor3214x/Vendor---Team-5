@@ -13,6 +13,8 @@ from app.models.performance import PerformanceRecord
 from app.models.procurement_request import ProcurementRequest
 from app.models.purchase_order import PurchaseOrder
 from app.models.reliability import VendorReliability
+from app.models.communication import Communication
+from app.models.activity_log import ActivityLog
 from app.services.notification_service import get_user_notifications
 
 
@@ -64,6 +66,16 @@ def generate_notification_report(db: Any, filters: dict[str, Any] | None = None)
     return [_notification_row(item) for item in get_user_notifications(db, user_id)]
 
 
+def generate_communication_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    return [_row(row, ("id", "sender_id", "vendor_id", "procurement_request_id", "subject", "message", "created_at"))
+            for row in _rows(db, Communication, filters)]
+
+
+def generate_activity_log_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    return [_row(row, ("id", "user_id", "module", "action", "description", "created_at"))
+            for row in _rows(db, ActivityLog, filters)]
+
+
 def generate_vendor_performance_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Prepare rows from persisted performance records, with reliability when present."""
     reliability_by_vendor = {getattr(row, "vendor_id", None): row for row in _rows(db, VendorReliability)}
@@ -110,7 +122,8 @@ def export_report_data(db: Any, report_type: str, format: str = "csv", filters: 
     generators = {"contract": generate_contract_report, "compliance": generate_compliance_report,
                   "vendor_document": generate_vendor_document_report, "notification": generate_notification_report,
                   "vendor_performance": generate_vendor_performance_report,
-                  "procurement_summary": generate_procurement_summary_report}
+                  "procurement_summary": generate_procurement_summary_report,
+                  "communication": generate_communication_report, "activity_log": generate_activity_log_report}
     if report_type not in generators:
         raise ValueError(f"Unsupported report type: {report_type}")
     if format.lower() not in {"csv", "pdf", "excel"}:

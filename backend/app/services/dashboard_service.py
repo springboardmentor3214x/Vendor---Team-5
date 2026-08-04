@@ -9,6 +9,7 @@ from app.models.certification import Certification
 from app.models.compliance import ComplianceRecord
 from app.models.contract import Contract
 from app.models.vendor_document import VendorDocument
+from app.models.communication import Communication
 from app.services.contract_compliance_service import is_contract_expiring_soon
 from app.services.notification_service import get_unread_notifications, get_user_notifications
 
@@ -68,6 +69,16 @@ def get_notification_dashboard_summary(db: Any, user_id: int | None = None) -> d
     notifications = get_user_notifications(db, user_id) if user_id is not None else []
     unread = get_unread_notifications(db, user_id) if user_id is not None else []
     return {"total_notifications": len(notifications), "unread_notifications": len(unread)}
+
+
+def get_communication_dashboard_summary(db: Any, vendor_id: int | None = None) -> dict[str, int]:
+    """Summarize only persisted communications; discussion/read metrics need schema support."""
+    rows = _rows(db, Communication)
+    if vendor_id is not None:
+        rows = [row for row in rows if getattr(row, "vendor_id", None) == vendor_id]
+    return {"total_messages": len(rows), "vendor_linked_messages": sum(
+        getattr(row, "vendor_id", None) is not None for row in rows), "procurement_linked_messages": sum(
+        getattr(row, "procurement_request_id", None) is not None for row in rows)}
 
 
 def get_module6_dashboard_summary(db: Any, user_id: int | None = None) -> dict[str, dict[str, int]]:

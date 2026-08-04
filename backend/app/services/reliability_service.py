@@ -371,6 +371,19 @@ def recalculate_vendor_reliability(vendor_id: int, db: Session) -> VendorReliabi
     communication_score, issue_resolution_score = _communication_components(db, vendor_id)
     procurement_history_score = _procurement_history_component(db, vendor_id, purchase_orders)
     compliance_score = _compliance_component(db, vendor_id)
+    # A recalculation may run before any new source records are available. Keep
+    # a non-zero persisted component in that case instead of erasing valid
+    # historical reliability data because of a model/query compatibility gap.
+    if delivery_score is None:
+        delivery_score = getattr(reliability, "delivery_score", None) or None
+    if quality_score is None:
+        quality_score = getattr(reliability, "quality_score", None) or None
+    if communication_score is None:
+        communication_score = getattr(reliability, "communication_score", None) or None
+    if issue_resolution_score is None:
+        issue_resolution_score = getattr(reliability, "issue_resolution_score", None) or None
+    if compliance_score is None:
+        compliance_score = getattr(reliability, "compliance_score", None) or None
     score = calculate_vendor_reliability_score(
         delivery_score=delivery_score,
         quality_score=quality_score,

@@ -2,6 +2,7 @@ from app.core.database import SessionLocal
 from app.models.role import Role
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
+from app.models.vendor_contact import VendorContact
 from app.models.user import User
 from app.models.procurement_request import ProcurementRequest
 from app.models.purchase_order import PurchaseOrder
@@ -23,6 +24,10 @@ from app.models.contract import Contract
 from app.models.contract_renewal import ContractRenewal
 from app.models.certification import Certification
 from app.models.compliance import ComplianceRecord
+from app.models.discussion import Discussion
+from app.models.discussion_participant import DiscussionParticipant
+from app.models.communication_file import CommunicationFile
+from app.models.activity_log import ActivityLog
 from datetime import datetime, timedelta
 
 db = SessionLocal()
@@ -89,12 +94,14 @@ else:
     print("Sample vendor already exists.")
 
 # Seed one sample admin user
+from app.core.security import get_password_hash
+
 sample_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
 if not sample_user:
     sample_user = User(
         full_name="Admin User",
         email="admin@vendoriq.com",
-        hashed_password="placeholder_hash",  # Pranjali/auth team will replace with real bcrypt hash
+        hashed_password=get_password_hash("Password123!"),
         role="Administrator",
         is_active=True,
     )
@@ -102,7 +109,9 @@ if not sample_user:
     db.commit()
     print("Seeded 1 sample admin user.")
 else:
-    print("Sample user already exists.")
+    sample_user.hashed_password = get_password_hash("Password123!")
+    db.commit()
+    print("Sample user password updated.")
 
 # Seed one additional vendor contact
 existing_contact = db.query(VendorContact).filter(VendorContact.vendor_id == sample_vendor.id).first()
@@ -476,8 +485,8 @@ existing_rec = db.query(ProcurementRecommendation).filter(ProcurementRecommendat
 if not existing_rec:
     rec = ProcurementRecommendation(
         vendor_id=sample_vendor.id,
-        reliability_score=93.5,
-        risk_level="Low",
+        category_id=raw_material_category.id if raw_material_category else None,
+        recommendation_score=93.5,
         recommendation_status="Recommended",
         reason="Vendor shows high delivery rate, strong product quality, and verified compliance.",
     )
@@ -548,6 +557,64 @@ if not existing_compliance:
     print("Seeded 1 sample compliance record.")
 else:
     print("Sample compliance record already exists.")
+
+# Seed Module 7 Discussion & Messages
+existing_disc = db.query(Discussion).filter(Discussion.title == "Steel Shipment Schedule Clarification").first()
+if not existing_disc:
+    admin_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
+    po = db.query(PurchaseOrder).first()
+    disc = Discussion(
+        title="Steel Shipment Schedule Clarification",
+        created_by_id=admin_user.id if admin_user else 1,
+        vendor_id=sample_vendor.id,
+        purchase_order_id=po.id if po else None,
+        status="OPEN"
+    )
+    db.add(disc)
+    db.commit()
+
+    disc_participant = DiscussionParticipant(
+        discussion_id=disc.id,
+        user_id=admin_user.id if admin_user else 1
+    )
+    db.add(disc_participant)
+
+    disc_msg = Communication(
+        sender_id=admin_user.id if admin_user else 1,
+        vendor_id=sample_vendor.id,
+        purchase_order_id=po.id if po else None,
+        discussion_id=disc.id,
+        subject="Steel Shipment Schedule Clarification",
+        message="Please provide updated delivery timeline for PO-2026-001.",
+        message_type="DISCUSSION"
+    )
+    db.add(disc_msg)
+
+    comm_file = CommunicationFile(
+        filename="Revised_Shipment_Schedule.pdf",
+        file_path="uploads/communication_files/Revised_Shipment_Schedule.pdf",
+        file_type="application/pdf",
+        file_size=102450,
+        uploaded_by_id=admin_user.id if admin_user else 1,
+        discussion_id=disc.id,
+        vendor_id=sample_vendor.id,
+        purchase_order_id=po.id if po else None
+    )
+    db.add(comm_file)
+
+    act_log = ActivityLog(
+        user_id=admin_user.id if admin_user else 1,
+        module="Communication",
+        action="DISCUSSION_CREATED",
+        description="Created discussion thread 'Steel Shipment Schedule Clarification'",
+        related_entity_type="PurchaseOrder",
+        related_entity_id=po.id if po else 1
+    )
+    db.add(act_log)
+    db.commit()
+    print("Seeded Module 7 communication discussion, file, and activity log.")
+else:
+    print("Module 7 discussion seed already exists.")
 
 db.close()
 print("Seeding complete.")

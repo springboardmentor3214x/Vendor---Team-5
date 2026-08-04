@@ -19,6 +19,9 @@ from app.models.activity_log import ActivityLog
 from app.models.contract_document import ContractDocument
 from app.models.invoice import Invoice
 from app.models.communication import Communication
+from app.models.discussion import Discussion
+from app.models.discussion_participant import DiscussionParticipant
+from app.models.communication_file import CommunicationFile
 from app.models.delivery_performance import DeliveryPerformance
 from app.models.product_quality_evaluation import ProductQualityEvaluation
 from app.models.communication_log import CommunicationLog

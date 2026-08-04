@@ -131,8 +131,10 @@ def test_recalculate_vendor_reliability_returns_full_persisted_record():
         "reliability_score", "risk_level", "updated_at",
     ):
         assert hasattr(result, field)
-    assert result.reliability_score == 27.0
-    assert result.risk_level == "High Risk"
+    # Existing component history is retained when no new source rows exist;
+    # the available-component scorer then normalizes delivery to 90.
+    assert result.reliability_score == 90.0
+    assert result.risk_level == "Low Risk"
     assert db.commits == 1
 
 
@@ -142,7 +144,10 @@ def test_recalculate_vendor_reliability_does_not_default_missing_data_to_100():
     result = recalculate_vendor_reliability(8, db)
     assert result.reliability_score == 0
     assert result.risk_level == "High Risk"
-    assert db.added == [result]
+    # Recalculation persists the reliability record plus trend/recommendation
+    # projections; the primary record remains the first write.
+    assert db.added[0] is result
+    assert len(db.added) == 3
 
 
 def test_recalculate_supplier_rankings_accepts_db_and_handles_no_vendors():

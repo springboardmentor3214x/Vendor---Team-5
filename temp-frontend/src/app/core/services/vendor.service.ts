@@ -109,6 +109,18 @@ export interface VendorDocumentUploadResponse {
   message: string;
 }
 
+export interface VendorDocument {
+  id: number;
+  vendorId?: number;
+  vendor_id?: number;
+  documentType?: string;
+  document_type?: string;
+  fileName?: string;
+  file_name?: string;
+  downloadUrl?: string;
+  download_url?: string;
+}
+
 interface VendorApiResponse {
   id: number;
   companyName?: string;
@@ -236,6 +248,10 @@ export class VendorService {
       `${this.baseUrl}/${vendorId}/documents`,
       formData
     );
+  }
+
+  listDocuments(vendorId: number): Observable<VendorDocument[]> {
+    return this.http.get<VendorDocument[]>(`${this.baseUrl}/${vendorId}/documents`);
   }
 
   private mapVendor(vendor: VendorApiResponse): Vendor {

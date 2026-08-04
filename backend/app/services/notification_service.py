@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, date, timedelta
 from typing import Any, List, Optional, Dict
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
+from types import SimpleNamespace
 
 from app.models.notification import Notification
 from app.models.contract import Contract
@@ -20,6 +22,30 @@ def _column_names() -> set[str]:
         return set(Notification.__table__.columns.keys()) if Notification is not None else set()
     except (AttributeError, TypeError):
         return set()
+
+
+def _legacy_notification_rows(
+    db: Session, user_id: int, module: Optional[str], priority: Optional[str], is_read: Optional[bool]
+) -> List[Any]:
+    """Read legacy notification rows without selecting columns not yet migrated."""
+    available = {column["name"] for column in inspect(db.bind).get_columns("notifications")}
+    selected = [getattr(Notification, name) for name in _column_names() if name in available]
+    if not selected:
+        return []
+    query = db.query(*selected).filter(Notification.user_id == user_id)
+    if module and "related_module" in available:
+        query = query.filter(Notification.related_module.ilike(f"%{module}%"))
+    if priority and "priority" in available:
+        query = query.filter(Notification.priority == priority.upper())
+    if is_read is not None and "is_read" in available:
+        query = query.filter(Notification.is_read == is_read)
+    if "created_at" in available:
+        query = query.order_by(Notification.created_at.desc())
+    defaults = {"vendor_id": None, "contract_id": None, "purchase_order_id": None,
+                "procurement_request_id": None, "notification_type": "INFO", "related_module": None,
+                "related_record_id": None, "priority": "MEDIUM", "delivery_method": "IN_APP",
+                "is_read": False, "read_at": None, "link": None, "created_at": None}
+    return [SimpleNamespace(**{**defaults, **dict(row._mapping)}) for row in query.all()]
 
 
 def get_user_notifications(
@@ -51,7 +77,13 @@ def get_user_notifications(
     if hasattr(query, "order_by"):
         query = query.order_by(Notification.created_at.desc())
     if hasattr(query, "all"):
-        return query.all()
+        try:
+            return query.all()
+        except Exception:
+            # The deployed DB can be one migration behind the ORM.  Reflect
+            # its actual columns so existing notifications remain readable.
+            db.rollback()
+            return _legacy_notification_rows(db, user_id, module, priority, is_read)
     return []
 
 
@@ -64,9 +96,11 @@ def get_unread_notifications(db: Session, user_id: int) -> List[Notification]:
         query = query.filter(Notification.user_id == user_id, Notification.is_read == False)
     if hasattr(query, "order_by"):
         query = query.order_by(Notification.created_at.desc())
-    if hasattr(query, "all"):
-        return query.all()
-    return []
+    try:
+        return query.all() if hasattr(query, "all") else []
+    except Exception:
+        db.rollback()
+        return _legacy_notification_rows(db, user_id, None, None, False)
 
 
 def mark_notification_as_read(db: Session, notification_id: int, user_id: int) -> Optional[Notification]:

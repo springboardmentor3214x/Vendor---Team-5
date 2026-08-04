@@ -33,17 +33,23 @@ class NotificationOut(BaseModel):
 
 
 class NotificationListOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     items: List[NotificationOut]
     total: int
     unread_count: int = Field(alias="unreadCount")
 
 
 class NotificationReadOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     message: str
     notification: NotificationOut
 
 
 class NotificationUnreadCountOut(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     unread_count: int = Field(alias="unreadCount")
 
 

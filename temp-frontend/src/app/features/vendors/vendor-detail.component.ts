@@ -7,6 +7,7 @@ import {
   VENDOR_APPROVER_ROLES,
   VENDOR_DOCUMENT_TYPES,
   Vendor,
+  VendorDocument,
   VendorService
 } from '../../core/services/vendor.service';
 
@@ -28,10 +29,10 @@ export class VendorDetailComponent implements OnInit {
   readonly remarksForm: FormGroup;
   readonly documentForm: FormGroup;
   readonly selectedFileName = signal('');
+  readonly documents = signal<VendorDocument[]>([]);
   readonly documentTypes = VENDOR_DOCUMENT_TYPES;
-  // The running API currently exposes neither approve/reject nor document-upload vendor routes.
-  readonly vendorApprovalApiAvailable = false;
-  readonly vendorDocumentUploadApiAvailable = false;
+  readonly vendorApprovalApiAvailable = true;
+  readonly vendorDocumentUploadApiAvailable = true;
 
   @ViewChild('documentFile') private documentFileInput?: ElementRef<HTMLInputElement>;
 
@@ -82,6 +83,7 @@ export class VendorDetailComponent implements OnInit {
     this.vendorService.getVendor(this.vendorId).subscribe({
       next: (vendor) => {
         this.vendor.set(vendor);
+        this.loadDocuments();
         this.loading.set(false);
       },
       error: (err) => {
@@ -179,12 +181,20 @@ export class VendorDetailComponent implements OnInit {
           if (this.documentFileInput) {
             this.documentFileInput.nativeElement.value = '';
           }
+          this.loadDocuments();
         },
         error: (err) => {
           this.uploading.set(false);
           this.errorMessage.set(this.readError(err, 'Unable to upload document.'));
         }
       });
+  }
+
+  private loadDocuments(): void {
+    this.vendorService.listDocuments(this.vendorId).subscribe({
+      next: (documents) => this.documents.set(documents),
+      error: () => this.documents.set([])
+    });
   }
 
   statusClass(status: string): string {

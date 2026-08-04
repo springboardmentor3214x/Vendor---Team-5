@@ -1,9 +1,9 @@
-import csv
 import io
-from datetime import datetime
+from datetime import datetime, date
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -32,64 +32,151 @@ def _require_report_access(current_user: User) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
 
+def _export_response(report_type: str, rows: list[dict], format: str = "csv"):
+    fmt = format.lower()
+    filename = f"{report_type}_report.{'pdf' if fmt == 'pdf' else 'csv'}"
+
+    if fmt == "pdf":
+        pdf_bytes = report_service.render_pdf_report(report_type.replace("-", " ").title(), rows)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    else:  # csv or excel
+        csv_str = report_service.render_excel_csv_report(rows)
+        return StreamingResponse(
+            io.StringIO(csv_str),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+
+
 @router.get("/")
 def list_reports(current_user: User = Depends(get_current_user)):
+    """List available Module 10 reporting modules and metadata."""
     _require_report_access(current_user)
-    return {"items": [
-        {"key": "vendor-performance", "title": "Vendor Performance Report", "format": "csv", "status": "placeholder"},
-        {"key": "procurement", "title": "Procurement Summary Report", "format": "csv", "status": "placeholder"},
-        {"key": "contracts", "title": "Contract Report", "format": "csv", "status": "ready"},
-        {"key": "compliance", "title": "Compliance Status Report", "format": "csv", "status": "ready"},
-        {"key": "vendor-documents", "title": "Vendor Document Report", "format": "csv", "status": "ready"},
-    ], "generated_at": datetime.utcnow()}
-
-
-def csv_download_response(rows: list[dict], filename: str) -> StreamingResponse:
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()) if rows else ["message"])
-    writer.writeheader()
-    writer.writerows(rows)
-    output.seek(0)
-    return StreamingResponse(output, media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return {
+        "items": [
+            {"key": "vendor-performance", "title": "Vendor Performance Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
+            {"key": "procurement", "title": "Procurement Summary Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
+            {"key": "purchase-orders", "title": "Purchase Order Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
+            {"key": "compliance", "title": "Compliance Status Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
+            {"key": "contracts", "title": "Contract Status Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
+            {"key": "executive-summary", "title": "Executive Summary Report", "formats": ["json", "pdf"], "status": "ready"},
+            {"key": "vendor-documents", "title": "Vendor Document Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
+        ],
+        "generated_at": datetime.utcnow()
+    }
 
 
 @router.get("/vendor-performance")
-def export_vendor_performance_report(current_user: User = Depends(get_current_user)):
+def get_vendor_performance_report_endpoint(
+    format: str = Query("json", description="json, csv, excel, or pdf"),
+    category_id: Optional[int] = Query(None, alias="categoryId"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Vendor Performance Evaluation Report endpoint."""
     _require_report_access(current_user)
-    return csv_download_response([], "vendor_performance_report.csv")
+    filters = {"category_id": category_id} if category_id else None
+    rows = report_service.generate_vendor_performance_report(db, filters)
+
+    if format.lower() == "json":
+        return {"report_type": "vendor-performance", "rows": rows, "total_rows": len(rows)}
+    return _export_response("vendor_performance", rows, format)
 
 
 @router.get("/procurement")
-def export_procurement_report(current_user: User = Depends(get_current_user)):
-    _require_report_access(current_user)
-    return csv_download_response([], "procurement_report.csv")
-
-
-@router.get("/contracts")
-def export_contract_report(
+def get_procurement_report_endpoint(
+    format: str = Query("json", description="json, csv, excel, or pdf"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Procurement Summary Activity and Spending Report endpoint."""
     _require_report_access(current_user)
-    report = report_service.export_report_data(db, "contract", format="csv")
-    return csv_download_response(report["rows"], "contract_report.csv")
+    rows = report_service.generate_procurement_summary_report(db)
+
+    if format.lower() == "json":
+        return {"report_type": "procurement", "rows": rows, "total_rows": len(rows)}
+    return _export_response("procurement", rows, format)
+
+
+@router.get("/purchase-orders")
+def get_purchase_order_report_endpoint(
+    format: str = Query("json", description="json, csv, excel, or pdf"),
+    vendor_id: Optional[int] = Query(None, alias="vendorId"),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Purchase Order Transaction Report endpoint."""
+    _require_report_access(current_user)
+    filters = {}
+    if vendor_id:
+        filters["vendor_id"] = vendor_id
+    if status:
+        filters["status"] = status
+
+    rows = report_service.generate_purchase_order_report(db, filters)
+
+    if format.lower() == "json":
+        return {"report_type": "purchase-orders", "rows": rows, "total_rows": len(rows)}
+    return _export_response("purchase_orders", rows, format)
 
 
 @router.get("/compliance")
-def export_compliance_report(
+def get_compliance_report_endpoint(
+    format: str = Query("json", description="json, csv, excel, or pdf"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Compliance Status Verification Report endpoint."""
     _require_report_access(current_user)
-    report = report_service.export_report_data(db, "compliance", format="csv")
-    return csv_download_response(report["rows"], "compliance_report.csv")
+    rows = report_service.generate_compliance_report(db)
+
+    if format.lower() == "json":
+        return {"report_type": "compliance", "rows": rows, "total_rows": len(rows)}
+    return _export_response("compliance", rows, format)
+
+
+@router.get("/contracts")
+def get_contract_report_endpoint(
+    format: str = Query("json", description="json, csv, excel, or pdf"),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Contract Status and Renewal Expiry Report endpoint."""
+    _require_report_access(current_user)
+    filters = {"status": status} if status else None
+    rows = report_service.generate_contract_report(db, filters)
+
+    if format.lower() == "json":
+        return {"report_type": "contracts", "rows": rows, "total_rows": len(rows)}
+    return _export_response("contract", rows, format)
+
+
+@router.get("/executive-summary")
+def get_executive_summary_report_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Executive High-Level Business Insights Summary Report endpoint."""
+    _require_report_access(current_user)
+    return report_service.generate_executive_summary_report(db)
 
 
 @router.get("/vendor-documents")
-def export_vendor_document_report(
+def get_vendor_document_report_endpoint(
+    format: str = Query("json", description="json, csv, excel, or pdf"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Vendor Document and Certificate Report endpoint."""
     _require_report_access(current_user)
-    report = report_service.export_report_data(db, "vendor_document", format="csv")
-    return csv_download_response(report["rows"], "vendor_document_report.csv")
+    rows = report_service.generate_vendor_document_report(db)
+
+    if format.lower() == "json":
+        return {"report_type": "vendor-documents", "rows": rows, "total_rows": len(rows)}
+    return _export_response("vendor_document", rows, format)

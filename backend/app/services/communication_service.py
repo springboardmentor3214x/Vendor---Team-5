@@ -71,18 +71,20 @@ def send_message(db: Any, sender_id: int, receiver_id: int | None = None, conten
                  "purchase_order_id": links.get("purchase_order_id"), "contract_id": links.get("contract_id"),
                  "invoice_id": links.get("invoice_id"), "discussion_id": links.get("discussion_id"),
                  "message_type": message_type}
-    unsupported = [name for name, value in requested.items() if value is not None and name not in columns]
+    unsupported = [key for key in requested if key not in columns]
     if unsupported:
         return _missing(f"Communication fields: {', '.join(unsupported)}")
     if db is None:
-        raise ValueError("A database session is required to send a message.")
+        return _missing("A database session is required to send a message.")
     values = {"sender_id": sender_id, "message": body.strip(), "subject": subject, "created_at": datetime.utcnow(),
               **requested, "is_read": False, "read_at": None}
     row = Communication(**{name: value for name, value in values.items() if name in columns and value is not None})
     try:
         db.add(row); db.commit(); db.refresh(row)
     except Exception:
-        db.rollback(); raise
+        if db is not None and hasattr(db, "rollback"):
+            db.rollback()
+        raise
     if receiver_id and receiver_id != sender_id:
         create_message_notification(db, receiver_id, row)
     return row
@@ -119,7 +121,8 @@ def mark_message_read(db: Any, message_id: int, current_user_id: int) -> Any:
         db.commit(); db.refresh(row)
         return row
     except Exception:
-        db.rollback()
+        if db is not None and hasattr(db, "rollback"):
+            db.rollback()
         return None
 
 
@@ -128,7 +131,7 @@ def mark_message_as_read(db: Any, message_id: int, user_id: int) -> Any:
 
 
 def create_discussion(db: Any, created_by: int, title: str, participants: list[int], **links: Any) -> Any:
-    if not _available(Discussion, {"title", "created_by_id"}) or not _available(DiscussionParticipant, {"discussion_id", "user_id"}):
+    if db is None or not _available(Discussion, {"title", "created_by_id"}) or not _available(DiscussionParticipant, {"discussion_id", "user_id"}):
         return _missing("Procurement discussions and participant persistence")
     if not title or not title.strip():
         raise ValueError("title is required.")
@@ -143,7 +146,9 @@ def create_discussion(db: Any, created_by: int, title: str, participants: list[i
         create_discussion_notification(db, [user_id for user_id in participants if user_id != created_by], discussion)
         return discussion
     except Exception:
-        db.rollback(); raise
+        if db is not None and hasattr(db, "rollback"):
+            db.rollback()
+        raise
 
 
 def list_discussions(db: Any, filters: dict[str, Any] | None = None, **kwargs: Any) -> list[Any]:
@@ -158,9 +163,9 @@ def get_vendor_communication_history(db: Any, vendor_id: int) -> list[Any]: retu
 def get_procurement_request_communication_history(db: Any, request_id: int) -> list[Any]: return list_messages(db, {"procurement_request_id": request_id})
 def get_purchase_order_communication_history(db: Any, po_id: int) -> list[Any]: return list_messages(db, {"purchase_order_id": po_id})
 def get_contract_communication_history(db: Any, contract_id: int) -> Any:
-    return list_messages(db, {"contract_id": contract_id}) if "contract_id" in _columns(Communication) else _missing("Contract-linked communication history")
+    return list_messages(db, {"contract_id": contract_id}) if _available(Communication, {"contract_id"}) else _missing("Contract-linked communication history")
 def get_invoice_communication_history(db: Any, invoice_id: int) -> Any:
-    return list_messages(db, {"invoice_id": invoice_id}) if "invoice_id" in _columns(Communication) else _missing("Invoice-linked communication history")
+    return list_messages(db, {"invoice_id": invoice_id}) if _available(Communication, {"invoice_id"}) else _missing("Invoice-linked communication history")
 
 
 def validate_safe_file_name(file_name: str) -> str:
@@ -171,8 +176,7 @@ def validate_safe_file_name(file_name: str) -> str:
 
 def save_communication_file(db: Any, file_name: str, **metadata: Any) -> Any:
     validate_safe_file_name(file_name)
-    if not _available(CommunicationFile, {"filename", "file_path", "uploaded_by_id"}): return _missing("Communication file persistence")
-    if db is None: raise ValueError("A database session is required to save a communication file.")
+    if db is None or not _available(CommunicationFile, {"filename", "file_path", "uploaded_by_id"}): return _missing("Communication file persistence")
     values = {"filename": file_name, **metadata}
     if not values.get("file_path") or not values.get("uploaded_by_id"): raise ValueError("file_path and uploaded_by_id are required.")
     row = CommunicationFile(**{key: value for key, value in values.items() if key in _columns(CommunicationFile) and value is not None})

@@ -126,7 +126,8 @@ def create_notification(
         db.refresh(notification)
         return notification
     except Exception:
-        db.rollback()
+        if db is not None and hasattr(db, "rollback"):
+            db.rollback()
         return _unavailable()
 
 

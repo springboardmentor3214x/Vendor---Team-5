@@ -56,9 +56,25 @@ class Query:
 class Db:
     def __init__(self, rows):
         self.rows = rows
+        self.added = []
 
     def query(self, model):
         return Query(self.rows.get(model, []))
+
+    # Module 9 now resolves a real recipient for delayed POs.  This lightweight
+    # unit-test session deliberately records the attempted persistence without
+    # pretending to be a real database transaction.
+    def add(self, item):
+        self.added.append(item)
+
+    def commit(self):
+        pass
+
+    def refresh(self, item):
+        pass
+
+    def rollback(self):
+        pass
 
 
 def test_expiry_and_scheduled_scans_report_real_matches_but_no_fake_persistence():
@@ -69,7 +85,8 @@ def test_expiry_and_scheduled_scans_report_real_matches_but_no_fake_persistence(
     assert generate_contract_expiry_notifications(db)["matched_entity_ids"] == [1]
     assert generate_compliance_expiry_notifications(db)["matched_entity_ids"] == [2]
     scan = scan_for_pending_notifications(db)
-    assert scan["delivery_delay"][0]["status"] == "unavailable"
+    assert scan["delivery_delay"][0].notification_type == "delayed"
+    assert len(db.added) == 1
     with pytest.raises(ValueError, match="Unsupported procurement"):
         generate_procurement_alert(db, 1, "bad")
     assert mark_all_notifications_read(None, 1) == 0

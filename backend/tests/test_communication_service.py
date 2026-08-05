@@ -7,19 +7,64 @@ from app.services.communication_service import (
     get_conversation, get_vendor_communication_history, save_communication_file,
     send_message, validate_safe_file_name,
 )
+from app.models.communication import Communication
+from app.models.discussion import Discussion
+from app.models.discussion_participant import DiscussionParticipant
 
 
-def test_message_persistence_requires_receiver_schema_for_direct_messages():
-    result = send_message(None, 1, receiver_id=2, content="Hello")
-    assert result["status"] == "unavailable"
+class Db:
+    """Small persistence double for migrated Module 7 ORM rows."""
+    def __init__(self):
+        self.added = []
+        self._next_id = 1
+
+    def add(self, item):
+        if getattr(item, "id", None) is None:
+            item.id = self._next_id
+            self._next_id += 1
+        self.added.append(item)
+
+    def commit(self):
+        pass
+
+    def refresh(self, item):
+        pass
+
+    def rollback(self):
+        pass
+
+
+def test_send_message_requires_db_session_and_persists_with_receiver_id():
+    with pytest.raises(ValueError, match="database session"):
+        send_message(None, 1, receiver_id=2, content="Hello")
+
+    db = Db()
+    result = send_message(db, 1, receiver_id=2, content="Hello")
+    assert isinstance(result, Communication)
+    assert result.receiver_id == 2
+    assert result.sender_id == 1
+    assert result.message == "Hello"
+    assert any(isinstance(row, Communication) and row.receiver_id == 2 for row in db.added)
     with pytest.raises(ValueError, match="content"):
         send_message(None, 1, content=" ")
 
 
-def test_unmigrated_discussion_file_and_contract_features_are_explicit():
-    assert create_discussion(None, 1, "Pricing", [2])["status"] == "unavailable"
-    assert get_contract_communication_history(None, 4)["status"] == "unavailable"
-    assert save_communication_file(None, "quote.pdf")["status"] == "unavailable"
+def test_create_discussion_requires_db_session_and_persists_participants():
+    with pytest.raises(AttributeError):
+        create_discussion(None, 1, "Pricing", [2])
+
+    db = Db()
+    discussion = create_discussion(db, 1, "Pricing", [2, 3])
+    assert isinstance(discussion, Discussion)
+    assert discussion.title == "Pricing"
+    assert discussion.created_by_id == 1
+    participants = [row for row in db.added if isinstance(row, DiscussionParticipant)]
+    assert {row.user_id for row in participants} == {1, 2, 3}
+    assert {row.discussion_id for row in participants} == {discussion.id}
+
+    assert get_contract_communication_history(None, 4) == []
+    with pytest.raises(ValueError, match="database session"):
+        save_communication_file(None, "quote.pdf")
     assert validate_safe_file_name("quote.pdf") == "quote.pdf"
     with pytest.raises(ValueError):
         validate_safe_file_name("../quote.pdf")

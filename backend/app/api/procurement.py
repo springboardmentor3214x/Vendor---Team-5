@@ -31,6 +31,7 @@ from app.schemas.procurement import (
 )
 
 from app.api.reliability_refresh import refresh_after_procurement_update
+from app.services import notification_service
 from app.services.procurement_service import (
     approve_procurement_request,
     reject_procurement_request,
@@ -107,6 +108,7 @@ def create_request(payload: ProcurementRequestCreate, db: Session = Depends(get_
 
     log_status_change(db, request.id, None, "Pending", request.requested_by, "Request created")
     db.commit()
+    notification_service.generate_procurement_alert(db, request.id, "submitted")
 
     return request
 
@@ -167,6 +169,7 @@ def update_request(request_id: int, payload: ProcurementRequestUpdate, db: Sessi
 
     db.commit()
     db.refresh(request)
+    notification_service.generate_procurement_alert(db, request.id, "submitted")
     return request
 
 
@@ -205,6 +208,7 @@ def approve_request(request_id: int, payload: ProcurementApprovalAction, db: Ses
 
     db.commit()
     db.refresh(request)
+    notification_service.generate_procurement_alert(db, request.id, "approved")
     return request
 
 
@@ -229,6 +233,7 @@ def reject_request(request_id: int, payload: ProcurementApprovalAction, db: Sess
 
     db.commit()
     db.refresh(request)
+    notification_service.generate_procurement_alert(db, request.id, "rejected")
     return request
 
 
@@ -380,6 +385,7 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     )
     db.add(tracking)
     db.commit()
+    notification_service.generate_purchase_order_notification(db, po.id, "created")
 
     return po
 
@@ -422,6 +428,8 @@ def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate,
     db.commit()
     db.refresh(po)
     refresh_after_procurement_update(po.vendor_id, db)
+    if po.po_status == "Delivered":
+        notification_service.generate_purchase_order_notification(db, po.id, "delivered")
     return po
 
 
@@ -470,6 +478,7 @@ def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(po)
     refresh_after_procurement_update(po.vendor_id, db)
+    notification_service.generate_purchase_order_notification(db, po.id, "delivered")
     return po
 
 
@@ -631,6 +640,7 @@ def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
     if purchase_order:
         refresh_after_procurement_update(purchase_order.vendor_id, db)
+    notification_service.generate_invoice_notification(db, invoice.id, "rejected")
     return invoice
 
 
@@ -650,4 +660,5 @@ def update_payment_status(invoice_id: int, payload: PaymentStatusUpdate, db: Ses
     purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
     if purchase_order:
         refresh_after_procurement_update(purchase_order.vendor_id, db)
+    notification_service.generate_invoice_notification(db, invoice.id, "paid" if invoice.payment_status == "Paid" else "approved")
     return invoice

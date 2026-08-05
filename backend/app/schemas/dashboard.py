@@ -1,3 +1,6 @@
+from datetime import date
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -43,3 +46,20 @@ class Module6DashboardOut(BaseModel):
     compliance: ComplianceDashboardSummaryOut
     documents: DocumentDashboardSummaryOut
     notifications: NotificationDashboardSummaryOut
+
+
+class DashboardFilterParams(BaseModel):
+    """Optional read-only dashboard filters supported by aggregation helpers."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    vendor_id: int | None = Field(default=None, alias="vendorId")
+    department: str | None = None
+    start_date: date | None = Field(default=None, alias="startDate")
+    end_date: date | None = Field(default=None, alias="endDate")
+
+
+class DashboardDataOut(BaseModel):
+    """Wrapper for service-backed analytics whose fields vary by dashboard view."""
+
+    model_config = ConfigDict(populate_by_name=True)
+    data: dict[str, Any]

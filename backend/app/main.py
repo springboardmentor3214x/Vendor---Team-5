@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     auth,
+    activity_logs,
     communications,
     contracts,
     dashboard,
@@ -15,6 +16,7 @@ from app.api import (
     certifications,
     compliance,
     documents,
+    discussions,
 )
 from app.core.config import settings
 
@@ -42,6 +44,8 @@ app.include_router(reliability.router, prefix=API_PREFIX)
 app.include_router(contracts.router, prefix=API_PREFIX)
 app.include_router(dashboard.router, prefix=API_PREFIX)
 app.include_router(communications.router, prefix=API_PREFIX)
+app.include_router(discussions.router, prefix=API_PREFIX)
+app.include_router(activity_logs.router, prefix=API_PREFIX)
 app.include_router(notifications.router, prefix=API_PREFIX)
 app.include_router(reports.router, prefix=API_PREFIX)
 app.include_router(certifications.router, prefix=API_PREFIX)

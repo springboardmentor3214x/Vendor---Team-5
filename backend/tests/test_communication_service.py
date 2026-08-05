@@ -9,15 +9,55 @@ from app.services.communication_service import (
 )
 
 
-def test_message_persistence_requires_receiver_schema_for_direct_messages():
+class _Db:
+    """Minimal unit-test session that exercises persisted Module 7 models."""
+
+    def __init__(self):
+        self.added = []
+
+    def add(self, item):
+        self.added.append(item)
+
+    def commit(self):
+        pass
+
+    def refresh(self, item):
+        if getattr(item, "id", None) is None:
+            item.id = len(self.added)
+
+    def rollback(self):
+        pass
+
+
+def test_send_message_requires_session_and_persists_receiver_id():
     result = send_message(None, 1, receiver_id=2, content="Hello")
     assert result["status"] == "unavailable"
+    assert "database session" in result["message"].lower()
+
+    db = _Db()
+    message = send_message(db, 1, receiver_id=2, content="Hello")
+    assert message.sender_id == 1
+    assert message.receiver_id == 2
+    assert message.message == "Hello"
+    assert message in db.added
     with pytest.raises(ValueError, match="content"):
         send_message(None, 1, content=" ")
 
 
-def test_unmigrated_discussion_file_and_contract_features_are_explicit():
-    assert create_discussion(None, 1, "Pricing", [2])["status"] == "unavailable"
+def test_create_discussion_requires_session_and_persists_participants():
+    unavailable = create_discussion(None, 1, "Pricing", [2])
+    assert unavailable["status"] == "unavailable"
+    assert "persistence" in unavailable["message"].lower()
+
+    db = _Db()
+    discussion = create_discussion(db, 1, "Pricing", [2, 3])
+    assert discussion.title == "Pricing"
+    assert discussion.created_by_id == 1
+    participants = [item for item in db.added if hasattr(item, "discussion_id") and hasattr(item, "user_id")]
+    assert {(item.discussion_id, item.user_id) for item in participants} == {(discussion.id, 1), (discussion.id, 2), (discussion.id, 3)}
+
+
+def test_file_and_history_helpers_handle_missing_session_without_fabricating_records():
     res = get_contract_communication_history(None, 4)
     assert res == [] or (isinstance(res, dict) and res.get("status") == "unavailable")
     assert save_communication_file(None, "quote.pdf")["status"] == "unavailable"

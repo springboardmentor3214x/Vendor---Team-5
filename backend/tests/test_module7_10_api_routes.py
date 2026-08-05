@@ -1,7 +1,10 @@
 """Contract checks for Pranjali-owned Module 7–10 route registration and JWT gates."""
 
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 
+from app.api.auth import get_current_user
 from app.main import app
 
 
@@ -42,8 +45,47 @@ def test_communication_upload_policy_is_explicit() -> None:
     assert COMMUNICATION_MAX_UPLOAD_BYTES == 10 * 1024 * 1024
 
 
-def test_procurement_write_routes_require_jwt() -> None:
-    for method, path in (("post", "/procurement/procurement-requests"), ("patch", "/procurement/purchase-orders/1/deliver"),
-                         ("post", "/procurement/invoices"), ("patch", "/procurement/invoices/1/payment-status")):
+def test_all_procurement_write_routes_require_jwt() -> None:
+    routes = (
+        ("post", "/procurement/procurement-requests"),
+        ("patch", "/procurement/procurement-requests/1"),
+        ("delete", "/procurement/procurement-requests/1"),
+        ("patch", "/procurement/procurement-requests/1/approve"),
+        ("patch", "/procurement/procurement-requests/1/reject"),
+        ("patch", "/procurement/procurement-requests/1/send-back"),
+        ("patch", "/procurement/procurement-requests/1/cancel"),
+        ("patch", "/procurement/procurement-requests/1/assign-vendor"),
+        ("post", "/procurement/purchase-orders"),
+        ("patch", "/procurement/purchase-orders/1/status"),
+        ("patch", "/procurement/purchase-orders/1/issue"),
+        ("patch", "/procurement/purchase-orders/1/deliver"),
+        ("patch", "/procurement/purchase-orders/1/cancel"),
+        ("post", "/procurement/purchase-orders/1/completion-check"),
+        ("patch", "/procurement/order-tracking/1"),
+        ("post", "/procurement/invoices"),
+        ("patch", "/procurement/invoices/1/verify"),
+        ("patch", "/procurement/invoices/1/reject"),
+        ("patch", "/procurement/invoices/1/payment-status"),
+    )
+    for method, path in routes:
         response = getattr(client, method)(path)
         assert response.status_code == 401, (path, response.status_code, response.text)
+
+
+def test_procurement_approval_writes_reject_non_approver_before_request_validation() -> None:
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=99, role="Finance Officer")
+    try:
+        response = client.patch("/procurement/procurement-requests/1/approve")
+        assert response.status_code == 403, response.text
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_report_discovery_advertises_all_generic_export_formats() -> None:
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1, role="Administrator")
+    try:
+        response = client.get("/reports/")
+        assert response.status_code == 200, response.text
+        assert set(response.json()["items"][0]["formats"]) == {"json", "csv", "xlsx", "pdf"}
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)

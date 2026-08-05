@@ -64,7 +64,9 @@ def _sorted(rows: list[dict[str, Any]], report_type: str, sort_by: str | None, s
 @router.get("/")
 def list_reports(current_user: User = Depends(get_current_user)):
     _require(current_user)
-    return {"items": [{"key": key, "title": key.replace("-", " ").title(), "formats": ["json", "csv"], "status": "ready"} for key in _REPORT_TYPES], "generated_at": datetime.utcnow()}
+    # ``/{report_key}/export`` supports all of these formats. Keep discovery in
+    # sync so API consumers do not incorrectly treat PDF/XLSX as unavailable.
+    return {"items": [{"key": key, "title": key.replace("-", " ").title(), "formats": ["json", "csv", "xlsx", "pdf"], "status": "ready"} for key in _REPORT_TYPES], "generated_at": datetime.utcnow()}
 
 
 @router.get("/{report_key}/preview", response_model=ReportPreviewOut)
@@ -115,6 +117,9 @@ def expiring_contract_report(window: int = Query(30), db: Session = Depends(get_
 
 
 # Stable Module 5/6 aliases used by the existing frontend.
+# These are intentionally CSV-only compatibility routes. They retain their
+# established no-query-parameter contract; consumers needing filtering,
+# sorting, PDF, or XLSX must use ``/{report_key}/export`` or ``/preview``.
 @router.get("/vendor-performance")
 def export_vendor_performance_report(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _require(current_user); return _csv(_rows(report_service.export_report_data(db, "vendor_performance")), "vendor_performance_report.csv")

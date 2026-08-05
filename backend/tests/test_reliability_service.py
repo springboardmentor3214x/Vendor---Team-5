@@ -81,20 +81,24 @@ class _Query:
 
 
 class _Session:
-    def __init__(self, vendor=None, reliability=None, vendors=None):
+    def __init__(self, vendor=None, reliability=None, vendors=None, rows=None):
         self.vendor = vendor
         self.reliability = reliability
         self.vendors = vendors
+        self.rows = rows or {}
         self.commits = 0
         self.refreshed = []
         self.added = []
 
     def query(self, model):
         from app.models.reliability import VendorReliability
+        from app.models.vendor import Vendor
 
         if model is VendorReliability:
             return _Query(self.reliability)
-        return _Query(self.vendors if self.vendors is not None else self.vendor)
+        if model is Vendor:
+            return _Query(self.vendors if self.vendors is not None else self.vendor)
+        return _Query(self.rows.get(model, []))
 
     def commit(self):
         self.commits += 1
@@ -107,19 +111,42 @@ class _Session:
         self.refreshed.append(value)
 
 
-def test_recalculate_vendor_reliability_returns_full_persisted_record():
+def test_recalculate_vendor_reliability_uses_real_model_shaped_records_and_persists_derivatives():
+    from datetime import timedelta
+    from app.models.certification import Certification
+    from app.models.communication_log import CommunicationLog
+    from app.models.compliance import ComplianceRecord
+    from app.models.contract import Contract
+    from app.models.delivery_performance import DeliveryPerformance
+    from app.models.product_quality_evaluation import ProductQualityEvaluation
+    from app.models.procurement_request import ProcurementRequest
+    from app.models.purchase_order import PurchaseOrder
+    from app.models.service_rating import ServiceRating
+    from app.models.vendor_document import VendorDocument
+    from app.models.reliability import PerformanceTrend, ProcurementRecommendation
+
     vendor = type("Vendor", (), {"id": 7, "reliability_score": 0.0})()
     reliability = type("Reliability", (), {
         "id": 1,
         "vendor_id": 7,
-        "delivery_score": 90.0,
-        "quality_score": 0.0,
-        "communication_score": 0.0,
-        "compliance_score": 0.0,
-        "issue_resolution_score": 0.0,
+        "delivery_score": 0.0, "quality_score": 0.0, "communication_score": 0.0,
+        "compliance_score": 0.0, "issue_resolution_score": 0.0,
         "updated_at": None,
     })()
-    db = _Session(vendor, reliability)
+    rows = {
+        PurchaseOrder: [type("PO", (), {"id": 10, "vendor_id": 7, "po_status": "Delivered"})()],
+        ProcurementRequest: [type("Request", (), {"vendor_id": 7, "approval_status": "Rejected"})()],
+        DeliveryPerformance: [type("Delivery", (), {"vendor_id": 7, "delay_days": 2, "delivery_status": "Delayed Delivery"})()],
+        ProductQualityEvaluation: [type("Quality", (), {"vendor_id": 7, "overall_quality_rating": 4.0})()],
+        CommunicationLog: [type("Communication", (), {"vendor_id": 7, "response_duration_minutes": 180, "communication_status": "Responded"})()],
+        ServiceRating: [type("Service", (), {"vendor_id": 7, "communication_effectiveness": None, "issue_resolution": 3.0})()],
+        Contract: [type("Contract", (), {"vendor_id": 7, "compliance_verified": True})()],
+        ComplianceRecord: [type("Compliance", (), {"vendor_id": 7, "status": "Compliant"})()],
+        Certification: [type("Certification", (), {"vendor_id": 7, "expiry_date": __import__("datetime").datetime.utcnow() + timedelta(days=1)})()],
+        VendorDocument: [type("Document", (), {"vendor_id": 7})()],
+        PerformanceTrend: [], ProcurementRecommendation: [],
+    }
+    db = _Session(vendor, reliability, rows=rows)
 
     result = recalculate_vendor_reliability(7, db)
 
@@ -131,8 +158,17 @@ def test_recalculate_vendor_reliability_returns_full_persisted_record():
         "reliability_score", "risk_level", "updated_at",
     ):
         assert hasattr(result, field)
-    assert result.reliability_score == 27.0
-    assert result.risk_level == "High Risk"
+    assert result.delivery_score == 80.0
+    assert result.quality_score == 80.0
+    assert result.communication_score == 80.0
+    assert result.issue_resolution_score == 60.0
+    assert result.compliance_score == 100.0
+    # PO success (100) and rejected request (0) yield procurement history 50,
+    # proving it is independent of the 100 compliance score.
+    assert result.reliability_score == 77.0
+    assert result.risk_level == "Medium Risk"
+    assert any(isinstance(row, PerformanceTrend) for row in db.added)
+    assert any(isinstance(row, ProcurementRecommendation) for row in db.added)
     assert db.commits == 1
 
 
@@ -142,7 +178,20 @@ def test_recalculate_vendor_reliability_does_not_default_missing_data_to_100():
     result = recalculate_vendor_reliability(8, db)
     assert result.reliability_score == 0
     assert result.risk_level == "High Risk"
-    assert db.added == [result]
+    assert db.added[0] is result
+
+
+def test_reliability_write_trigger_helpers_delegate_to_the_recalculation(monkeypatch):
+    import app.services.reliability_service as service
+
+    calls = []
+    monkeypatch.setattr(service, "recalculate_vendor_reliability", lambda vendor_id, db: calls.append((vendor_id, db)) or "updated")
+    monkeypatch.setattr(service, "recalculate_supplier_rankings", lambda db: calls.append(("rankings", db)) or [])
+    db = object()
+    assert service.refresh_vendor_reliability_after_performance_write(3, db) == "updated"
+    assert service.refresh_vendor_reliability_after_procurement_update(3, db) == "updated"
+    assert service.refresh_vendor_reliability_after_compliance_update(3, db) == "updated"
+    assert calls == [(3, db), ("rankings", db), (3, db), (3, db)]
 
 
 def test_recalculate_supplier_rankings_accepts_db_and_handles_no_vendors():

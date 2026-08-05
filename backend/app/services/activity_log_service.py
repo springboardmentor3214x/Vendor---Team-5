@@ -67,6 +67,32 @@ def record_activity_log(
     return log
 
 
+def log_activity(
+    db: Any,
+    user_id: int | None,
+    action: str,
+    module: str | None = None,
+    description: dict[str, Any] | str | None = None,
+    related_entity_type: str | None = None,
+    related_entity_id: int | None = None,
+    ip_address: str | None = None,
+    *,
+    module_name: str | None = None,
+    details: dict[str, Any] | str | None = None,
+) -> ActivityLog:
+    """Backward-compatible Module 7 name for :func:`record_activity_log`.
+
+    Both the older ``module``/``description`` and newer
+    ``module_name``/``details`` calling conventions are accepted.
+    """
+    resolved_module = module_name if module_name is not None else module
+    resolved_details = details if details is not None else description
+    if resolved_module is None:
+        raise ValueError("module or module_name is required.")
+    return record_activity_log(db, user_id, action, resolved_module, related_entity_type,
+                               related_entity_id, ip_address, resolved_details)
+
+
 def list_activity_logs(db: Any, filters: dict[str, Any] | None = None) -> list[ActivityLog]:
     """Return activity history, optionally filtered by migrated table fields."""
     if db is None:

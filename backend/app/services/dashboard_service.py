@@ -260,6 +260,15 @@ def get_vendor_dashboard_summary(db: Any, vendor_id: int) -> dict[str, Any]:
     invoices = [row for row in _rows(db, Invoice) if getattr(row, "purchase_order_id", None) in order_ids]
     communications = [row for row in _rows(db, Communication) if getattr(row, "vendor_id", None) == vendor_id]
     vendor_tracking = [row for row in _rows(db, OrderTracking) if getattr(row, "purchase_order_id", None) in order_ids]
+    vendor = next((row for row in _rows(db, Vendor) if getattr(row, "id", None) == vendor_id), None)
+    user_ids = {getattr(vendor, name, None) for name in ("user_id", "account_id", "contact_user_id") if vendor is not None}
+    user_ids.update(getattr(getattr(vendor, name, None), "id", None) for name in ("user", "account", "contact_user") if vendor is not None)
+    user_ids.discard(None)
+    if not user_ids and vendor is not None and getattr(vendor, "email", None):
+        user_ids.update(getattr(row, "id", None) for row in _rows(db, User) if getattr(row, "email", None) == vendor.email)
+    recent_notifications = []
+    for user_id in user_ids:
+        recent_notifications.extend(get_user_notifications(db, user_id))
     delivery = get_delivery_status_dashboard(db, {"vendor_id": vendor_id}) if vendor_tracking else {
         "pending_shipments": sum(getattr(row, "po_status", None) == "Issued" for row in orders)}
     return {"overall_performance_score": getattr(performance, "overall_performance_score", None),
@@ -272,7 +281,7 @@ def get_vendor_dashboard_summary(db: Any, vendor_id: int) -> dict[str, Any]:
             "recent_communications": sorted(communications, key=lambda row: getattr(row, "created_at", datetime.min), reverse=True)[:5],
             "payment_status": {status: sum(getattr(row, "payment_status", None) == status for row in invoices)
                                for status in sorted({getattr(row, "payment_status", None) for row in invoices if getattr(row, "payment_status", None)})},
-            "recent_notifications": [],  # Notification model/table is not migrated on this branch.
+            "recent_notifications": sorted(recent_notifications, key=lambda row: getattr(row, "created_at", datetime.min), reverse=True)[:5],
     }
 
 

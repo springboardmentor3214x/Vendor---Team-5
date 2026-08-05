@@ -2,9 +2,12 @@
 
 from types import SimpleNamespace
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.auth import get_current_user
+from app.api.reports import _filters
 from app.main import app
 
 
@@ -89,3 +92,13 @@ def test_report_discovery_advertises_all_generic_export_formats() -> None:
         assert set(response.json()["items"][0]["formats"]) == {"json", "csv", "xlsx", "pdf"}
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_reliability_level_filter_is_report_type_specific() -> None:
+    accepted = _filters("vendor_performance", None, None, None, None, None, None, None, None, None, None, "High")
+    assert accepted["reliability_level"] == "High"
+
+    with pytest.raises(HTTPException) as exc_info:
+        _filters("procurement_summary", None, None, None, None, None, None, None, None, None, None, "High")
+    assert exc_info.value.status_code == 400
+    assert "vendor-performance" in exc_info.value.detail

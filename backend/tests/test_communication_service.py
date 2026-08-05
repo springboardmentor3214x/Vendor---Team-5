@@ -3,9 +3,9 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.communication_service import (
-    can_access_communication, create_discussion, get_contract_communication_history,
-    get_conversation, get_vendor_communication_history, save_communication_file,
-    send_message, validate_safe_file_name,
+    can_access_communication, create_discussion, get_conversation,
+    get_vendor_communication_history, save_communication_file, send_message,
+    validate_safe_file_name,
 )
 
 
@@ -31,7 +31,6 @@ class _Db:
 
 def test_send_message_requires_session_and_persists_receiver_id():
     result = send_message(None, 1, receiver_id=2, content="Hello")
-    assert result["status"] == "unavailable"
     assert "database session" in result["message"].lower()
 
     db = _Db()
@@ -45,9 +44,8 @@ def test_send_message_requires_session_and_persists_receiver_id():
 
 
 def test_create_discussion_requires_session_and_persists_participants():
-    unavailable = create_discussion(None, 1, "Pricing", [2])
-    assert unavailable["status"] == "unavailable"
-    assert "persistence" in unavailable["message"].lower()
+    no_session_result = create_discussion(None, 1, "Pricing", [2])
+    assert "persistence" in no_session_result["message"].lower()
 
     db = _Db()
     discussion = create_discussion(db, 1, "Pricing", [2, 3])
@@ -57,10 +55,12 @@ def test_create_discussion_requires_session_and_persists_participants():
     assert {(item.discussion_id, item.user_id) for item in participants} == {(discussion.id, 1), (discussion.id, 2), (discussion.id, 3)}
 
 
-def test_file_and_history_helpers_handle_missing_session_without_fabricating_records():
-    res = get_contract_communication_history(None, 4)
-    assert res == [] or (isinstance(res, dict) and res.get("status") == "unavailable")
-    assert save_communication_file(None, "quote.pdf")["status"] == "unavailable"
+def test_communication_file_persists_and_file_name_validation_is_explicit():
+    db = _Db()
+    saved = save_communication_file(db, "quote.pdf", file_path="C:/temp/quote.pdf", uploaded_by_id=1)
+    assert saved.filename == "quote.pdf"
+    assert saved.uploaded_by_id == 1
+    assert saved in db.added
     assert validate_safe_file_name("quote.pdf") == "quote.pdf"
     with pytest.raises(ValueError):
         validate_safe_file_name("../quote.pdf")

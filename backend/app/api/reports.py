@@ -24,10 +24,16 @@ def _require(current_user: User) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
 
-def _filters(start_date: date | None, end_date: date | None, department: str | None, vendor_id: int | None, vendor_name: str | None, vendor_category: str | None, procurement_status: str | None, purchase_order_status: str | None, contract_status: str | None, compliance_status: str | None, reliability_level: str | None) -> dict[str, Any]:
-    if reliability_level is not None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="reliability_level filtering is not supported by the current report service")
-    return {key: value for key, value in locals().items() if value is not None}
+def _filters(report_type: str, start_date: date | None, end_date: date | None, department: str | None, vendor_id: int | None, vendor_name: str | None, vendor_category: str | None, procurement_status: str | None, purchase_order_status: str | None, contract_status: str | None, compliance_status: str | None, reliability_level: str | None) -> dict[str, Any]:
+    """Validate and forward only filters the report service supports."""
+    if reliability_level is not None and report_type != "vendor_performance":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="reliability_level is supported only for vendor-performance reports",
+        )
+    values = locals().copy()
+    values.pop("report_type")
+    return {key: value for key, value in values.items() if value is not None}
 
 
 def _rows(result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -73,7 +79,7 @@ def list_reports(current_user: User = Depends(get_current_user)):
 def preview_report(report_key: str, start_date: date | None = Query(None), end_date: date | None = Query(None), department: str | None = None, vendor_id: int | None = None, vendor_name: str | None = None, vendor_category: str | None = None, procurement_status: str | None = None, purchase_order_status: str | None = None, contract_status: str | None = None, compliance_status: str | None = None, reliability_level: str | None = None, sort_by: str | None = Query(None), sort_order: str = Query("asc"), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _require(current_user); report_type = _REPORT_TYPES.get(report_key)
     if not report_type: raise HTTPException(status_code=404, detail="Unsupported report type")
-    result = report_service.export_report_data(db, report_type, filters=_filters(start_date, end_date, department, vendor_id, vendor_name, vendor_category, procurement_status, purchase_order_status, contract_status, compliance_status, reliability_level))
+    result = report_service.export_report_data(db, report_type, filters=_filters(report_type, start_date, end_date, department, vendor_id, vendor_name, vendor_category, procurement_status, purchase_order_status, contract_status, compliance_status, reliability_level))
     return ReportPreviewOut(report_type=report_type, rows=_sorted(_rows(result), report_type, sort_by, sort_order), metadata=result["metadata"])
 
 
@@ -90,7 +96,7 @@ def report_charts(report_key: str, db: Session = Depends(get_db), current_user: 
 def export_report(report_key: str, format: str = Query("csv"), start_date: date | None = Query(None), end_date: date | None = Query(None), department: str | None = None, vendor_id: int | None = None, vendor_name: str | None = None, vendor_category: str | None = None, procurement_status: str | None = None, purchase_order_status: str | None = None, contract_status: str | None = None, compliance_status: str | None = None, reliability_level: str | None = None, sort_by: str | None = Query(None), sort_order: str = Query("asc"), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     _require(current_user); report_type = _REPORT_TYPES.get(report_key)
     if not report_type: raise HTTPException(status_code=404, detail="Unsupported report type")
-    applied_filters = _filters(start_date, end_date, department, vendor_id, vendor_name, vendor_category, procurement_status, purchase_order_status, contract_status, compliance_status, reliability_level)
+    applied_filters = _filters(report_type, start_date, end_date, department, vendor_id, vendor_name, vendor_category, procurement_status, purchase_order_status, contract_status, compliance_status, reliability_level)
     try: result = report_service.export_report_data(db, report_type, format="csv", filters=applied_filters)
     except ValueError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
     rows = _sorted(_rows(result), report_type, sort_by, sort_order)

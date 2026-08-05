@@ -78,8 +78,6 @@ def _recipient_id(row: Any, users: list[Any], *, vendor: Any | None = None) -> i
 
 def _vendor_for(db: Any, vendor_id: Any) -> Any | None:
     return next((vendor for vendor in _rows(db, Vendor) if _value(vendor, "id") == vendor_id), None)
-
-
 def classify_notification_priority(event_type: str, related_module: str | None = None) -> str:
     """Classify known events without relying on an in-app notification table."""
     event = event_type.strip().lower().replace(" ", "_")
@@ -128,7 +126,8 @@ def create_notification(
         db.refresh(notification)
         return notification
     except Exception:
-        db.rollback()
+        if db is not None and hasattr(db, "rollback"):
+            db.rollback()
         return _unavailable()
 
 

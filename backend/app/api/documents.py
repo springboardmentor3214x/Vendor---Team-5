@@ -1,6 +1,6 @@
 import os
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from app.api.auth import get_current_user, normalize_user_role
 from app.schemas.document import VendorDocumentOut, VendorDocumentUpdate
 from app.services import document_service
 from app.api.reliability_refresh import refresh_after_compliance_update
+from app.services.activity_log_service import record_activity_log
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -72,7 +73,7 @@ def get_vendor_documents(
 
 
 @router.get("/{document_id}", response_model=VendorDocumentOut)
-def get_document_details(document_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_document_details(document_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     doc = document_service.get_document_by_id(db, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -83,11 +84,12 @@ def get_document_details(document_id: int, db: Session = Depends(get_db), curren
         if not vendor or doc.vendor_id != vendor.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    record_activity_log(db, current_user.id, "DOCUMENT_VIEWED", "Documents", "VendorDocument", doc.id, request.client.host if request.client else None)
     return doc
 
 
 @router.get("/{document_id}/download")
-def download_document(document_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def download_document(document_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     doc = document_service.get_document_by_id(db, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -101,6 +103,7 @@ def download_document(document_id: int, db: Session = Depends(get_db), current_u
     if not os.path.exists(doc.file_path):
         raise HTTPException(status_code=404, detail="Physical file not found on disk")
 
+    record_activity_log(db, current_user.id, "DOCUMENT_DOWNLOADED", "Documents", "VendorDocument", doc.id, request.client.host if request.client else None)
     return FileResponse(doc.file_path, filename=doc.file_name, media_type=doc.content_type)
 
 

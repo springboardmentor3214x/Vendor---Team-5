@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -20,6 +20,10 @@ router = APIRouter(prefix="/communications", tags=["Communications"])
 _MANAGEMENT_ROLES = {"Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"}
 _WRITE_ROLES = {"Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor", "Finance Officer"}
 _UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads" / "communications"
+
+# Module 7 communication upload policy. Adjust here if project policy changes.
+COMMUNICATION_ALLOWED_EXTENSIONS = {"pdf", "xlsx", "xls", "docx", "doc", "png", "jpg", "jpeg", "zip"}
+COMMUNICATION_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 def _visible_query(db: Session, current_user: User):
@@ -78,26 +82,9 @@ def list_communications(
     return query.order_by(Communication.created_at.desc()).all()
 
 
-@router.get("/{communication_id}", response_model=CommunicationResponse)
-def get_communication(communication_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    communication = _visible_query(db, current_user).filter(Communication.id == communication_id).first()
-    if not communication:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Communication not found")
-    return communication
-
-
-@router.patch("/{communication_id}/read", response_model=CommunicationResponse)
-def mark_communication_read(communication_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    communication = communication_service.mark_message_read(db, communication_id, current_user.id)
-    if not communication:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unread communication for the current user was not found")
-    record_activity_log(db, current_user.id, "MESSAGE_READ", "Communication", "Communication", communication.id)
-    return communication
-
-
 @router.post("/files", response_model=CommunicationFileOut, status_code=status.HTTP_201_CREATED)
 def upload_communication_file(
-    file: UploadFile = File(...), message_id: int | None = Form(default=None), discussion_id: int | None = Form(default=None),
+    request: Request, file: UploadFile = File(...), message_id: int | None = Form(default=None), discussion_id: int | None = Form(default=None),
     vendor_id: int | None = Form(default=None), procurement_request_id: int | None = Form(default=None),
     purchase_order_id: int | None = Form(default=None), contract_id: int | None = Form(default=None),
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
@@ -111,9 +98,14 @@ def upload_communication_file(
         filename = communication_service.validate_safe_file_name(file.filename or "")
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if extension not in COMMUNICATION_ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported communication file type")
+    content = file.file.read()
+    if len(content) > COMMUNICATION_MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Communication file exceeds the 10 MB limit")
     _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     destination = _UPLOAD_DIR / f"{current_user.id}_{filename}"
-    content = file.file.read()
     destination.write_bytes(content)
     try:
         stored = communication_service.save_communication_file(
@@ -129,7 +121,7 @@ def upload_communication_file(
         if destination.exists():
             destination.unlink()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=stored.get("message", "File upload is unavailable"))
-    record_activity_log(db, current_user.id, "FILE_UPLOADED", "Communication", "CommunicationFile", stored.id)
+    record_activity_log(db, current_user.id, "FILE_UPLOADED", "Communication", "CommunicationFile", stored.id, request.client.host if request.client else None)
     return stored
 
 
@@ -142,7 +134,7 @@ def list_communication_files(message_id: int | None = None, discussion_id: int |
 
 
 @router.get("/files/{file_id}/download")
-def download_communication_file(file_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def download_communication_file(file_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     item = communication_service.get_communication_file(db, file_id, current_user)
     if not item or isinstance(item, dict):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Communication file not found")
@@ -153,4 +145,24 @@ def download_communication_file(file_id: int, db: Session = Depends(get_db), cur
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     if not os.path.isfile(item.file_path):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File is not available on disk")
+    record_activity_log(db, current_user.id, "FILE_DOWNLOADED", "Communication", "CommunicationFile", item.id, request.client.host if request.client else None)
     return FileResponse(item.file_path, filename=item.filename, media_type=item.file_type or "application/octet-stream")
+
+
+# Keep variable-path routes last: FastAPI evaluates route declarations in order.
+@router.get("/{communication_id}", response_model=CommunicationResponse)
+def get_communication(communication_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    communication = _visible_query(db, current_user).filter(Communication.id == communication_id).first()
+    if not communication:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Communication not found")
+    record_activity_log(db, current_user.id, "COMMUNICATION_VIEWED", "Communication", "Communication", communication.id, request.client.host if request.client else None)
+    return communication
+
+
+@router.patch("/{communication_id}/read", response_model=CommunicationResponse)
+def mark_communication_read(communication_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    communication = communication_service.mark_message_read(db, communication_id, current_user.id)
+    if not communication:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unread communication for the current user was not found")
+    record_activity_log(db, current_user.id, "MESSAGE_READ", "Communication", "Communication", communication.id, request.client.host if request.client else None)
+    return communication

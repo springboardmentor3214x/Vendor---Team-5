@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.api.auth import get_current_user, normalize_user_role
+from app.models.user import User
 from app.models.invoice import Invoice
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_approval import ProcurementApproval
@@ -60,6 +62,30 @@ VALID_PO_STATUSES = {"Draft", "Issued", "Delivered", "Cancelled", "Completed"}
 VALID_DELIVERY_STATUSES = {"Awaiting Shipment", "In Transit", "Delivered", "Delayed", "Completed"}
 VALID_PAYMENT_STATUSES = {"Pending", "Verified", "Approved", "Paid", "Rejected"}
 
+_PROCUREMENT_WRITE_ROLES = {"Administrator", "Procurement Manager", "Supply Chain Manager", "Finance Officer", "Vendor"}
+_PROCUREMENT_APPROVAL_ROLES = {"Administrator", "Procurement Manager", "Supply Chain Manager"}
+_FINANCE_WRITE_ROLES = {"Administrator", "Procurement Manager", "Finance Officer"}
+
+
+def _require_procurement_role(current_user: User, allowed: set[str]) -> None:
+    if normalize_user_role(current_user) not in allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+
+def require_procurement_write_user(current_user: User = Depends(get_current_user)) -> User:
+    _require_procurement_role(current_user, _PROCUREMENT_WRITE_ROLES)
+    return current_user
+
+
+def require_procurement_approver(current_user: User = Depends(get_current_user)) -> User:
+    _require_procurement_role(current_user, _PROCUREMENT_APPROVAL_ROLES)
+    return current_user
+
+
+def require_finance_write_user(current_user: User = Depends(get_current_user)) -> User:
+    _require_procurement_role(current_user, _FINANCE_WRITE_ROLES)
+    return current_user
+
 
 def log_status_change(db: Session, request_id: int, old_status: str, new_status: str, changed_by: int | None, remarks: str | None = None):
     history = ProcurementStatusHistory(
@@ -86,7 +112,7 @@ def log_approval_action(db: Session, request_id: int, approved_by: int | None, a
 
 # ---------------- Procurement Requests ----------------
 
-@router.post("/procurement-requests", response_model=ProcurementRequestOut, status_code=status.HTTP_201_CREATED)
+@router.post("/procurement-requests", response_model=ProcurementRequestOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_procurement_write_user)])
 def create_request(payload: ProcurementRequestCreate, db: Session = Depends(get_db)):
     if payload.required_delivery_date < date.today():
         raise HTTPException(status_code=400, detail="Required delivery date cannot be in the past")
@@ -143,7 +169,7 @@ def get_request(request_id: int, db: Session = Depends(get_db)):
     return request
 
 
-@router.patch("/procurement-requests/{request_id}", response_model=ProcurementRequestOut)
+@router.patch("/procurement-requests/{request_id}", response_model=ProcurementRequestOut, dependencies=[Depends(require_procurement_write_user)])
 def update_request(request_id: int, payload: ProcurementRequestUpdate, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -173,7 +199,7 @@ def update_request(request_id: int, payload: ProcurementRequestUpdate, db: Sessi
     return request
 
 
-@router.delete("/procurement-requests/{request_id}")
+@router.delete("/procurement-requests/{request_id}", dependencies=[Depends(require_procurement_write_user)])
 def delete_request(request_id: int, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -187,7 +213,7 @@ def delete_request(request_id: int, db: Session = Depends(get_db)):
     return {"message": "Procurement request deleted successfully"}
 
 
-@router.patch("/procurement-requests/{request_id}/approve", response_model=ProcurementRequestOut)
+@router.patch("/procurement-requests/{request_id}/approve", response_model=ProcurementRequestOut, dependencies=[Depends(require_procurement_approver)])
 def approve_request(request_id: int, payload: ProcurementApprovalAction, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -212,7 +238,7 @@ def approve_request(request_id: int, payload: ProcurementApprovalAction, db: Ses
     return request
 
 
-@router.patch("/procurement-requests/{request_id}/reject", response_model=ProcurementRequestOut)
+@router.patch("/procurement-requests/{request_id}/reject", response_model=ProcurementRequestOut, dependencies=[Depends(require_procurement_approver)])
 def reject_request(request_id: int, payload: ProcurementApprovalAction, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -237,7 +263,7 @@ def reject_request(request_id: int, payload: ProcurementApprovalAction, db: Sess
     return request
 
 
-@router.patch("/procurement-requests/{request_id}/send-back", response_model=ProcurementRequestOut)
+@router.patch("/procurement-requests/{request_id}/send-back", response_model=ProcurementRequestOut, dependencies=[Depends(require_procurement_approver)])
 def send_back_request(request_id: int, payload: ProcurementApprovalAction, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -258,7 +284,7 @@ def send_back_request(request_id: int, payload: ProcurementApprovalAction, db: S
     return request
 
 
-@router.patch("/procurement-requests/{request_id}/cancel", response_model=ProcurementRequestOut)
+@router.patch("/procurement-requests/{request_id}/cancel", response_model=ProcurementRequestOut, dependencies=[Depends(require_procurement_write_user)])
 def cancel_request(request_id: int, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -303,7 +329,7 @@ def get_approved_vendors_for_request(request_id: int, db: Session = Depends(get_
     return query.order_by(Vendor.reliability_score.desc()).all()
 
 
-@router.patch("/procurement-requests/{request_id}/assign-vendor", response_model=ProcurementRequestOut)
+@router.patch("/procurement-requests/{request_id}/assign-vendor", response_model=ProcurementRequestOut, dependencies=[Depends(require_procurement_approver)])
 def assign_vendor(request_id: int, payload: VendorAssignmentAction, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -327,7 +353,7 @@ def assign_vendor(request_id: int, payload: VendorAssignmentAction, db: Session 
 
 # ---------------- Purchase Orders ----------------
 
-@router.post("/purchase-orders", response_model=PurchaseOrderOut, status_code=status.HTTP_201_CREATED)
+@router.post("/purchase-orders", response_model=PurchaseOrderOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_procurement_approver)])
 def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(
         ProcurementRequest.id == payload.procurement_request_id
@@ -412,7 +438,7 @@ def get_purchase_order(po_id: int, db: Session = Depends(get_db)):
     return po
 
 
-@router.patch("/purchase-orders/{po_id}/status", response_model=PurchaseOrderOut)
+@router.patch("/purchase-orders/{po_id}/status", response_model=PurchaseOrderOut, dependencies=[Depends(require_procurement_approver)])
 def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate, db: Session = Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
@@ -433,7 +459,7 @@ def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate,
     return po
 
 
-@router.patch("/purchase-orders/{po_id}/issue", response_model=PurchaseOrderOut)
+@router.patch("/purchase-orders/{po_id}/issue", response_model=PurchaseOrderOut, dependencies=[Depends(require_procurement_approver)])
 def issue_purchase_order(po_id: int, db: Session = Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
@@ -453,7 +479,7 @@ def issue_purchase_order(po_id: int, db: Session = Depends(get_db)):
     return po
 
 
-@router.patch("/purchase-orders/{po_id}/deliver", response_model=PurchaseOrderOut)
+@router.patch("/purchase-orders/{po_id}/deliver", response_model=PurchaseOrderOut, dependencies=[Depends(require_procurement_approver)])
 def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
@@ -482,7 +508,7 @@ def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
     return po
 
 
-@router.patch("/purchase-orders/{po_id}/cancel", response_model=PurchaseOrderOut)
+@router.patch("/purchase-orders/{po_id}/cancel", response_model=PurchaseOrderOut, dependencies=[Depends(require_procurement_approver)])
 def cancel_purchase_order_route(po_id: int, db: Session = Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
@@ -535,7 +561,7 @@ def preview_completion(po_id: int, db: Session = Depends(get_db)):
     return _completion_check(po_id, db, apply_completion=False)
 
 
-@router.post("/purchase-orders/{po_id}/completion-check")
+@router.post("/purchase-orders/{po_id}/completion-check", dependencies=[Depends(require_procurement_approver)])
 def complete_if_eligible(po_id: int, db: Session = Depends(get_db)):
     """Apply the supported completion transition after an explicit user action."""
     return _completion_check(po_id, db, apply_completion=True)
@@ -549,7 +575,7 @@ def get_order_tracking(po_id: int, db: Session = Depends(get_db)):
     return tracking
 
 
-@router.patch("/order-tracking/{po_id}", response_model=OrderTrackingOut)
+@router.patch("/order-tracking/{po_id}", response_model=OrderTrackingOut, dependencies=[Depends(require_procurement_approver)])
 def update_order_tracking(po_id: int, payload: OrderTrackingUpdate, db: Session = Depends(get_db)):
     tracking = db.query(OrderTracking).filter(OrderTracking.purchase_order_id == po_id).first()
     if not tracking:
@@ -571,7 +597,7 @@ def update_order_tracking(po_id: int, payload: OrderTrackingUpdate, db: Session 
     return tracking
 
 
-@router.post("/invoices", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED)
+@router.post("/invoices", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_finance_write_user)])
 def upload_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == payload.purchase_order_id).first()
     if not po:
@@ -611,7 +637,7 @@ def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
     return invoice
 
 
-@router.patch("/invoices/{invoice_id}/verify", response_model=InvoiceOut)
+@router.patch("/invoices/{invoice_id}/verify", response_model=InvoiceOut, dependencies=[Depends(require_finance_write_user)])
 def verify_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = Depends(get_db)):
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
@@ -627,7 +653,7 @@ def verify_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     return invoice
 
 
-@router.patch("/invoices/{invoice_id}/reject", response_model=InvoiceOut)
+@router.patch("/invoices/{invoice_id}/reject", response_model=InvoiceOut, dependencies=[Depends(require_finance_write_user)])
 def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = Depends(get_db)):
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
@@ -644,7 +670,7 @@ def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     return invoice
 
 
-@router.patch("/invoices/{invoice_id}/payment-status", response_model=InvoiceOut)
+@router.patch("/invoices/{invoice_id}/payment-status", response_model=InvoiceOut, dependencies=[Depends(require_finance_write_user)])
 def update_payment_status(invoice_id: int, payload: PaymentStatusUpdate, db: Session = Depends(get_db)):
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:

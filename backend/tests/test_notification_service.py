@@ -25,10 +25,10 @@ def test_notification_model_absence_returns_no_fabricated_records():
 
 def test_external_delivery_helpers_are_safe_structured_placeholders():
     assert send_email_notification("recipient@example.com", "subject", "body") == {
-        "status": "placeholder", "channel": "email", "message": "Email delivery is not configured.",
+        "status": "not_configured", "channel": "email", "message": "SMTP provider delivery is not configured.",
     }
     assert send_sms_notification("+919999999999", "body") == {
-        "status": "placeholder", "channel": "sms", "message": "SMS delivery is not configured.",
+        "status": "not_configured", "channel": "sms", "message": "SMS provider delivery is not configured.",
     }
 
 
@@ -69,7 +69,7 @@ def test_expiry_and_scheduled_scans_report_real_matches_but_no_fake_persistence(
     assert generate_contract_expiry_notifications(db)["matched_entity_ids"] == [1]
     assert generate_compliance_expiry_notifications(db)["matched_entity_ids"] == [2]
     scan = scan_for_pending_notifications(db)
-    assert scan["delivery_delay"][0]["status"] == "unavailable"
+    assert scan["delivery_delay"]["matched_entity_ids"] == [3]
     with pytest.raises(ValueError, match="Unsupported procurement"):
         generate_procurement_alert(db, 1, "bad")
     assert mark_all_notifications_read(None, 1) == 0

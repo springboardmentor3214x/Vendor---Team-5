@@ -144,7 +144,7 @@ def generate_vendor_document_report(db: Any, filters: dict[str, Any] | None = No
 
 
 def generate_notification_report(db: Any, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    """No model means no fabricated notification report rows."""
+    """Return persisted notification rows when a user filter is supplied."""
     user_id = (filters or {}).get("user_id")
     if user_id is None:
         return []
@@ -174,6 +174,8 @@ def generate_vendor_performance_report(db: Any, filters: dict[str, Any] | None =
                             "evaluation_date"))
         row["reliability_score"] = _value(getattr(reliability, "reliability_score", None))
         row["risk_level"] = _value(getattr(reliability, "risk_level", None))
+        if (filters or {}).get("reliability_level") is not None and row["risk_level"] != (filters or {})["reliability_level"]:
+            continue
         vendor = vendors.get(getattr(record, "vendor_id", None))
         if not _vendor_matches(vendor, filters):
             continue
@@ -319,6 +321,8 @@ def export_report_data(
                   "dashboard_analytics": generate_dashboard_analytics_report}
     if report_type not in generators:
         raise ValueError(f"Unsupported report type: {report_type}")
+    if (filters or {}).get("reliability_level") is not None and report_type != "vendor_performance":
+        raise ValueError("reliability_level is supported only for vendor_performance reports.")
     selected_format = (export_format or format).lower()
     if selected_format not in {"csv", "pdf", "excel"}:
         raise ValueError(f"Unsupported export format: {selected_format}")

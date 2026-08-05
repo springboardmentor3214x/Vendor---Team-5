@@ -14,6 +14,8 @@ from app.models.contract import Contract
 from app.models.invoice import Invoice
 from app.models.procurement_request import ProcurementRequest
 from app.models.purchase_order import PurchaseOrder
+from app.models.user import User
+from app.models.vendor import Vendor
 
 try:
     from app.models.notification import Notification  # type: ignore[import-not-found]
@@ -54,6 +56,28 @@ def _value(item: Any, name: str, default: Any = None) -> Any:
     return item.get(name, default) if isinstance(item, dict) else getattr(item, name, default)
 
 
+def _recipient_id(row: Any, users: list[Any], *, vendor: Any | None = None) -> int | None:
+    """Resolve only explicit user links or a verified vendor-email user match."""
+    for name in ("responsible_manager_id", "procurement_manager_id", "owner_id", "created_by", "user_id", "contact_user_id", "account_id"):
+        value = _value(row, name)
+        if isinstance(value, int) and value > 0:
+            return value
+    for name in ("responsible_manager", "procurement_manager", "owner", "user", "contact_user", "account"):
+        value = _value(row, name)
+        if isinstance(_value(value, "id"), int) and _value(value, "id") > 0:
+            return _value(value, "id")
+    candidate = vendor or row
+    email = _value(candidate, "email")
+    if email:
+        matched = next((user for user in users if _value(user, "email") == email), None)
+        if matched and isinstance(_value(matched, "id"), int):
+            return _value(matched, "id")
+    admin = next((user for user in users if _value(user, "role") in {"Administrator", "Admin"}), None)
+    return _value(admin, "id") if isinstance(_value(admin, "id"), int) else None
+
+
+def _vendor_for(db: Any, vendor_id: Any) -> Any | None:
+    return next((vendor for vendor in _rows(db, Vendor) if _value(vendor, "id") == vendor_id), None)
 def classify_notification_priority(event_type: str, related_module: str | None = None) -> str:
     """Classify known events without relying on an in-app notification table."""
     event = event_type.strip().lower().replace(" ", "_")
@@ -202,9 +226,17 @@ def generate_purchase_order_notification(db: Any, purchase_order_id: int, event_
 
 
 def generate_vendor_approval_notification(db: Any, vendor_id: int, approved: bool = True, reason: str | None = None) -> Any:
-    # Vendor has no user_id relationship, so a recipient cannot be resolved safely.
-    del db, vendor_id, approved, reason
-    return _unavailable("Vendor approval notification recipient resolution")
+    vendor = _vendor_for(db, vendor_id)
+    if vendor is None:
+        return _unavailable("Requested vendor record")
+    recipient = _recipient_id(vendor, _rows(db, User))
+    if recipient is None:
+        return _unavailable("Vendor approval notification recipient resolution")
+    outcome = "approved" if approved else "rejected"
+    detail = reason or f"Vendor registration was {outcome}."
+    return create_notification(db, recipient, f"Vendor registration {outcome}", detail,
+                               "vendor_approval", "vendor", vendor_id,
+                               classify_notification_priority("approved" if approved else "rejected", "vendor"))
 
 
 def _expiry_result(rows: list[Any], days_before: int | None, entity_name: str, date_name: str) -> dict[str, Any]:
@@ -219,11 +251,35 @@ def _expiry_result(rows: list[Any], days_before: int | None, entity_name: str, d
 
 
 def generate_contract_expiry_notifications(db: Any, days_before: int | None = None) -> dict[str, Any]:
-    return _expiry_result(_rows(db, Contract), days_before, "Contract", "end_date")
+    rows, users = _rows(db, Contract), _rows(db, User)
+    result = _expiry_result(rows, days_before, "Contract", "end_date")
+    generated = []
+    for contract in (row for row in rows if getattr(row, "id", None) in result["matched_entity_ids"]):
+        recipient = _recipient_id(contract, users, vendor=_vendor_for(db, _value(contract, "vendor_id")))
+        if recipient is not None:
+            generated.append(create_contract_expiry_notification(db, recipient, _value(contract, "id"),
+                                                                  (_value(contract, "end_date").date() if isinstance(_value(contract, "end_date"), datetime) else _value(contract, "end_date") - date.today()).days))
+    result["generated"] = generated
+    result["generated_count"] = len(generated)
+    if result["matched_entity_ids"] and not generated:
+        result.update(_unavailable("Contract expiry notification recipient resolution"))
+    return result
 
 
 def generate_compliance_expiry_notifications(db: Any, days_before: int | None = None) -> dict[str, Any]:
-    return _expiry_result(_rows(db, Certification), days_before, "Certification", "expiry_date")
+    rows, users = _rows(db, Certification), _rows(db, User)
+    result = _expiry_result(rows, days_before, "Certification", "expiry_date")
+    generated = []
+    for certification in (row for row in rows if getattr(row, "id", None) in result["matched_entity_ids"]):
+        recipient = _recipient_id(certification, users, vendor=_vendor_for(db, _value(certification, "vendor_id")))
+        if recipient is not None:
+            generated.append(create_compliance_notification(db, recipient, _value(certification, "vendor_id"),
+                                                            f"Certification expires in {(_value(certification, 'expiry_date').date() if isinstance(_value(certification, 'expiry_date'), datetime) else _value(certification, 'expiry_date') - date.today()).days} days."))
+    result["generated"] = generated
+    result["generated_count"] = len(generated)
+    if result["matched_entity_ids"] and not generated:
+        result.update(_unavailable("Compliance expiry notification recipient resolution"))
+    return result
 
 
 def create_contract_expiry_notification(db: Any, user_id: int, contract_id: int, days_until_expiry: int) -> Any:

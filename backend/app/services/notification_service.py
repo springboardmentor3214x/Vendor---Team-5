@@ -1,7 +1,8 @@
-"""Notification business logic with a deliberate no-persistence fallback.
+"""Notification helpers plus deterministic scans for a scheduler/API to call.
 
-The branch has no Notification ORM model.  Event helpers may inspect the existing
-business records, but never fabricate saved notifications when that table is absent.
+Persistence uses ``Notification`` when its model/migration is available. External
+email/SMS delivery intentionally remains unconfigured until provider credentials
+and transport integration are supplied.
 """
 
 from __future__ import annotations
@@ -311,7 +312,7 @@ def build_email_notification_payload(notification: Any, recipient: Any) -> dict[
     email = _value(recipient, "email") if not isinstance(recipient, str) else recipient
     if not email:
         return _unavailable("Email recipient")
-    return {"status": "placeholder", "channel": "email", "to": email, "subject": _value(notification, "title"),
+    return {"status": "not_configured", "channel": "email", "to": email, "subject": _value(notification, "title"),
             "body": _value(notification, "description", _value(notification, "message")), "notification_id": _value(notification, "id")}
 
 
@@ -319,32 +320,59 @@ def build_sms_notification_payload(notification: Any, recipient: Any) -> dict[st
     phone = _value(recipient, "mobile_number", _value(recipient, "phone_number")) if not isinstance(recipient, str) else recipient
     if not phone:
         return _unavailable("SMS recipient")
-    return {"status": "placeholder", "channel": "sms", "to": phone,
+    return {"status": "not_configured", "channel": "sms", "to": phone,
             "body": f"{_value(notification, 'title')}: {_value(notification, 'description', _value(notification, 'message'))}",
             "notification_id": _value(notification, "id")}
 
 
 def send_email_notification(*args: Any, **kwargs: Any) -> dict[str, str]:
+    """Provider integration requires SMTP configuration and credentials."""
     del args, kwargs
-    return {"status": "placeholder", "channel": "email", "message": "Email delivery is not configured."}
+    return {"status": "not_configured", "channel": "email", "message": "SMTP provider delivery is not configured."}
 
 
 def send_sms_notification(*args: Any, **kwargs: Any) -> dict[str, str]:
+    """Provider integration requires SMS credentials and a configured transport."""
     del args, kwargs
-    return {"status": "placeholder", "channel": "sms", "message": "SMS delivery is not configured."}
+    return {"status": "not_configured", "channel": "sms", "message": "SMS provider delivery is not configured."}
+
+
+def scan_contract_expiry_notifications(db: Any, days_before: int | None = None) -> dict[str, Any]:
+    """Deterministic contract-expiry scan; scheduler registration is intentionally external."""
+    return generate_contract_expiry_notifications(db, days_before)
+
+
+def scan_compliance_expiry_notifications(db: Any, days_before: int | None = None) -> dict[str, Any]:
+    """Deterministic certification-expiry scan; scheduler registration is intentionally external."""
+    return generate_compliance_expiry_notifications(db, days_before)
+
+
+def scan_delayed_purchase_order_notifications(db: Any) -> dict[str, Any]:
+    """Find overdue PO/delivery rows and generate only safely-addressed notifications."""
+    today, generated, matched = date.today(), [], []
+    for order in _rows(db, PurchaseOrder):
+        expected = _value(order, "expected_delivery_date") or _value(order, "delivery_date")
+        expected_day = expected.date() if isinstance(expected, datetime) else expected
+        status = (_value(order, "po_status") or _value(order, "status") or "").lower()
+        if not expected_day or expected_day >= today or status in {"delivered", "completed", "cancelled"}:
+            continue
+        matched.append(_value(order, "id"))
+        recipient = _recipient_id(order, _rows(db, User), vendor=_vendor_for(db, _value(order, "vendor_id")))
+        if recipient is None:
+            continue
+        generated.append(create_notification(db, recipient, "Purchase order delivery delayed",
+                                             f"Purchase order {_value(order, 'po_number', _value(order, 'id'))} is overdue.",
+                                             "delivery_delay", "procurement", _value(order, "id"), "high"))
+    return {"status": "ready" if not matched or generated else "unavailable", "matched_entity_ids": matched,
+            "generated": generated, "generated_count": len(generated),
+            "message": None if not matched or generated else "Delayed purchase-order recipient resolution is unavailable."}
 
 
 def scan_for_pending_notifications(db: Any) -> dict[str, Any]:
-    """Scheduled-work boundary; it scans existing rows but does not send externally."""
-    delayed = []
-    today = date.today()
-    for order in _rows(db, PurchaseOrder):
-        expected = getattr(order, "expected_delivery_date", None)
-        expected_day = expected.date() if isinstance(expected, datetime) else expected
-        if expected_day and expected_day < today and getattr(order, "po_status", None) not in {"Delivered", "Cancelled"}:
-            delayed.append(generate_purchase_order_notification(db, order.id, "delayed"))
-    return {"contract_expiry": generate_contract_expiry_notifications(db), "delivery_delay": delayed,
-            "compliance_expiry": generate_compliance_expiry_notifications(db)}
+    """Compatibility aggregate for scheduler/API layers; does not create scheduler infrastructure."""
+    return {"contract_expiry": scan_contract_expiry_notifications(db),
+            "delivery_delay": scan_delayed_purchase_order_notifications(db),
+            "compliance_expiry": scan_compliance_expiry_notifications(db)}
 
 
 def get_notification_summary(db: Any, user_id: int) -> dict[str, Any]:

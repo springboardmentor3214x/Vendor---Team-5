@@ -47,6 +47,23 @@ def _filtered_rows(db: Any, model: Any, filters: dict[str, Any] | None = None) -
     )]
 
 
+def _user_display_name(user: Any | None) -> str | None:
+    """Return the best available display name for an assigned manager."""
+    if user is None:
+        return None
+    for field in ("full_name", "name"):
+        if value := getattr(user, field, None):
+            return value
+    first_name = getattr(user, "first_name", None)
+    last_name = getattr(user, "last_name", None)
+    if first_name or last_name:
+        return " ".join(part for part in (first_name, last_name) if part)
+    for field in ("email", "username"):
+        if value := getattr(user, field, None):
+            return value
+    return None
+
+
 def _month(value: date | datetime | None) -> str | None:
     day = _day(value)
     return day.strftime("%Y-%m") if day else None
@@ -167,6 +184,7 @@ def get_active_purchase_orders_summary(db: Any, filters: dict[str, Any] | None =
     today = date.today()
     vendors = {getattr(row, "id", None): row for row in _rows(db, Vendor)}
     requests = {getattr(row, "id", None): row for row in _rows(db, ProcurementRequest)}
+    users = {getattr(row, "id", None): row for row in _rows(db, User)}
     rows = []
     for order in _filtered_rows(db, PurchaseOrder, filters):
         if getattr(order, "po_status", None) != "Issued":
@@ -180,12 +198,14 @@ def get_active_purchase_orders_summary(db: Any, filters: dict[str, Any] | None =
             indicator = "On Track"
         vendor = vendors.get(getattr(order, "vendor_id", None))
         request = requests.get(getattr(order, "procurement_request_id", None))
+        manager_id = getattr(order, "assigned_procurement_manager_id", None) or getattr(
+            request, "assigned_procurement_manager_id", None)
+        manager = getattr(order, "assigned_procurement_manager", None) or users.get(manager_id)
         rows.append({"purchase_order_id": getattr(order, "id", None), "purchase_order_number": getattr(order, "po_number", None),
                      "vendor_name": getattr(vendor, "company_name", None), "procurement_category": getattr(request, "product_category", None),
                      "status": getattr(order, "po_status", None), "expected_delivery_date": expected,
                      "deadline_indicator": indicator,
-                     # The model has created_by but no assigned-manager field/name relationship.
-                     "assigned_procurement_manager": None})
+                     "assigned_procurement_manager": _user_display_name(manager)})
     return rows
 
 
@@ -220,6 +240,7 @@ def get_procurement_cost_analysis(db: Any, filters: dict[str, Any] | None = None
     by_vendor: dict[str, float] = defaultdict(float)
     by_category: dict[str, float] = defaultdict(float)
     by_department: dict[str, float] = defaultdict(float)
+    by_project: dict[str, float] = defaultdict(float)
     by_month: dict[str, float] = defaultdict(float)
     for order in orders:
         cost = float(getattr(order, "total_cost", 0) or 0)
@@ -229,10 +250,14 @@ def get_procurement_cost_analysis(db: Any, filters: dict[str, Any] | None = None
         if request:
             if getattr(request, "product_category", None): by_category[request.product_category] += cost
             if getattr(request, "department", None): by_department[request.department] += cost
+        project_name = getattr(order, "project_name", None) or getattr(request, "project_name", None)
+        if project_name:
+            by_project[project_name] += cost
         if month := _month(getattr(order, "po_date", None)): by_month[month] += cost
     rows = lambda values, key: [{key: name, "total": round(value, 2)} for name, value in sorted(values.items())]
     return {"spending_by_vendor": rows(by_vendor, "vendor"), "spending_by_category": rows(by_category, "category"),
-            "monthly_expenses": rows(by_month, "month"), "department_spending": rows(by_department, "department")}
+            "monthly_expenses": rows(by_month, "month"), "department_spending": rows(by_department, "department"),
+            "project_spending": rows(by_project, "project")}
 
 
 def get_delivery_status_dashboard(db: Any, filters: dict[str, Any] | None = None) -> dict[str, int]:

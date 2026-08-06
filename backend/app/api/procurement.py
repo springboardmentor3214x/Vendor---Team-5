@@ -383,6 +383,10 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     if existing_po:
         raise HTTPException(status_code=400, detail="Purchase order already exists for this request")
 
+    # Module 8 context remains stable at the request level unless the approved
+    # PO payload explicitly supplies a project name.
+    project_name = payload.project_name or request.project_name
+
     po = PurchaseOrder(
         procurement_request_id=payload.procurement_request_id,
         vendor_id=request.vendor_id,
@@ -397,6 +401,8 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         payment_terms=payload.payment_terms,
         po_status="Draft",
         created_by=payload.created_by,
+        assigned_procurement_manager_id=payload.assigned_procurement_manager_id,
+        project_name=project_name,
         po_date=datetime.utcnow(),
     )
     db.add(po)

@@ -203,6 +203,7 @@ class PerformanceRecordOut(BaseModel):
     delayed_delivery_count: int = Field(alias="delayedDeliveryCount")
     average_quality_score: float = Field(alias="averageQualityScore")
     average_response_time: float = Field(alias="averageResponseTime")
+    average_communication_score: float = Field(default=0.0, alias="averageCommunicationScore")
     average_service_rating_score: float = Field(alias="averageServiceRatingScore")
     overall_performance_score: float = Field(alias="overallPerformanceScore")
     performance_status: str = Field(alias="performanceStatus")

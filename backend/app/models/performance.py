@@ -14,6 +14,7 @@ class PerformanceRecord(Base):
     delayed_delivery_count = Column(Integer, default=0)
     average_quality_score = Column(Float, default=0.0)
     average_response_time = Column(Float, default=0.0)  # in minutes, per Sonali's function
+    average_communication_score = Column(Float, default=0.0)  # 0-100 communication score
     average_service_rating_score = Column(Float, default=0.0)
     overall_performance_score = Column(Float, default=0.0)
     performance_status = Column(String(50), default="Not Evaluated", index=True)

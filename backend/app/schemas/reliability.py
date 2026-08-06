@@ -12,6 +12,7 @@ class VendorReliabilityOut(BaseModel):
     communication_score: float
     compliance_score: float
     issue_resolution_score: float
+    procurement_history_score: float = 0.0
     reliability_score: float
     risk_level: str
     recommendation: Optional[str] = None
@@ -30,6 +31,7 @@ class PerformanceTrendOut(BaseModel):
     communication_score: float
     compliance_score: float
     issue_resolution_score: float
+    procurement_history_score: float = 0.0
     created_at: datetime
 
 

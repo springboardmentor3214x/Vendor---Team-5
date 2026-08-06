@@ -69,22 +69,22 @@ def _document_response(document: VendorDocument) -> dict:
     }
 
 
-@router.get("/categories", response_model=list[VendorCategoryResponse])
+@router.get("/categories", response_model=list[VendorCategoryResponse], dependencies=[Depends(get_current_user)])
 def list_vendor_categories(db: Session = Depends(get_db)):
     return db.query(VendorCategory).order_by(VendorCategory.name).all()
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(get_current_user)])
 def list_vendors(db: Session = Depends(get_db)):
     return db.query(Vendor).all()
 
 
-@router.get("/{vendor_id}")
+@router.get("/{vendor_id}", dependencies=[Depends(get_current_user)])
 def get_vendor(vendor_id: int, db: Session = Depends(get_db)):
     return _vendor_or_404(db, vendor_id)
 
 
-@router.get("/{vendor_id}/documents", response_model=list[VendorDocumentResponse])
+@router.get("/{vendor_id}/documents", response_model=list[VendorDocumentResponse], dependencies=[Depends(get_current_user)])
 def list_vendor_documents(vendor_id: int, db: Session = Depends(get_db)):
     _vendor_or_404(db, vendor_id)
     documents = (
@@ -137,7 +137,7 @@ async def upload_vendor_document(
     return _document_response(document)
 
 
-@router.get("/{vendor_id}/documents/{document_id}/download")
+@router.get("/{vendor_id}/documents/{document_id}/download", dependencies=[Depends(get_current_user)])
 def download_vendor_document(document_id: int, vendor_id: int, db: Session = Depends(get_db)):
     document = (
         db.query(VendorDocument)
@@ -156,7 +156,7 @@ def download_vendor_document(document_id: int, vendor_id: int, db: Session = Dep
     )
 
 
-@router.get("/{vendor_id}/approval-history", response_model=list[VendorApprovalHistoryResponse])
+@router.get("/{vendor_id}/approval-history", response_model=list[VendorApprovalHistoryResponse], dependencies=[Depends(get_current_user)])
 def list_vendor_approval_history(vendor_id: int, db: Session = Depends(get_db)):
     _vendor_or_404(db, vendor_id)
     return (
@@ -167,7 +167,11 @@ def list_vendor_approval_history(vendor_id: int, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("Administrator", "Procurement Manager", "Vendor"))],
+)
 def create_vendor(payload: VendorCreate, db: Session = Depends(get_db)):
     vendor_data = payload.model_dump(by_alias=False, exclude_unset=True)
     _resolve_category(db, vendor_data, required=True)
@@ -180,7 +184,10 @@ def create_vendor(payload: VendorCreate, db: Session = Depends(get_db)):
     return vendor
 
 
-@router.put("/{vendor_id}")
+@router.put(
+    "/{vendor_id}",
+    dependencies=[Depends(require_roles("Administrator", "Procurement Manager"))],
+)
 def update_vendor(vendor_id: int, payload: VendorUpdate, db: Session = Depends(get_db)):
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     if not vendor:

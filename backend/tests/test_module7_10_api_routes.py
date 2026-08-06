@@ -75,6 +75,38 @@ def test_all_procurement_write_routes_require_jwt() -> None:
         assert response.status_code == 401, (path, response.status_code, response.text)
 
 
+def test_vendor_and_procurement_read_routes_require_jwt() -> None:
+    """Sensitive vendor and procurement records are not publicly readable."""
+    for path in (
+        "/vendors/categories", "/vendors/", "/vendors/1", "/vendors/1/documents",
+        "/vendors/1/documents/1/download", "/vendors/1/approval-history",
+        "/procurement/procurement-requests", "/procurement/procurement-requests/1",
+        "/procurement/procurement-requests/1/status-history",
+        "/procurement/procurement-requests/1/approved-vendors",
+        "/procurement/purchase-orders", "/procurement/purchase-orders/1",
+        "/procurement/purchase-orders/1/completion-check", "/procurement/order-tracking/1",
+        "/procurement/invoices", "/procurement/invoices/1",
+    ):
+        response = client.get(path)
+        assert response.status_code == 401, (path, response.status_code, response.text)
+
+
+def test_vendor_mutations_require_jwt() -> None:
+    for method, path in (("post", "/vendors/"), ("put", "/vendors/1")):
+        response = getattr(client, method)(path)
+        assert response.status_code == 401, (path, response.status_code, response.text)
+
+
+def test_vendor_mutations_reject_finance_officer_before_payload_validation() -> None:
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=99, role="Finance Officer")
+    try:
+        for method, path in (("post", "/vendors/"), ("put", "/vendors/1")):
+            response = getattr(client, method)(path)
+            assert response.status_code == 403, (path, response.status_code, response.text)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
 def test_procurement_approval_writes_reject_non_approver_before_request_validation() -> None:
     app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=99, role="Finance Officer")
     try:

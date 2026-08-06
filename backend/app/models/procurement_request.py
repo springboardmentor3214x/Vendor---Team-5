@@ -11,6 +11,7 @@ class ProcurementRequest(Base):
     request_number = Column(String(100), unique=True, nullable=False, index=True)
     title = Column(String(255), nullable=False)
     department = Column(String(100), nullable=False)
+    project_name = Column(String(255), nullable=True)
     item_description = Column(String(500), nullable=False)
     
     product_name = Column(String(255), nullable=False)

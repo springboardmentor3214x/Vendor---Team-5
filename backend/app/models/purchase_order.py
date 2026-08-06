@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
 
@@ -27,7 +28,11 @@ class PurchaseOrder(Base):
 
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    assigned_procurement_manager_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    project_name = Column(String(255), nullable=True)
     po_date = Column(DateTime, default=datetime.utcnow)
+
+    assigned_procurement_manager = relationship("User", foreign_keys=[assigned_procurement_manager_id])
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

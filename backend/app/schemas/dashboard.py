@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Dict, Any
+from datetime import date
 
 
 class ContractDashboardSummaryOut(BaseModel):
@@ -47,6 +48,19 @@ class Module6DashboardOut(BaseModel):
 
 
 # --- Module 8 Analytics Schemas ---
+class DashboardFilterParams(BaseModel):
+    """Optional read-only dashboard filters supported by aggregation helpers."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    vendor_id: int | None = Field(default=None, alias="vendorId")
+    department: str | None = None
+    project: str | None = Field(default=None, alias="project")
+    start_date: date | None = Field(default=None, alias="startDate")
+    end_date: date | None = Field(default=None, alias="endDate")
+
+
+class DashboardDataOut(BaseModel):
+    """Wrapper for service-backed analytics whose fields vary by dashboard view."""
 
 class ProcurementStatusSummary(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

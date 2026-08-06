@@ -54,6 +54,7 @@ class DashboardFilterParams(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
     vendor_id: int | None = Field(default=None, alias="vendorId")
     department: str | None = None
+    project: str | None = Field(default=None, alias="project")
     start_date: date | None = Field(default=None, alias="startDate")
     end_date: date | None = Field(default=None, alias="endDate")
 

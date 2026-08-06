@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.api.auth import get_current_user
 from app.models.invoice import Invoice
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_approval import ProcurementApproval
@@ -111,7 +112,7 @@ def create_request(payload: ProcurementRequestCreate, db: Session = Depends(get_
     return request
 
 
-@router.get("/procurement-requests", response_model=list[ProcurementRequestOut])
+@router.get("/procurement-requests", response_model=list[ProcurementRequestOut], dependencies=[Depends(get_current_user)])
 def list_requests(
     department: str | None = None,
     approval_status: str | None = None,
@@ -133,7 +134,7 @@ def list_requests(
     return query.order_by(ProcurementRequest.created_at.desc()).all()
 
 
-@router.get("/procurement-requests/{request_id}", response_model=ProcurementRequestOut)
+@router.get("/procurement-requests/{request_id}", response_model=ProcurementRequestOut, dependencies=[Depends(get_current_user)])
 def get_request(request_id: int, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -271,7 +272,7 @@ def cancel_request(request_id: int, db: Session = Depends(get_db)):
     return request
 
 
-@router.get("/procurement-requests/{request_id}/status-history")
+@router.get("/procurement-requests/{request_id}/status-history", dependencies=[Depends(get_current_user)])
 def get_status_history(request_id: int, db: Session = Depends(get_db)):
     history = (
         db.query(ProcurementStatusHistory)
@@ -284,7 +285,7 @@ def get_status_history(request_id: int, db: Session = Depends(get_db)):
 
 # ---------------- Vendor Assignment ----------------
 
-@router.get("/procurement-requests/{request_id}/approved-vendors", response_model=list[ApprovedVendorOut])
+@router.get("/procurement-requests/{request_id}/approved-vendors", response_model=list[ApprovedVendorOut], dependencies=[Depends(get_current_user)])
 def get_approved_vendors_for_request(request_id: int, db: Session = Depends(get_db)):
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
@@ -384,7 +385,7 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     return po
 
 
-@router.get("/purchase-orders", response_model=list[PurchaseOrderOut])
+@router.get("/purchase-orders", response_model=list[PurchaseOrderOut], dependencies=[Depends(get_current_user)])
 def list_purchase_orders(
     vendor_id: int | None = None,
     po_status: str | None = None,
@@ -398,7 +399,7 @@ def list_purchase_orders(
     return query.order_by(PurchaseOrder.created_at.desc()).all()
 
 
-@router.get("/purchase-orders/{po_id}", response_model=PurchaseOrderOut)
+@router.get("/purchase-orders/{po_id}", response_model=PurchaseOrderOut, dependencies=[Depends(get_current_user)])
 def get_purchase_order(po_id: int, db: Session = Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
@@ -520,7 +521,7 @@ def _completion_check(po_id: int, db: Session, *, apply_completion: bool):
     }
 
 
-@router.get("/purchase-orders/{po_id}/completion-check")
+@router.get("/purchase-orders/{po_id}/completion-check", dependencies=[Depends(get_current_user)])
 def preview_completion(po_id: int, db: Session = Depends(get_db)):
     """Return completion eligibility without changing the purchase order."""
     return _completion_check(po_id, db, apply_completion=False)
@@ -532,7 +533,7 @@ def complete_if_eligible(po_id: int, db: Session = Depends(get_db)):
     return _completion_check(po_id, db, apply_completion=True)
 
 
-@router.get("/order-tracking/{po_id}", response_model=OrderTrackingOut)
+@router.get("/order-tracking/{po_id}", response_model=OrderTrackingOut, dependencies=[Depends(get_current_user)])
 def get_order_tracking(po_id: int, db: Session = Depends(get_db)):
     tracking = db.query(OrderTracking).filter(OrderTracking.purchase_order_id == po_id).first()
     if not tracking:
@@ -584,7 +585,7 @@ def upload_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
     return invoice
 
 
-@router.get("/invoices", response_model=list[InvoiceOut])
+@router.get("/invoices", response_model=list[InvoiceOut], dependencies=[Depends(get_current_user)])
 def list_invoices(purchase_order_id: int | None = None, payment_status: str | None = None, db: Session = Depends(get_db)):
     query = db.query(Invoice)
     if purchase_order_id:
@@ -594,7 +595,7 @@ def list_invoices(purchase_order_id: int | None = None, payment_status: str | No
     return query.order_by(Invoice.invoice_date.desc()).all()
 
 
-@router.get("/invoices/{invoice_id}", response_model=InvoiceOut)
+@router.get("/invoices/{invoice_id}", response_model=InvoiceOut, dependencies=[Depends(get_current_user)])
 def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:

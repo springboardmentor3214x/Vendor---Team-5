@@ -302,7 +302,8 @@ def get_report_chart_data(db: Any, report_type: str, filters: dict[str, Any] | N
             "contract_status_distribution": charts["contract_status_distribution"],
             "procurement_status_distribution": [{"status": key, "count": value} for key, value in sorted(status_counts.items())],
             "spending_by_vendor": get_procurement_cost_analysis(db, filters)["spending_by_vendor"],
-            "spending_by_category": get_procurement_cost_analysis(db, filters)["spending_by_category"]}
+            "spending_by_category": get_procurement_cost_analysis(db, filters)["spending_by_category"],
+            "spending_by_project": get_procurement_cost_analysis(db, filters)["spending_by_project"]}
 
 
 def export_report_data(

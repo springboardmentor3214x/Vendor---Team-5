@@ -357,6 +357,8 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     if existing_po:
         raise HTTPException(status_code=400, detail="Purchase order already exists for this request")
 
+    project_name = getattr(payload, "project_name", None) or getattr(request, "project_name", None)
+    assigned_mgr_id = getattr(payload, "assigned_procurement_manager_id", None)
     po = PurchaseOrder(
         procurement_request_id=payload.procurement_request_id,
         vendor_id=request.vendor_id,
@@ -371,6 +373,8 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         payment_terms=payload.payment_terms,
         po_status="Draft",
         created_by=payload.created_by,
+        assigned_procurement_manager_id=assigned_mgr_id,
+        project_name=project_name,
         po_date=datetime.utcnow(),
     )
     db.add(po)

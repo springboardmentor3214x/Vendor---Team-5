@@ -18,6 +18,7 @@ class ProcurementRequestCreate(BaseModel):
 
     title: str = Field(alias="requestTitle", min_length=3, max_length=255)
     department: str = Field(alias="departmentName")
+    project_name: Optional[str] = Field(default=None, alias="projectName")
     item_description: str = Field(alias="itemDescription", min_length=3, max_length=500)
     product_name: str = Field(alias="itemProductName", min_length=2, max_length=255)
     product_category: str = Field(alias="productCategory")
@@ -43,6 +44,7 @@ class ProcurementRequestUpdate(BaseModel):
 
     title: Optional[str] = Field(default=None, alias="requestTitle")
     department: Optional[str] = Field(default=None, alias="departmentName")
+    project_name: Optional[str] = Field(default=None, alias="projectName")
     item_description: Optional[str] = Field(default=None, alias="itemDescription")
     product_name: Optional[str] = Field(default=None, alias="itemProductName")
     product_category: Optional[str] = Field(default=None, alias="productCategory")
@@ -71,6 +73,7 @@ class ProcurementRequestOut(BaseModel):
     request_number: str = Field(alias="requestNumber")
     title: str = Field(alias="requestTitle")
     department: str = Field(alias="departmentName")
+    project_name: Optional[str] = Field(default=None, alias="projectName")
     item_description: str = Field(alias="itemDescription")
     product_name: str = Field(alias="itemProductName")
     product_category: str = Field(alias="productCategory")
@@ -142,6 +145,8 @@ class PurchaseOrderCreate(BaseModel):
     expected_delivery_date: datetime = Field(alias="expectedDeliveryDate")
     payment_terms: Optional[str] = Field(default=None, alias="paymentTerms")
     created_by: Optional[int] = Field(default=None, alias="createdBy")
+    assigned_procurement_manager_id: Optional[int] = Field(default=None, alias="assignedProcurementManagerId")
+    project_name: Optional[str] = Field(default=None, alias="projectName")
 
 
 class PurchaseOrderStatusUpdate(BaseModel):
@@ -177,6 +182,8 @@ class PurchaseOrderOut(BaseModel):
     po_status: str = Field(alias="poStatus")
     created_by: Optional[int] = Field(default=None, alias="createdBy")
     approved_by: Optional[int] = Field(default=None, alias="approvedBy")
+    assigned_procurement_manager_id: Optional[int] = Field(default=None, alias="assignedProcurementManagerId")
+    project_name: Optional[str] = Field(default=None, alias="projectName")
     po_date: datetime = Field(alias="poDate")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")

@@ -159,6 +159,7 @@ if not existing_request:
         request_number="REQ-2026-001",
         title="Monthly Steel Procurement",
         department="Production",
+        project_name="Alpha Expansion",
         item_description="Steel rods - 500 units",
         product_name="Grade 50 Steel Rods",
         product_category="Raw Materials",
@@ -243,6 +244,8 @@ if not existing_po:
         po_status="Delivered",
         created_by=sample_user.id,
         approved_by=sample_user.id,
+        assigned_procurement_manager_id=sample_user.id,
+        project_name="Alpha Expansion",
         po_date=datetime.utcnow() - timedelta(days=17)
     )
     db.add(purchase_order)

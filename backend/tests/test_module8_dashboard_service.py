@@ -37,11 +37,12 @@ class Db:
 
 def make_db():
     today = date.today()
-    request = SimpleNamespace(id=10, department="Operations", product_category="Steel", approval_status="Pending",
+    request = SimpleNamespace(id=10, department="Operations", project_name="Apollo", product_category="Steel", approval_status="Pending",
                               estimated_budget=150.0, request_date=today, vendor_id=1)
+    user = SimpleNamespace(id=5, full_name="Sarah Manager", is_active=True)
     order = SimpleNamespace(id=20, procurement_request_id=10, vendor_id=1, po_number="PO-20", po_status="Issued",
                             total_cost=125.0, po_date=datetime(today.year, today.month, 2), expected_delivery_date=today + timedelta(days=2),
-                            actual_delivery_date=None)
+                            actual_delivery_date=None, assigned_procurement_manager_id=5, project_name="Apollo")
     vendor = SimpleNamespace(id=1, company_name="Acme Supplies", is_active=True)
     performance = SimpleNamespace(vendor_id=1, overall_performance_score=85.0, on_time_delivery_rate=96.0,
                                   average_quality_score=91.0, average_service_rating_score=88.0, performance_status="Excellent")
@@ -51,7 +52,7 @@ def make_db():
                VendorReliability: [reliability], Contract: [SimpleNamespace(vendor_id=1, status="Active", start_date=today, end_date=today + timedelta(days=30))],
                OrderTracking: [SimpleNamespace(purchase_order_id=20, delivery_status="In Transit")],
                Invoice: [SimpleNamespace(purchase_order_id=20, payment_status="Pending")],
-               Communication: [SimpleNamespace(vendor_id=1, created_at=datetime.now())], User: [SimpleNamespace(is_active=True)],
+               Communication: [SimpleNamespace(vendor_id=1, created_at=datetime.now())], User: [user],
                ActivityLog: [SimpleNamespace()], PerformanceTrend: [SimpleNamespace(vendor_id=1, year=today.year, month=today.month, reliability_score=82.0)]})
 
 
@@ -63,7 +64,9 @@ def test_procurement_analytics_aggregate_persisted_model_shaped_rows():
     assert summary["active_purchase_orders"] == 1
     assert summary["procurement_cost_summary"]["total_purchase_order_cost"] == 125.0
     assert get_procurement_overview(db)["today_procurement_requests"] == 1
-    assert get_procurement_cost_analysis(db)["spending_by_vendor"] == [{"vendor": "Acme Supplies", "total": 125.0}]
+    cost_analysis = get_procurement_cost_analysis(db)
+    assert cost_analysis["spending_by_vendor"] == [{"vendor": "Acme Supplies", "total": 125.0}]
+    assert cost_analysis["spending_by_project"] == [{"project": "Apollo", "total": 125.0}]
 
 
 def test_order_vendor_delivery_admin_and_chart_helpers_use_real_rows_without_writes():
@@ -71,6 +74,7 @@ def test_order_vendor_delivery_admin_and_chart_helpers_use_real_rows_without_wri
     active = get_active_purchase_orders_summary(db)
     assert active[0]["vendor_name"] == "Acme Supplies"
     assert active[0]["deadline_indicator"] == "Due Soon"
+    assert active[0]["assigned_procurement_manager"] == "Sarah Manager"
     performance = get_vendor_performance_dashboard(db)
     assert performance["best_performing_vendors"][0]["reliability_score"] == 82.0
     assert get_delivery_status_dashboard(db)["pending_shipments"] == 1

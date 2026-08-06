@@ -167,6 +167,7 @@ def get_active_purchase_orders_summary(db: Any, filters: dict[str, Any] | None =
     today = date.today()
     vendors = {getattr(row, "id", None): row for row in _rows(db, Vendor)}
     requests = {getattr(row, "id", None): row for row in _rows(db, ProcurementRequest)}
+    users = {getattr(row, "id", None): row for row in _rows(db, User)}
     rows = []
     for order in _filtered_rows(db, PurchaseOrder, filters):
         if getattr(order, "po_status", None) != "Issued":
@@ -180,12 +181,14 @@ def get_active_purchase_orders_summary(db: Any, filters: dict[str, Any] | None =
             indicator = "On Track"
         vendor = vendors.get(getattr(order, "vendor_id", None))
         request = requests.get(getattr(order, "procurement_request_id", None))
+        mgr_id = getattr(order, "assigned_procurement_manager_id", None)
+        manager_user = users.get(mgr_id) if mgr_id else None
+        manager_name = getattr(manager_user, "full_name", None) if manager_user else None
         rows.append({"purchase_order_id": getattr(order, "id", None), "purchase_order_number": getattr(order, "po_number", None),
                      "vendor_name": getattr(vendor, "company_name", None), "procurement_category": getattr(request, "product_category", None),
                      "status": getattr(order, "po_status", None), "expected_delivery_date": expected,
                      "deadline_indicator": indicator,
-                     # The model has created_by but no assigned-manager field/name relationship.
-                     "assigned_procurement_manager": None})
+                     "assigned_procurement_manager": manager_name})
     return rows
 
 
@@ -221,6 +224,7 @@ def get_procurement_cost_analysis(db: Any, filters: dict[str, Any] | None = None
     by_category: dict[str, float] = defaultdict(float)
     by_department: dict[str, float] = defaultdict(float)
     by_month: dict[str, float] = defaultdict(float)
+    by_project: dict[str, float] = defaultdict(float)
     for order in orders:
         cost = float(getattr(order, "total_cost", 0) or 0)
         vendor = vendors.get(getattr(order, "vendor_id", None))
@@ -229,10 +233,16 @@ def get_procurement_cost_analysis(db: Any, filters: dict[str, Any] | None = None
         if request:
             if getattr(request, "product_category", None): by_category[request.product_category] += cost
             if getattr(request, "department", None): by_department[request.department] += cost
+            p_name = getattr(request, "project_name", None) or getattr(order, "project_name", None)
+            if p_name: by_project[p_name] += cost
+        else:
+            p_name = getattr(order, "project_name", None)
+            if p_name: by_project[p_name] += cost
         if month := _month(getattr(order, "po_date", None)): by_month[month] += cost
     rows = lambda values, key: [{key: name, "total": round(value, 2)} for name, value in sorted(values.items())]
     return {"spending_by_vendor": rows(by_vendor, "vendor"), "spending_by_category": rows(by_category, "category"),
-            "monthly_expenses": rows(by_month, "month"), "department_spending": rows(by_department, "department")}
+            "monthly_expenses": rows(by_month, "month"), "department_spending": rows(by_department, "department"),
+            "spending_by_project": rows(by_project, "project")}
 
 
 def get_delivery_status_dashboard(db: Any, filters: dict[str, Any] | None = None) -> dict[str, int]:

@@ -1,15 +1,15 @@
-from datetime import datetime, date
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.procurement_request import ProcurementRequest
+from app.models.invoice import Invoice
+from app.models.order_tracking import OrderTracking
 from app.models.procurement_approval import ProcurementApproval
+from app.models.procurement_request import ProcurementRequest
 from app.models.procurement_status_history import ProcurementStatusHistory
 from app.models.purchase_order import PurchaseOrder
-from app.models.order_tracking import OrderTracking
-from app.models.invoice import Invoice
 from app.models.vendor import Vendor
 
 from app.schemas.procurement import (
@@ -30,7 +30,8 @@ from app.schemas.procurement import (
     ApprovedVendorOut,
 )
 
-from app.services.reliability_service import recalculate_vendor_reliability
+from app.api.reliability_refresh import refresh_after_procurement_update
+from app.services import notification_service
 from app.services.procurement_service import (
     approve_procurement_request,
     reject_procurement_request,
@@ -52,7 +53,7 @@ from app.services.purchase_order_service import (
     can_complete_procurement,
 )
 
-router = APIRouter(tags=["Procurement"])
+router = APIRouter(prefix="/procurement", tags=["Procurement"])
 
 
 VALID_PO_STATUSES = {"Draft", "Issued", "Delivered", "Cancelled", "Completed"}
@@ -107,6 +108,7 @@ def create_request(payload: ProcurementRequestCreate, db: Session = Depends(get_
 
     log_status_change(db, request.id, None, "Pending", request.requested_by, "Request created")
     db.commit()
+    notification_service.generate_procurement_alert(db, request.id, "submitted")
 
     return request
 
@@ -167,6 +169,7 @@ def update_request(request_id: int, payload: ProcurementRequestUpdate, db: Sessi
 
     db.commit()
     db.refresh(request)
+    notification_service.generate_procurement_alert(db, request.id, "submitted")
     return request
 
 
@@ -205,6 +208,7 @@ def approve_request(request_id: int, payload: ProcurementApprovalAction, db: Ses
 
     db.commit()
     db.refresh(request)
+    notification_service.generate_procurement_alert(db, request.id, "approved")
     return request
 
 
@@ -229,6 +233,7 @@ def reject_request(request_id: int, payload: ProcurementApprovalAction, db: Sess
 
     db.commit()
     db.refresh(request)
+    notification_service.generate_procurement_alert(db, request.id, "rejected")
     return request
 
 
@@ -380,6 +385,7 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
     )
     db.add(tracking)
     db.commit()
+    notification_service.generate_purchase_order_notification(db, po.id, "created")
 
     return po
 
@@ -421,10 +427,9 @@ def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate,
 
     db.commit()
     db.refresh(po)
-    try:
-        recalculate_vendor_reliability(po.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {po.vendor_id}: {e}")
+    refresh_after_procurement_update(po.vendor_id, db)
+    if po.po_status == "Delivered":
+        notification_service.generate_purchase_order_notification(db, po.id, "delivered")
     return po
 
 
@@ -472,10 +477,8 @@ def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(po)
-    try:
-        recalculate_vendor_reliability(po.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {po.vendor_id}: {e}")
+    refresh_after_procurement_update(po.vendor_id, db)
+    notification_service.generate_purchase_order_notification(db, po.id, "delivered")
     return po
 
 
@@ -490,10 +493,7 @@ def cancel_purchase_order_route(po_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(e))
     db.commit()
     db.refresh(po)
-    try:
-        recalculate_vendor_reliability(po.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {po.vendor_id}: {e}")
+    refresh_after_procurement_update(po.vendor_id, db)
     return po
 
 
@@ -519,7 +519,7 @@ def _completion_check(po_id: int, db: Session, *, apply_completion: bool):
         po.po_status = "Completed"
         db.commit()
         db.refresh(po)
-
+        refresh_after_procurement_update(po.vendor_id, db)
     return {
         "po_id": po_id,
         "is_complete": is_complete,
@@ -541,8 +541,6 @@ def complete_if_eligible(po_id: int, db: Session = Depends(get_db)):
     return _completion_check(po_id, db, apply_completion=True)
 
 
-# ---------------- Order Tracking ----------------
-
 @router.get("/order-tracking/{po_id}", response_model=OrderTrackingOut)
 def get_order_tracking(po_id: int, db: Session = Depends(get_db)):
     tracking = db.query(OrderTracking).filter(OrderTracking.purchase_order_id == po_id).first()
@@ -556,33 +554,28 @@ def update_order_tracking(po_id: int, payload: OrderTrackingUpdate, db: Session 
     tracking = db.query(OrderTracking).filter(OrderTracking.purchase_order_id == po_id).first()
     if not tracking:
         raise HTTPException(status_code=404, detail="Order tracking record not found")
-
     if payload.delivery_status and payload.delivery_status not in VALID_DELIVERY_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid delivery status")
-
-    update_data = payload.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(tracking, field, value)
-
     if tracking.expected_delivery_date and tracking.actual_delivery_date:
         if tracking.actual_delivery_date.date() > tracking.expected_delivery_date.date():
             tracking.delay_days = (tracking.actual_delivery_date.date() - tracking.expected_delivery_date.date()).days
             if tracking.delivery_status not in {"Delivered", "Completed"}:
                 tracking.delivery_status = "Delayed"
-
     db.commit()
     db.refresh(tracking)
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    if purchase_order:
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
     return tracking
 
-
-# ---------------- Invoices ----------------
 
 @router.post("/invoices", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED)
 def upload_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == payload.purchase_order_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
-
     invoice = Invoice(
         purchase_order_id=payload.purchase_order_id,
         invoice_number=payload.invoice_number,
@@ -601,11 +594,7 @@ def upload_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/invoices", response_model=list[InvoiceOut])
-def list_invoices(
-    purchase_order_id: int | None = None,
-    payment_status: str | None = None,
-    db: Session = Depends(get_db),
-):
+def list_invoices(purchase_order_id: int | None = None, payment_status: str | None = None, db: Session = Depends(get_db)):
     query = db.query(Invoice)
     if purchase_order_id:
         query = query.filter(Invoice.purchase_order_id == purchase_order_id)
@@ -627,13 +616,14 @@ def verify_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
-
     if invoice.payment_status != "Pending":
         raise HTTPException(status_code=400, detail="Only pending invoices can be verified")
-
     invoice.payment_status = "Verified"
     db.commit()
     db.refresh(invoice)
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if purchase_order:
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
     return invoice
 
 
@@ -642,13 +632,15 @@ def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
-
     if invoice.payment_status not in {"Pending", "Verified"}:
         raise HTTPException(status_code=400, detail="Only pending or verified invoices can be rejected")
-
     invoice.payment_status = "Rejected"
     db.commit()
     db.refresh(invoice)
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if purchase_order:
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
+    notification_service.generate_invoice_notification(db, invoice.id, "rejected")
     return invoice
 
 
@@ -657,21 +649,16 @@ def update_payment_status(invoice_id: int, payload: PaymentStatusUpdate, db: Ses
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
-
-    allowed_transitions = {
-        "Verified": {"Approved", "Rejected"},
-        "Approved": {"Paid"},
-    }
+    allowed_transitions = {"Verified": {"Approved", "Rejected"}, "Approved": {"Paid"}}
     if payload.payment_status not in allowed_transitions.get(invoice.payment_status, set()):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invoice cannot move from {invoice.payment_status} to {payload.payment_status}",
-        )
-
+        raise HTTPException(status_code=400, detail=f"Invoice cannot move from {invoice.payment_status} to {payload.payment_status}")
     invoice.payment_status = payload.payment_status
     if payload.payment_status == "Paid":
         invoice.paid_date = datetime.utcnow()
-
     db.commit()
     db.refresh(invoice)
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if purchase_order:
+        refresh_after_procurement_update(purchase_order.vendor_id, db)
+    notification_service.generate_invoice_notification(db, invoice.id, "paid" if invoice.payment_status == "Paid" else "approved")
     return invoice

@@ -2,7 +2,6 @@ from app.core.database import SessionLocal
 from app.models.role import Role
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
-from app.models.vendor_contact import VendorContact
 from app.models.user import User
 from app.models.procurement_request import ProcurementRequest
 from app.models.purchase_order import PurchaseOrder
@@ -76,8 +75,6 @@ if not sample_vendor:
         designation="Sales Manager",
         email="sample.vendor@example.com",
         phone_number="9876543210",
-        gst_number="36AAAAA0000A1Z5",
-        pan_number="ABCDE1234F",
         city="Hyderabad",
         state="Telangana",
         country="India",
@@ -97,12 +94,8 @@ if not sample_user:
     sample_user = User(
         full_name="Admin User",
         email="admin@vendoriq.com",
-        hashed_password="placeholder_hash",
+        hashed_password="placeholder_hash",  # Pranjali/auth team will replace with real bcrypt hash
         role="Administrator",
-        mobile_number="9999999999",
-        employee_id="EMP001",
-        company_name="VendorIQ Admin Inc",
-        profile_picture_url="https://example.com/profiles/admin.png",
         is_active=True,
     )
     db.add(sample_user)

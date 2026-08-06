@@ -103,6 +103,7 @@ def upgrade() -> None:
         op.create_index(op.f('ix_compliance_records_id'), 'compliance_records', ['id'], unique=False)
         op.create_index(op.f('ix_compliance_records_vendor_id'), 'compliance_records', ['vendor_id'], unique=False)
         op.create_index(op.f('ix_compliance_records_verified_by'), 'compliance_records', ['verified_by'], unique=False)
+<<<<<<< HEAD
     else:
         cr_cols = [c['name'] for c in inspector.get_columns('compliance_records')]
         cr_indexes = [idx['name'] for idx in inspector.get_indexes('compliance_records')]
@@ -118,6 +119,8 @@ def upgrade() -> None:
                     batch_op.create_index('ix_compliance_records_compliance_status', ['compliance_status'], unique=False)
             if 'status' not in cr_cols:
                 batch_op.add_column(sa.Column('status', sa.String(length=50), nullable=True))
+=======
+>>>>>>> 5509ac0da30360d3f73d6fd61f4aa23a5127694c
 
     # 4. Notifications table
     if not inspector.has_table('notifications'):

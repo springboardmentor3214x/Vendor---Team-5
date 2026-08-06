@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, normalize_user_role
 from app.models.performance import PerformanceRecord
 from app.models.delivery_performance import DeliveryPerformance
 from app.models.product_quality_evaluation import ProductQualityEvaluation
@@ -28,7 +28,7 @@ from app.schemas.performance import (
     PerformanceRecordOut,
     VendorRankingOut,
 )
-from app.services.reliability_service import recalculate_vendor_reliability
+from app.api.reliability_refresh import refresh_after_performance_write
 from app.services.performance_service import (
     calculate_delivery_delay,
     get_delivery_status,
@@ -51,6 +51,13 @@ from app.services.performance_service import (
 
 router = APIRouter(prefix="/performance", tags=["Performance"])
 
+_PERFORMANCE_WRITE_ROLES = {"Administrator", "Procurement Manager"}
+_PERFORMANCE_READ_ROLES = {
+    "Administrator",
+    "Procurement Manager",
+    "Supply Chain Manager",
+    "Auditor",
+}
 
 def performance_record_response(record: PerformanceRecord):
     return {
@@ -70,6 +77,34 @@ def performance_record_response(record: PerformanceRecord):
         "created_at": record.created_at,
         "updated_at": record.updated_at,
     }
+
+
+def _require_performance_write_access(current_user: User) -> None:
+    if normalize_user_role(current_user) not in _PERFORMANCE_WRITE_ROLES:
+        raise HTTPException(
+            status_code=403,
+            detail="Only Administrators or Procurement Managers can record performance data",
+        )
+
+
+def _require_performance_read_access(current_user: User) -> None:
+    if normalize_user_role(current_user) not in _PERFORMANCE_READ_ROLES:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
+def _require_vendor_performance_access(
+    vendor_id: int,
+    current_user: User,
+    db: Session,
+) -> None:
+    role = normalize_user_role(current_user)
+    if role in _PERFORMANCE_READ_ROLES:
+        return
+    if role == "Vendor":
+        vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
+        if vendor and vendor.id == vendor_id:
+            return
+    raise HTTPException(status_code=403, detail="Access denied")
 
 
 def get_or_create_record(db: Session, vendor_id: int) -> PerformanceRecord:
@@ -94,11 +129,29 @@ def get_or_create_record(db: Session, vendor_id: int) -> PerformanceRecord:
     return record
 
 
-def sync_overall_score(record: PerformanceRecord) -> None:
+def _communication_score_for_vendor(db: Session, vendor_id: int) -> float:
+    """Derive a 0-100 communication score from real communication records.
+
+    ``average_response_time`` is deliberately retained as minutes; it must not
+    be used as a performance score.
+    """
+    response_minutes = [
+        row[0]
+        for row in db.query(CommunicationLog.response_duration_minutes)
+        .filter(CommunicationLog.vendor_id == vendor_id)
+        .all()
+        if row[0] is not None
+    ]
+    return calculate_average_communication_score(
+        [calculate_communication_score(minutes) for minutes in response_minutes]
+    ) if response_minutes else 0.0
+
+
+def sync_overall_score(db: Session, record: PerformanceRecord) -> None:
     record.overall_performance_score = calculate_overall_performance_score(
         record.on_time_delivery_rate or 0.0,
         record.average_quality_score or 0.0,
-        record.average_response_time or 0.0,
+        _communication_score_for_vendor(db, record.vendor_id),
         record.average_service_rating_score or 0.0,
     )
     record.performance_status = get_performance_status(record.overall_performance_score)
@@ -119,7 +172,7 @@ def refresh_vendor_ranking(db: Session, vendor_id: int) -> None:
             vendor_id=vendor_id,
             delivery_score=record.on_time_delivery_rate or 0.0,
             quality_score=record.average_quality_score or 0.0,
-            communication_score=record.average_response_time or 0.0,
+            communication_score=_communication_score_for_vendor(db, vendor_id),
             service_rating_score=record.average_service_rating_score or 0.0,
             overall_performance_score=record.overall_performance_score or 0.0,
             rank_position=0,
@@ -128,7 +181,7 @@ def refresh_vendor_ranking(db: Session, vendor_id: int) -> None:
     else:
         ranking.delivery_score = record.on_time_delivery_rate or 0.0
         ranking.quality_score = record.average_quality_score or 0.0
-        ranking.communication_score = record.average_response_time or 0.0
+        ranking.communication_score = _communication_score_for_vendor(db, vendor_id)
         ranking.service_rating_score = record.average_service_rating_score or 0.0
         ranking.overall_performance_score = record.overall_performance_score or 0.0
 
@@ -144,7 +197,11 @@ def refresh_vendor_ranking(db: Session, vendor_id: int) -> None:
 
 
 @router.get("/dashboard", response_model=PerformanceDashboardOut)
-def performance_dashboard(db: Session = Depends(get_db)):
+def performance_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_performance_read_access(current_user)
     records = db.query(PerformanceRecord).all()
     total_vendors = len({record.vendor_id for record in records})
 
@@ -154,7 +211,7 @@ def performance_dashboard(db: Session = Depends(get_db)):
 
     delivery_scores = [r.on_time_delivery_rate or 0.0 for r in records]
     quality_scores = [r.average_quality_score or 0.0 for r in records]
-    response_scores = [r.average_response_time or 0.0 for r in records]
+    communication_scores = [_communication_score_for_vendor(db, r.vendor_id) for r in records]
     service_scores = [r.average_service_rating_score or 0.0 for r in records]
 
     excellent_count = sum(1 for r in records if get_performance_status(r.overall_performance_score or 0.0) == "Excellent")
@@ -181,14 +238,19 @@ def performance_dashboard(db: Session = Depends(get_db)):
         "total_delayed_deliveries": total_delayed,
         "average_delivery_score": calculate_average_delivery_score(delivery_scores),
         "average_quality_score": calculate_average_quality_score(quality_scores) if quality_scores else 0.0,
-        "average_communication_score": calculate_average_communication_score(response_scores),
+        "average_communication_score": calculate_average_communication_score(communication_scores),
         "average_service_rating_score": calculate_average_service_rating_score(service_scores),
         "completion_rate": completion_rate,
     }
 
 
 @router.post("/delivery", response_model=PerformanceActionResponse)
-def record_delivery_performance(payload: DeliveryPerformanceCreate, db: Session = Depends(get_db)):
+def record_delivery_performance(
+    payload: DeliveryPerformanceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_performance_write_access(current_user)
     try:
         validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
         validate_no_duplicate_performance_entry(db, DeliveryPerformance, payload.vendor_id, payload.purchase_order_id)
@@ -224,15 +286,12 @@ def record_delivery_performance(payload: DeliveryPerformanceCreate, db: Session 
     record.delayed_delivery_count = new_delayed_count
     record.evaluation_date = payload.actual_delivery_date
     record.notes = f"PO {payload.purchase_order_id}: Delivery {delivery_status}, delay {delay_days} days"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,
@@ -245,7 +304,12 @@ def record_delivery_performance(payload: DeliveryPerformanceCreate, db: Session 
 
 
 @router.get("/delivery/{vendor_id}", response_model=list[DeliveryPerformanceOut])
-def list_delivery_performance(vendor_id: int, db: Session = Depends(get_db)):
+def list_delivery_performance(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_vendor_performance_access(vendor_id, current_user, db)
     return (
         db.query(DeliveryPerformance)
         .filter(DeliveryPerformance.vendor_id == vendor_id)
@@ -255,7 +319,12 @@ def list_delivery_performance(vendor_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/quality", response_model=PerformanceActionResponse)
-def record_quality_performance(payload: QualityPerformanceCreate, db: Session = Depends(get_db)):
+def record_quality_performance(
+    payload: QualityPerformanceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_performance_write_access(current_user)
     try:
         validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
         validate_no_duplicate_performance_entry(db, ProductQualityEvaluation, payload.vendor_id, payload.purchase_order_id)
@@ -288,15 +357,12 @@ def record_quality_performance(payload: QualityPerformanceCreate, db: Session = 
     record.average_quality_score = quality_score
     record.evaluation_date = datetime.utcnow()
     record.notes = f"PO {payload.purchase_order_id}: Quality score generated with defects={payload.product_defects}"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,
@@ -309,7 +375,12 @@ def record_quality_performance(payload: QualityPerformanceCreate, db: Session = 
 
 
 @router.get("/quality/{vendor_id}", response_model=list[QualityPerformanceOut])
-def list_quality_performance(vendor_id: int, db: Session = Depends(get_db)):
+def list_quality_performance(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_vendor_performance_access(vendor_id, current_user, db)
     return (
         db.query(ProductQualityEvaluation)
         .filter(ProductQualityEvaluation.vendor_id == vendor_id)
@@ -319,7 +390,12 @@ def list_quality_performance(vendor_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/communication", response_model=PerformanceActionResponse)
-def record_communication_performance(payload: CommunicationPerformanceCreate, db: Session = Depends(get_db)):
+def record_communication_performance(
+    payload: CommunicationPerformanceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_performance_write_access(current_user)
     try:
         validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
         validate_no_duplicate_performance_entry(db, CommunicationLog, payload.vendor_id, payload.purchase_order_id)
@@ -349,15 +425,12 @@ def record_communication_performance(payload: CommunicationPerformanceCreate, db
     record.average_response_time = float(response_duration)
     record.evaluation_date = datetime.utcnow()
     record.notes = f"PO {payload.purchase_order_id}: Response duration {response_duration} minutes"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,
@@ -370,7 +443,12 @@ def record_communication_performance(payload: CommunicationPerformanceCreate, db
 
 
 @router.get("/communication/{vendor_id}", response_model=list[CommunicationPerformanceOut])
-def list_communication_logs(vendor_id: int, db: Session = Depends(get_db)):
+def list_communication_logs(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_vendor_performance_access(vendor_id, current_user, db)
     return (
         db.query(CommunicationLog)
         .filter(CommunicationLog.vendor_id == vendor_id)
@@ -380,7 +458,12 @@ def list_communication_logs(vendor_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/service-rating", response_model=PerformanceActionResponse)
-def record_service_rating(payload: ServiceRatingCreate, db: Session = Depends(get_db)):
+def record_service_rating(
+    payload: ServiceRatingCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_performance_write_access(current_user)
     try:
         validate_performance_write_eligibility(db, payload.vendor_id, payload.purchase_order_id)
         validate_no_duplicate_performance_entry(db, ServiceRating, payload.vendor_id, payload.purchase_order_id)
@@ -414,15 +497,12 @@ def record_service_rating(payload: ServiceRatingCreate, db: Session = Depends(ge
     record.average_service_rating_score = service_rating_score
     record.evaluation_date = datetime.utcnow()
     record.notes = f"PO {payload.purchase_order_id}: Service rating recorded"
-    sync_overall_score(record)
+    sync_overall_score(db, record)
 
     refresh_vendor_ranking(db, payload.vendor_id)
     db.commit()
     db.refresh(record)
-    try:
-        recalculate_vendor_reliability(payload.vendor_id, db)
-    except Exception as e:
-        print(f"Error recalculating reliability for vendor {payload.vendor_id}: {e}")
+    refresh_after_performance_write(payload.vendor_id, db)
 
     return {
         "vendor_id": payload.vendor_id,
@@ -435,7 +515,12 @@ def record_service_rating(payload: ServiceRatingCreate, db: Session = Depends(ge
 
 
 @router.get("/service-rating/{vendor_id}", response_model=list[ServiceRatingOut])
-def list_service_ratings(vendor_id: int, db: Session = Depends(get_db)):
+def list_service_ratings(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_vendor_performance_access(vendor_id, current_user, db)
     return (
         db.query(ServiceRating)
         .filter(ServiceRating.vendor_id == vendor_id)
@@ -445,7 +530,12 @@ def list_service_ratings(vendor_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/history/{vendor_id}", response_model=list[PerformanceRecordOut])
-def performance_history(vendor_id: int, db: Session = Depends(get_db)):
+def performance_history(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_vendor_performance_access(vendor_id, current_user, db)
     records = (
         db.query(PerformanceRecord)
         .filter(PerformanceRecord.vendor_id == vendor_id)
@@ -456,7 +546,11 @@ def performance_history(vendor_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/rankings", response_model=VendorRankingOut)
-def vendor_rankings(db: Session = Depends(get_db)):
+def vendor_rankings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_performance_read_access(current_user)
     rankings = (
         db.query(VendorRanking)
         .order_by(VendorRanking.rank_position.asc())
@@ -487,6 +581,7 @@ def recalculate_rankings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _require_performance_write_access(current_user)
     if not can_user_recalculate_vendor_ranking(current_user.role):
         raise HTTPException(
             status_code=403,
@@ -496,11 +591,16 @@ def recalculate_rankings(
     for record in records:
         refresh_vendor_ranking(db, record.vendor_id)
     db.commit()
-    return vendor_rankings(db)
+    return vendor_rankings(db, current_user)
 
 
 @router.get("/{vendor_id}", response_model=PerformanceRecordOut)
-def get_vendor_performance(vendor_id: int, db: Session = Depends(get_db)):
+def get_vendor_performance(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_vendor_performance_access(vendor_id, current_user, db)
     record = (
         db.query(PerformanceRecord)
         .filter(PerformanceRecord.vendor_id == vendor_id)

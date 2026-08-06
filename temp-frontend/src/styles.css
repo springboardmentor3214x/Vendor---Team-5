@@ -1,13 +1,17 @@
 :root {
-  --vr-navy: #0b1f3a;
-  --vr-slate: #334155;
-  --vr-muted: #64748b;
-  --vr-border: #dbe4f0;
+  --vr-navy: #1F2937;
+  --vr-slate: #374151;
+  --vr-muted: #6B7280;
+  --vr-border: #E5E7EB;
   --vr-surface: #ffffff;
-  --vr-page: #f8fafc;
-  --vr-primary: #2563eb;
-  --vr-teal: #0f766e;
+  --vr-page: #FFF7F7;
+  --vr-primary: #E11D48;
+  --vr-primary-dark: #9F1239;
+  --vr-teal: #F97316;
   --vr-focus: rgba(37, 99, 235, 0.16);
+  --vr-success: #15803D;
+  --vr-warning: #B45309;
+  --vr-danger: #DC2626;
 }
 
 html, body {
@@ -17,10 +21,8 @@ html, body {
 body {
   margin: 0;
   font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(45, 212, 191, 0.12), transparent 20%),
-    linear-gradient(135deg, #06172f 0%, #0a2547 50%, #12345c 100%);
-  color: #e2e8f0;
+  background: #FFF7F7;
+  color: #1F2937;
 }
 
 * {
@@ -35,13 +37,89 @@ textarea {
 }
 
 .page-card {
-  background: var(--vr-page);
-  border: 1px solid rgba(219, 228, 240, 0.9);
-  border-radius: 22px;
+  background: linear-gradient(135deg, #FFF1F2 0%, #FFF7F7 38%, #FFFFFF 100%);
+  border: 1px solid var(--vr-border);
+  border-radius: 24px;
   padding: clamp(1.25rem, 2.6vw, 2rem);
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 18px 45px rgba(31, 41, 55, .09);
   color: var(--vr-navy);
 }
+
+/* Shared application surface: feature pages intentionally use these common hooks. */
+.page-header, .procurement-header, .reports-page .page-header, .performance-page .page-header,
+.reliability-page .page-header, .contracts-page header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h2, .procurement-header h2, .reports-page h2, .performance-page h2,
+.reliability-page h2, .page-card h2 {
+  color: var(--vr-navy);
+  font-weight: 760;
+  letter-spacing: -.025em;
+}
+
+.page-card > header:first-child, .page-card > .page-header:first-child, .page-card > .vendor-page-header:first-child,
+.page-card > .mb-4:first-child, .procurement-header, .performance-page .page-header, .reliability-page .page-header, .reports-page .page-header {
+  padding: 1.15rem 1.25rem;
+  border: 1px solid #FECDD3;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #FFF1F2, #FFFFFF 58%, #FFE4E6);
+}
+
+.eyebrow { color: var(--vr-primary); font-size: .72rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.page-header > div > p:not(.eyebrow), .procurement-header > div > p:not(.eyebrow), .page-card header > div > p:not(.eyebrow) { color: var(--vr-muted); margin-bottom: 0; }
+
+.summary-grid, .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .9rem; }
+.summary-card, .kpi-card, .metric-card {
+  background: #fff;
+  border: 1px solid var(--vr-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(31, 41, 55, .07);
+  min-height: 96px;
+  padding: 1rem 1.1rem;
+}
+.summary-card:nth-child(4n+1), .kpi-card:nth-child(4n+1) { border-top: 4px solid #E11D48; }
+.summary-card:nth-child(4n+2), .kpi-card:nth-child(4n+2) { border-top: 4px solid #F97316; }
+.summary-card:nth-child(4n+3), .kpi-card:nth-child(4n+3) { border-top: 4px solid #059669; }
+.summary-card:nth-child(4n), .kpi-card:nth-child(4n) { border-top: 4px solid #D97706; }
+.summary-card span, .kpi-card span, .metric-card small { color: var(--vr-muted); font-size: .8rem; font-weight: 650; }
+.summary-card strong, .kpi-card strong, .metric-card strong { color: var(--vr-navy); font-size: 1.55rem; line-height: 1.25; }
+
+.panel, .dashboard-panel, .actions-panel, .guidance-card, .form-card, .detail-item {
+  background: #fff;
+  border: 1px solid var(--vr-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(31, 41, 55, .06);
+}
+.panel, .dashboard-panel, .actions-panel, .guidance-card, .form-card { padding: 1.15rem; }
+.panel h3, .dashboard-panel h3, .form-card h3, .actions-panel h3 { color: var(--vr-navy); font-size: 1.03rem; font-weight: 750; }
+.panel > p, .dashboard-panel > p, .form-card > p, .guidance-card p { color: var(--vr-muted); }
+
+.table-wrap, .table-responsive, .vendor-table-wrap { overflow-x: auto; border: 1px solid var(--vr-border); border-radius: 14px; background: #fff; }
+table, .table { width: 100%; border-collapse: collapse; margin: 0; }
+th, td, .table > :not(caption) > * > * { border-bottom: 1px solid #e8eef5; padding: .85rem .95rem; text-align: left; vertical-align: middle; }
+th, .table > thead > tr > th { background: #FFF7ED; color: #6B7280; font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; position: sticky; top: 0; }
+tbody tr:last-child td { border-bottom: 0; } tbody tr:hover { background: #fbfdff; }
+
+.status-badge, .badge, .risk-badge, .score-badge {
+  display: inline-flex; align-items: center; border-radius: 999px; font-size: .74rem; font-weight: 750; line-height: 1; padding: .4rem .65rem;
+}
+.status-badge, .badge, .score-badge { background: #FFE4E6; color: #9F1239; }
+.status-approved, .status-active, .status-completed, .badge.active { background: #dcfce7; color: #166534; }
+.status-pending, .status-expiring, .badge.expiring { background: #fef3c7; color: #92400e; }
+.status-rejected, .status-expired, .status-terminated, .badge.expired, .badge.noncompliant { background: #fee2e2; color: #991b1b; }
+.empty-state, .empty { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 14px; color: var(--vr-muted); padding: 1.5rem; text-align: center; }
+.empty-state h3, .empty h3 { color: var(--vr-slate); font-size: 1rem; margin-bottom: .35rem; }
+
+.btn-outline-primary, .btn-outline-secondary, .btn-outline-danger { background: #fff; border: 1px solid currentColor; }
+.btn-outline-primary { color: #7C3AED; }.btn-outline-secondary { color: #475569; }.btn-outline-danger { color: #b91c1c; }
+.btn-outline-primary:hover { background: #F3E8FF; }.btn-outline-secondary:hover { background: #f1f5f9; }.btn-outline-danger:hover { background: #fff1f2; }
+a:not(.btn):not(.quick-link):not(.module-action):not(.primary-action) { color: #6D28D9; font-weight: 650; text-decoration: none; }
+a:not(.btn):not(.quick-link):not(.module-action):not(.primary-action):hover { text-decoration: underline; }
 
 .form-label {
   display: block;
@@ -49,6 +127,9 @@ textarea {
   color: var(--vr-slate);
   margin-bottom: 8px;
 }
+
+form label { color: var(--vr-slate); font-weight: 650; }
+form small, .help, .helper-text { color: var(--vr-muted); font-size: .78rem; }
 
 .form-control,
 .form-select {
@@ -96,7 +177,7 @@ textarea {
 
 .btn-primary {
   color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0f766e);
+  background: linear-gradient(135deg, var(--vr-primary), var(--vr-primary-dark));
 }
 
 .btn-primary:hover {
@@ -158,6 +239,11 @@ a:focus-visible,
   .btn {
     min-height: 44px;
   }
+
+  .page-header, .procurement-header, .reports-page .page-header, .performance-page .page-header,
+  .reliability-page .page-header, .contracts-page header { flex-direction: column; }
+
+  .page-header > .btn, .procurement-header > .btn, .contracts-page header > .btn { width: 100%; }
 }
 
 /* Module 3: shared action and responsive list refinements. */

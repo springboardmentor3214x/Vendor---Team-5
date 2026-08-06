@@ -30,23 +30,49 @@
       <span class="status-badge badge-muted">Score: {{ vendor.reliability_score ?? 0 }}</span>
     </div>
 
-    <div class="detail-grid mb-4">
+    <section class="profile-section mb-4">
+      <div class="section-heading"><div><span class="section-kicker">Organisation</span><h3>Company information</h3></div><span class="section-marker">01</span></div>
+      <div class="detail-grid">
       <div class="detail-item">
         <label>Company name</label>
         <div>{{ vendor.company_name }}</div>
       </div>
+      </div>
+    </section>
+
+    <section class="profile-section mb-4">
+      <div class="section-heading"><div><span class="section-kicker">Primary contact</span><h3>Contact details</h3></div><span class="section-marker">02</span></div>
+      <div class="detail-grid">
       <div class="detail-item">
         <label>Category</label>
         <div>{{ vendor.vendor_category || '—' }}</div>
       </div>
+      </div>
+    </section>
+
+    <section class="profile-section mb-4">
+      <div class="section-heading"><div><span class="section-kicker">Registered information</span><h3>Tax & registration</h3></div><span class="section-marker">03</span></div>
+      <div class="detail-grid">
       <div class="detail-item">
         <label>Contact person</label>
         <div>{{ vendor.contact_person_name }}</div>
       </div>
+      </div>
+    </section>
+
+    <section class="profile-section mb-4">
+      <div class="section-heading"><div><span class="section-kicker">Payment & location</span><h3>Banking and address</h3></div><span class="section-marker">04</span></div>
+      <div class="detail-grid">
       <div class="detail-item">
         <label>Designation</label>
         <div>{{ vendor.designation || '—' }}</div>
       </div>
+      </div>
+    </section>
+
+    <section class="profile-section mb-4">
+      <div class="section-heading"><div><span class="section-kicker">Notes</span><h3>Additional information</h3></div><span class="section-marker">05</span></div>
+      <div class="detail-grid">
       <div class="detail-item">
         <label>Email</label>
         <div>{{ vendor.email }}</div>
@@ -103,10 +129,11 @@
         <label>Description</label>
         <div>{{ vendor.description || '—' }}</div>
       </div>
-    </div>
+      </div>
+    </section>
 
-    <div *ngIf="canApprove && vendor.approval_status === 'Pending' && vendorApprovalApiAvailable" [formGroup]="remarksForm">
-      <h3 class="h5 mb-3">Approval actions</h3>
+    <section *ngIf="canApprove && vendor.approval_status === 'Pending' && vendorApprovalApiAvailable" class="approval-panel" [formGroup]="remarksForm">
+      <div class="section-heading"><div><span class="section-kicker">Workflow</span><h3 class="h5 mb-1">Approval actions</h3></div><span class="status-badge badge-warning">Pending review</span></div>
       <p class="text-muted">This vendor is pending review. Add an optional remark, then approve or reject the record.</p>
       <div class="mb-3">
         <label class="form-label">Remarks (optional)</label>
@@ -120,18 +147,14 @@
           {{ approvalAction() === 'reject' ? 'Rejecting...' : 'Reject vendor' }}
         </button>
       </div>
-    </div>
-
-    <div *ngIf="canApprove && vendor.approval_status === 'Pending' && !vendorApprovalApiAvailable" class="alert alert-warning mt-4 mb-0" role="status">
-      Vendor approval is not available in the currently running backend. The backend needs approve/reject endpoints before this pending vendor can be actioned.
-    </div>
+    </section>
 
     <p class="text-muted mt-4" *ngIf="canApprove && vendor.approval_status !== 'Pending'">
       This vendor has already been {{ vendor.approval_status.toLowerCase() }}. No further approval action is available.
     </p>
 
-    <div *ngIf="vendorDocumentUploadApiAvailable; else documentUploadUnavailable" class="detail-item mt-4" [formGroup]="documentForm">
-      <h3 class="h5 mb-2">Vendor documents</h3>
+    <section *ngIf="vendorDocumentUploadApiAvailable" class="document-panel mt-4" [formGroup]="documentForm">
+      <div class="section-heading"><div><span class="section-kicker">Records</span><h3 class="h5 mb-1">Vendor documents</h3></div><span class="section-marker">Files</span></div>
       <p class="text-muted mb-3">
         Upload a supporting document for this vendor.
       </p>
@@ -169,11 +192,6 @@
           <span class="text-muted"> — {{ document.documentType || document.document_type }}</span>
         </li>
       </ul>
-    </div>
-    <ng-template #documentUploadUnavailable>
-      <div class="alert alert-secondary mt-4 mb-0" role="status">
-        Vendor document upload is unavailable because the currently running backend does not expose the document-upload endpoint.
-      </div>
-    </ng-template>
+    </section>
   </ng-container>
 </section>

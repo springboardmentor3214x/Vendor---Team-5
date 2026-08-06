@@ -1,24 +1,48 @@
 <section class="page-card">
-  <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3">
     <div>
+      <span class="eyebrow">Operations overview</span>
       <h2 class="mb-1">{{ view.title }}</h2>
       <p class="mb-0 text-muted">{{ view.description }}</p>
     </div>
-    <a class="btn btn-primary" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }}</a>
+    <a class="primary-action" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }} <span aria-hidden="true">→</span></a>
   </div>
 
-  <div class="row g-3">
-    <div class="col-md-6 col-xl-4" *ngFor="let card of view.cards">
-      <div class="stat-card" [class]="'stat-card tone-' + card.tone">
-        <span class="stat-label">{{ card.title }}</span>
-        <p class="stat-description">{{ card.description }}</p>
-        <a class="btn btn-outline-primary btn-sm align-self-start" [routerLink]="card.path">{{ card.actionLabel }}</a>
+  <div class="kpi-grid" aria-label="Key performance indicators">
+    <article class="kpi-card" *ngFor="let kpi of kpis" [class]="'kpi-card tone-' + kpi.tone">
+      <span class="kpi-icon" aria-hidden="true">{{ kpi.icon }}</span>
+      <div>
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <strong class="kpi-value">{{ kpi.value }}</strong>
+        <span class="kpi-caption">Current workspace total</span>
       </div>
-    </div>
+    </article>
   </div>
 
-  <div class="panel mt-4">
-    <h4 class="panel-title">Operational highlights</h4>
+  <div class="section-heading">
+    <div>
+      <span class="eyebrow">Your workspace</span>
+      <h3>Module shortcuts</h3>
+    </div>
+    <span class="section-note">Choose a module to continue</span>
+  </div>
+
+  <div class="module-grid">
+    <article class="stat-card" *ngFor="let card of view.cards" [class]="'stat-card tone-' + card.tone">
+      <div class="card-topline">
+        <span class="module-icon" aria-hidden="true">{{ card.icon }}</span>
+        <span class="module-badge">{{ card.badge }}</span>
+      </div>
+      <div>
+        <h4 class="stat-label">{{ card.title }}</h4>
+        <p class="stat-description">{{ card.description }}</p>
+      </div>
+      <a class="module-action" [routerLink]="card.path">{{ card.actionLabel }} <span aria-hidden="true">→</span></a>
+    </article>
+  </div>
+
+  <div class="panel">
+    <div class="panel-heading"><span class="panel-icon" aria-hidden="true">✦</span><h4 class="panel-title">Operational highlights</h4></div>
     <ul class="highlights-list mb-0">
       <li *ngFor="let item of view.highlights">{{ item }}</li>
     </ul>

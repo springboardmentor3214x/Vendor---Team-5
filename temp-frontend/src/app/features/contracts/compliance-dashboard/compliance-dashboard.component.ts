@@ -14,9 +14,11 @@ type DashboardResponse = Record<string, DashboardSection | undefined>;
     <section class="page-card">
       <div class="page-heading">
         <div>
+          <span class="eyebrow">Governance workspace</span>
           <h2>Compliance Dashboard</h2>
           <p>Track contract compliance, document status, and notifications.</p>
         </div>
+        <span class="live-badge">Live overview</span>
       </div>
 
       <p *ngIf="dashboardLoading()" class="state-message">Loading dashboard summary…</p>
@@ -88,21 +90,22 @@ type DashboardResponse = Record<string, DashboardSection | undefined>;
   styles: [`
     section { color: var(--vr-navy); }
     h2, h3, p { margin-top: 0; }
-    .page-heading p { color: #64748b; margin-bottom: 1.25rem; }
-    .dashboard-sections { display: grid; gap: 1.25rem; }
-    .summary-section h3, .actions-panel h3 { font-size: 1rem; margin-bottom: .75rem; }
+    .page-heading { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; padding:1.25rem; border:1px solid #f3e8ff; border-radius:18px; background:linear-gradient(115deg,#fff7ed,#fff 58%,#f3e8ff); margin-bottom:1.25rem; }
+    .page-heading p { color: #6b7280; margin-bottom: 0; }.eyebrow{display:block;color:#7c3aed;font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;margin-bottom:.3rem}.live-badge{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:999px;padding:.38rem .65rem;font-size:.75rem;font-weight:800;white-space:nowrap}
+    .dashboard-sections { display: grid; gap: 1rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .summary-section { background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:1rem;box-shadow:0 8px 20px rgba(31,41,55,.06) }.summary-section h3, .actions-panel h3 { font-size: 1rem; margin-bottom: .75rem; }
     .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; }
     .summary-grid--compact { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-    .summary-card { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 12px; padding: 1rem; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; }
+    .summary-card { background: #fff; border: 1px solid #e5e7eb; border-top:4px solid #7c3aed; border-radius: 12px; padding: 1rem; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; }.summary-card:nth-child(4n+2){border-top-color:#f97316}.summary-card:nth-child(4n+3){border-top-color:#059669}.summary-card:nth-child(4n){border-top-color:#d97706}
     .summary-card span { color: #475569; font-size: .875rem; }
     .summary-card strong { color: var(--vr-navy); font-size: 1.5rem; margin-top: .5rem; }
-    .actions-panel { border-top: 1px solid var(--vr-border); margin-top: 1.5rem; padding-top: 1.25rem; }
+    .actions-panel { border: 1px solid #e5e7eb; margin-top: 1.25rem; padding:1.25rem; border-radius:18px; background:#fff;box-shadow:0 8px 20px rgba(31,41,55,.06) }
     .bar, form { display: flex; gap: .75rem; margin: .75rem 0; align-items: center; }
     .bar .form-control, form .form-control { max-width: 320px; }
     .state-message { color: #64748b; padding: .75rem 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
     td, th { padding: .7rem; border-bottom: 1px solid var(--vr-border); text-align: left; }
-    @media (max-width: 640px) { .bar, form { align-items: stretch; flex-direction: column; } .bar .form-control, form .form-control { max-width: none; } }
+    @media (max-width: 800px) { .dashboard-sections{grid-template-columns:1fr} }.bar,form{flex-wrap:wrap}@media (max-width: 640px) { .page-heading,.bar, form { align-items: stretch; flex-direction: column; } .bar .form-control, form .form-control { max-width: none; } }
   `]
 })
 export class ComplianceDashboardComponent {

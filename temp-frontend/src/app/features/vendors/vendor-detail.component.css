@@ -26,12 +26,26 @@
   gap: 1rem;
 }
 
+.profile-section, .approval-panel, .document-panel {
+  padding: 1.15rem;
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .045);
+}
+
+.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.section-heading h3 { color: #111827; font-size: 1.05rem; font-weight: 750; margin: .15rem 0 0; }
+.section-kicker { color: #2563EB; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.section-marker { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; padding: 0 .55rem; background: #eff6ff; border-radius: 10px; color: #1E3A8A; font-size: .74rem; font-weight: 800; }
+
 .detail-item {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 1rem 1.1rem;
-  min-height: 88px;
+  min-height: 82px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .025);
 }
 
 .detail-item label {
@@ -151,7 +165,7 @@ textarea.form-control:focus {
 
 .btn-primary {
   border: none;
-  background: linear-gradient(135deg, #2563eb, #0f766e);
+  background: linear-gradient(135deg, #2563EB, #1E3A8A);
   color: #fff;
 }
 
@@ -204,4 +218,6 @@ textarea.form-control:focus {
   .action-row a.btn {
     width: 100%;
   }
+
+  .section-heading { align-items: center; }
 }

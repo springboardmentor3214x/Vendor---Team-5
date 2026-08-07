@@ -28,6 +28,7 @@ from app.models.discussion import Discussion
 from app.models.discussion_participant import DiscussionParticipant
 from app.models.communication_file import CommunicationFile
 from app.models.activity_log import ActivityLog
+from app.models.notification import Notification
 from datetime import datetime, timedelta
 
 db = SessionLocal()
@@ -615,6 +616,29 @@ if not existing_disc:
     print("Seeded Module 7 communication discussion, file, and activity log.")
 else:
     print("Module 7 discussion seed already exists.")
+
+# Team demo records: idempotent data for dashboards and cross-module testing.
+demo_vendors = [
+    ("Apex Industrial Components", "apex.industrial@example.com", "Equipment Vendors", 91.0, "Low Risk"),
+    ("Nimbus Cloud Systems", "nimbus.cloud@example.com", "IT Vendors", 86.5, "Low Risk"),
+    ("SwiftRoute Logistics", "swiftroute.logistics@example.com", "Logistics Partners", 72.0, "Medium Risk"),
+    ("Evergreen Facility Services", "evergreen.facilities@example.com", "Service Providers", 64.0, "High Risk"),
+    ("Northstar Packaging Solutions", "northstar.packaging@example.com", "Service Providers", 78.0, "Medium Risk"),
+]
+for index, (name, email, category_name, score, risk) in enumerate(demo_vendors, start=1):
+    vendor = db.query(Vendor).filter(Vendor.email == email).first()
+    if not vendor:
+        category = db.query(VendorCategory).filter(VendorCategory.name == category_name).first()
+        vendor = Vendor(company_name=name, category_id=category.id, contact_person_name=f"Demo Contact {index}", email=email, phone_number=f"9800000{index:03d}", city="Hyderabad", state="Telangana", country="India", vendor_status="Active", approval_status="Approved")
+        db.add(vendor); db.flush()
+    if not db.query(PerformanceRecord).filter(PerformanceRecord.vendor_id == vendor.id).first():
+        db.add(PerformanceRecord(vendor_id=vendor.id, total_completed_orders=3, on_time_delivery_rate=score, delayed_delivery_count=0 if score >= 85 else 1, average_quality_score=round(score / 20, 1), average_response_time=90.0, average_service_rating_score=round(score / 20, 1), overall_performance_score=score, performance_status="Excellent" if score >= 85 else "Good", notes="Shared demo data."))
+    if not db.query(VendorReliability).filter(VendorReliability.vendor_id == vendor.id).first():
+        db.add(VendorReliability(vendor_id=vendor.id, delivery_score=score, quality_score=score, communication_score=score, compliance_score=score, issue_resolution_score=score, reliability_score=score, risk_level=risk, recommendation="Shared demo evaluation."))
+    if not db.query(Notification).filter(Notification.vendor_id == vendor.id, Notification.title == "Vendor approved").first():
+        db.add(Notification(user_id=sample_user.id, vendor_id=vendor.id, title="Vendor approved", message=f"{name} is ready for evaluation.", type="VENDOR_APPROVAL", notification_type="VENDOR_APPROVAL", related_module="Vendor", related_record_id=vendor.id, link=f"/vendors/{vendor.id}"))
+db.commit()
+print("Seeded shared vendor performance, reliability, and notification demo data.")
 
 db.close()
 print("Seeding complete.")

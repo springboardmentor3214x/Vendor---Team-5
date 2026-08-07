@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 
 type ApiRecord = Record<string, unknown>;
 export interface Contract { id: number; vendorId: number; contractTitle: string; contractType: string | null; startDate: string; endDate: string | null; contractValue: number; status: string; complianceVerified: boolean; createdAt: string | null; updatedAt: string | null; }
-export interface ContractPayload { vendorId: number; contractTitle: string; contractType?: string | null; startDate: string; endDate?: string | null; contractValue?: number; status?: string; complianceVerified?: boolean; }
+export interface ContractPayload { vendorId: number; contractNumber: string; contractTitle: string; contractType?: string | null; startDate: string; endDate?: string | null; contractValue?: number; status?: string; complianceVerified?: boolean; }
 export interface ContractUpdatePayload { contractTitle?: string; endDate?: string | null; contractValue?: number; status?: string; }
 export interface RenewalPayload { newEndDate: string; renewalValue?: number; remarks?: string; }
 

@@ -640,5 +640,22 @@ for index, (name, email, category_name, score, risk) in enumerate(demo_vendors, 
 db.commit()
 print("Seeded shared vendor performance, reliability, and notification demo data.")
 
+# Shared Module 6/7 records used by the compliance and communication demos.
+# These checks make the script safe to run repeatedly on every teammate's DB.
+for vendor_email, compliance_type, compliance_status, remarks in [
+    ("apex.industrial@example.com", "Safety Regulation", "Pending Verification", "Safety audit scheduled for this procurement cycle."),
+    ("nimbus.cloud@example.com", "ISO 9001", "Compliant", "Quality-management certificate verified."),
+]:
+    vendor = db.query(Vendor).filter(Vendor.email == vendor_email).first()
+    if vendor and not db.query(ComplianceRecord).filter(ComplianceRecord.vendor_id == vendor.id, ComplianceRecord.compliance_type == compliance_type).first():
+        db.add(ComplianceRecord(vendor_id=vendor.id, compliance_type=compliance_type, status=compliance_status, verified_by=sample_user.id, verification_date=datetime.utcnow(), remarks=remarks))
+
+apex_vendor = db.query(Vendor).filter(Vendor.email == "apex.industrial@example.com").first()
+if apex_vendor and not db.query(Communication).filter(Communication.subject == "Demo communication", Communication.vendor_id == apex_vendor.id).first():
+    db.add(Communication(sender_id=sample_user.id, vendor_id=apex_vendor.id, subject="Demo communication", message="Vendor reliability demonstration message.", message_type="DIRECT"))
+
+db.commit()
+print("Seeded shared compliance and communication demo records.")
+
 db.close()
 print("Seeding complete.")

@@ -15,6 +15,8 @@ interface DashboardView {
     path: string;
   };
 }
+interface ChartSeries { title:string; labels:string[]; datasets:{label?:string;data:number[];backgroundColor?:string|string[];borderColor?:string}[]; }
+interface ChartResponse { monthlyExpensesChart:ChartSeries; vendorPerformanceTrendChart:ChartSeries; categoryDistributionChart:ChartSeries; contractStatusChart:ChartSeries; }
 
 @Component({
   selector: 'app-dashboard',
@@ -37,9 +39,12 @@ export class DashboardComponent implements OnInit {
     { label: 'Invoices to review', value: 0, icon: '🧾', tone: 'warning' },
     { label: 'Active contracts', value: 0, icon: '📄', tone: 'info' }
   ]);
+  readonly charts = signal<ChartResponse | null>(null);
 
   ngOnInit(): void {
     if (this.authService.getUserRole() !== 'Administrator') return;
+
+    this.http.get<ChartResponse>(`${environment.apiUrl}/dashboard/charts`).subscribe({ next: charts => this.charts.set(charts) });
 
     this.http.get<{ approvedVendors: number; totalProcurementRequests: number }>(`${environment.apiUrl}/dashboard/admin`)
       .subscribe({
@@ -56,6 +61,11 @@ export class DashboardComponent implements OnInit {
         index === 3 ? { ...kpi, value: contracts.filter((contract) => contract.status === 'Active').length } : kpi
       )) });
   }
+
+  maximum(data: number[]): number { return Math.max(...data, 1); }
+  linePoints(data: number[]): string { const max=this.maximum(data); return data.map((value,index)=>`${index*(300/Math.max(data.length-1,1))},${120-(value/max)*120}`).join(' '); }
+  doughnut(data: number[], colors: string[]): string { const total=data.reduce((sum,value)=>sum+value,0)||1; let current=0; return data.map((value,index)=>{const start=current/total*360;current+=value;return `${colors[index%colors.length]} ${start}deg ${current/total*360}deg`;}).join(','); }
+  chartColors(colors: string|string[]|undefined): string[] { return Array.isArray(colors) ? colors : ['#2563eb','#16a34a','#f59e0b','#dc2626','#7c3aed']; }
 
   private readonly views: Record<AppRole, DashboardView> = {
     Administrator: {

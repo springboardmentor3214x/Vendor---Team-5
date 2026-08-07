@@ -19,6 +19,16 @@
     </article>
   </div>
 
+  <section class="analytics" *ngIf="charts() as charts">
+    <div class="section-heading"><div><span class="eyebrow">Module 8 analytics</span><h3>Business insights</h3></div><span class="section-note">Live FastAPI datasets</span></div>
+    <div class="chart-grid">
+      <article class="chart-card"><h4>{{charts.monthlyExpensesChart.title}}</h4><div class="bar-chart"><div class="bar-group" *ngFor="let value of charts.monthlyExpensesChart.datasets[0].data; let i=index"><span class="bar" [style.height.%]="value / maximum(charts.monthlyExpensesChart.datasets[0].data) * 100"></span><small>{{charts.monthlyExpensesChart.labels[i]}}</small><b>₹{{value}}</b></div></div></article>
+      <article class="chart-card"><h4>{{charts.vendorPerformanceTrendChart.title}}</h4><svg class="line-chart" viewBox="0 0 300 150"><polyline [attr.points]="linePoints(charts.vendorPerformanceTrendChart.datasets[0].data)" fill="none" stroke="#0f766e" stroke-width="4"/><line x1="0" y1="120" x2="300" y2="120" stroke="#cbd5e1"/></svg><div class="chart-labels"><small *ngFor="let label of charts.vendorPerformanceTrendChart.labels">{{label}}</small></div></article>
+      <article class="chart-card"><h4>{{charts.categoryDistributionChart.title}}</h4><div class="split"><div class="pie" [style.background]="'conic-gradient(' + doughnut(charts.categoryDistributionChart.datasets[0].data, chartColors(charts.categoryDistributionChart.datasets[0].backgroundColor)) + ')' "></div><ul><li *ngFor="let label of charts.categoryDistributionChart.labels; let i=index">{{label}}: {{charts.categoryDistributionChart.datasets[0].data[i]}}</li></ul></div></article>
+      <article class="chart-card"><h4>{{charts.contractStatusChart.title}}</h4><div class="split"><div class="pie doughnut" [style.background]="'conic-gradient(' + doughnut(charts.contractStatusChart.datasets[0].data, chartColors(charts.contractStatusChart.datasets[0].backgroundColor)) + ')' "></div><ul><li *ngFor="let label of charts.contractStatusChart.labels; let i=index">{{label}}: {{charts.contractStatusChart.datasets[0].data[i]}}</li></ul></div></article>
+    </div>
+  </section>
+
   <div class="section-heading">
     <div>
       <span class="eyebrow">Your workspace</span>

@@ -100,6 +100,12 @@ export class AppShellComponent {
       roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer']
     },
     {
+      label: 'Communications',
+      path: '/communications',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Vendor', 'Auditor']
+    },
+    {
       label: 'Reports',
       path: '/reports',
       exact: true,

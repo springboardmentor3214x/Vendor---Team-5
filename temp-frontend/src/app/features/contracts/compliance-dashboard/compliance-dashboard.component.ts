@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ComplianceRecord, ComplianceService } from '../../../core/services/compliance.service';
@@ -69,6 +70,7 @@ type DashboardResponse = Record<string, DashboardSection | undefined>;
           <button class="btn btn-primary" type="button" (click)="loadHistory()">Load history</button>
         </div>
         <form (ngSubmit)="verify()">
+          <input class="form-control" [(ngModel)]="complianceType" name="complianceType" placeholder="Compliance type">
           <input class="form-control" [(ngModel)]="verifyStatus" name="verifyStatus" placeholder="Compliance status">
           <button class="btn btn-primary" type="submit">Verify compliance</button>
         </form>
@@ -111,7 +113,8 @@ type DashboardResponse = Record<string, DashboardSection | undefined>;
 export class ComplianceDashboardComponent {
   private service = inject(ComplianceService);
 
-  vendorId = 0;
+  vendorId = 1;
+  complianceType = 'Contract Compliance';
   verifyStatus = 'Compliant';
   readonly dashboard = signal<DashboardResponse | null>(null);
   readonly history = signal<ComplianceRecord[]>([]);
@@ -122,6 +125,7 @@ export class ComplianceDashboardComponent {
   readonly actionError = signal('');
 
   ngOnInit() {
+    this.loadHistory();
     this.service.getDashboard().subscribe({
       next: data => { this.dashboard.set(data as DashboardResponse); this.dashboardLoading.set(false); },
       error: () => { this.dashboardError.set('Unable to load dashboard summary.'); this.dashboardLoading.set(false); }
@@ -175,9 +179,9 @@ export class ComplianceDashboardComponent {
   verify() {
     if (!this.vendorId) { this.actionError.set('Enter a vendor ID to verify compliance.'); return; }
     this.actionError.set('');
-    this.service.verifyCompliance({ vendor_id: this.vendorId, status: this.verifyStatus }).subscribe({
+    this.service.verifyCompliance({ vendor_id: this.vendorId, compliance_type: this.complianceType, status: this.verifyStatus }).subscribe({
       next: () => this.loadHistory(),
-      error: () => this.actionError.set('Unable to verify compliance.')
+      error: (error: HttpErrorResponse) => this.actionError.set(this.errorMessage(error, 'Unable to verify compliance.'))
     });
   }
 
@@ -185,12 +189,19 @@ export class ComplianceDashboardComponent {
     this.actionError.set('');
     this.service.updateComplianceStatus(item.id, item.status ?? item.compliance_status ?? '').subscribe({
       next: () => this.loadHistory(),
-      error: () => this.actionError.set('Unable to update compliance status.')
+      error: (error: HttpErrorResponse) => this.actionError.set(this.errorMessage(error, 'Unable to update compliance status.'))
     });
   }
 
   private metric(label: string, section: DashboardSection | undefined, ...keys: string[]) {
     const value = keys.map(key => section?.[key]).find(item => item !== undefined && item !== null);
     return { label, value: typeof value === 'number' || typeof value === 'string' ? value : 0 };
+  }
+
+  private errorMessage(error: HttpErrorResponse, fallback: string) {
+    const detail = error.error?.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) return detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(', ') || fallback;
+    return fallback;
   }
 }

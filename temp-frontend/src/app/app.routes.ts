@@ -35,6 +35,7 @@ import { VendorDocumentationComponent } from './features/contracts/vendor-docume
 import { ComplianceDashboardComponent } from './features/contracts/compliance-dashboard/compliance-dashboard.component';
 import { ContractNotificationsComponent } from './features/contracts/contract-notifications/contract-notifications.component';
 import { CommunicationHubComponent } from './features/communications/communication-hub.component';
+import { MessagesComponent } from './features/communications/messages.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -226,6 +227,7 @@ export const routes: Routes = [
       { path: 'contracts/compliance', component: ComplianceDashboardComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor'] } },
       { path: 'contracts/notifications', component: ContractNotificationsComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer'] } },
       { path: 'communications', component: CommunicationHubComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Vendor', 'Auditor'] } },
+      { path: 'messages', component: MessagesComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Vendor', 'Auditor'] } },
       { path: 'contracts/:id/edit', component: ContractFormComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager'] } },
       { path: 'contracts/:id', component: ContractDetailsComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer'] } },
       { path: 'contracts', component: ContractRepositoryComponent, canActivate: [roleGuard], data: { roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer'] } },

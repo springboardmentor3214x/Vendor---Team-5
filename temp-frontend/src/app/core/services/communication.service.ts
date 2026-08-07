@@ -14,4 +14,7 @@ export interface ActivityLog { id:number; module:string; action:string; descript
   createDiscussion(body:Record<string,unknown>){return this.http.post<Discussion>(`${this.base}/discussions`,body)}
   logs(){return this.http.get<ActivityLog[]>(`${this.base}/activity-logs`)}
   markRead(id:number){return this.http.post<Message>(`${this.base}/${id}/read`,{})}
+  upload(file:File,vendorId:number){const body=new FormData();body.append('file',file);body.append('vendorId',String(vendorId));return this.http.post<{id:number;filename:string}>(`${this.base}/files/upload`,body)}
+  files(vendorId?:number){let p=new HttpParams();if(vendorId)p=p.set('vendorId',vendorId);return this.http.get<{id:number;filename:string;createdAt:string}[]>(`${this.base}/files`,{params:p})}
+  unreadNotifications(){return this.http.get<{unreadCount:number}>(`${environment.apiUrl}/notifications/unread-count`)}
 }

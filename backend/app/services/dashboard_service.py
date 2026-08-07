@@ -303,7 +303,9 @@ def get_procurement_cost_analysis(db: Any) -> Dict[str, Any]:
     total = 0.0
 
     for po in pos:
-        amt = float(getattr(po, "total_amount", 0) or getattr(po, "amount", 0) or 0)
+        # PurchaseOrder persists its financial amount as total_cost.  Keep the
+        # legacy fallbacks for older records, but prefer the canonical field.
+        amt = float(getattr(po, "total_cost", 0) or getattr(po, "total_amount", 0) or getattr(po, "amount", 0) or 0)
         total += amt
 
         # Category / Dept breakdown

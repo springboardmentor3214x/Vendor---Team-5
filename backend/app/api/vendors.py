@@ -12,6 +12,9 @@ from app.models.vendor_category import VendorCategory
 from app.models.vendor_approval_history import VendorApprovalHistory
 from app.models.vendor_document import VendorDocument
 from app.models.user import User
+from app.models.performance import PerformanceRecord
+from app.models.reliability import VendorReliability
+from app.models.notification import Notification
 from app.schemas.vendor import (
     VendorApprovalAction,
     VendorApprovalHistoryResponse,
@@ -220,6 +223,18 @@ def approve_vendor(
             acted_by=current_user.id,
         )
     )
+    # Create the projections consumed by Performance, Reliability, and
+    # Notifications in the same transaction as the approval.
+    if not db.query(PerformanceRecord).filter(PerformanceRecord.vendor_id == vendor.id).first():
+        db.add(PerformanceRecord(vendor_id=vendor.id, performance_status="Not Evaluated", notes="Created when vendor was approved."))
+    if not db.query(VendorReliability).filter(VendorReliability.vendor_id == vendor.id).first():
+        db.add(VendorReliability(vendor_id=vendor.id, risk_level="Medium", recommendation="Awaiting performance evaluation."))
+    db.add(Notification(
+        user_id=current_user.id, vendor_id=vendor.id, title="Vendor approved",
+        message=f"{vendor.company_name} is now active and available for evaluation.",
+        notification_type="VENDOR_APPROVAL", type="VENDOR_APPROVAL", related_module="Vendor",
+        related_record_id=vendor.id, link=f"/vendors/{vendor.id}",
+    ))
     db.commit()
     db.refresh(vendor)
     return vendor

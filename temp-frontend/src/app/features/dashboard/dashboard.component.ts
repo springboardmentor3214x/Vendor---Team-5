@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AppRole, AuthService } from '../../core/services/auth.service';
+import { environment } from '../../../environments/environment';
 
 interface DashboardView {
   title: string;
@@ -21,19 +23,39 @@ interface DashboardView {
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
 
   get view(): DashboardView {
     return this.views[this.authService.getUserRole() as AppRole] ?? this.views.Vendor;
   }
 
-  readonly kpis = [
+  readonly kpis = signal([
     { label: 'Active vendors', value: 0, icon: '👥', tone: 'success' },
     { label: 'Open procurement', value: 0, icon: '📋', tone: 'primary' },
     { label: 'Invoices to review', value: 0, icon: '🧾', tone: 'warning' },
     { label: 'Active contracts', value: 0, icon: '📄', tone: 'info' }
-  ];
+  ]);
+
+  ngOnInit(): void {
+    if (this.authService.getUserRole() !== 'Administrator') return;
+
+    this.http.get<{ approvedVendors: number; totalProcurementRequests: number }>(`${environment.apiUrl}/dashboard/admin`)
+      .subscribe({
+        next: (summary) => {
+          this.kpis.update((kpis) => kpis.map((kpi, index) => {
+            if (index === 0) return { ...kpi, value: summary.approvedVendors };
+            if (index === 1) return { ...kpi, value: summary.totalProcurementRequests };
+            return kpi;
+          }));
+        }
+      });
+    this.http.get<{ status: string }[]>(`${environment.apiUrl}/contracts/`)
+      .subscribe({ next: (contracts) => this.kpis.update((kpis) => kpis.map((kpi, index) =>
+        index === 3 ? { ...kpi, value: contracts.filter((contract) => contract.status === 'Active').length } : kpi
+      )) });
+  }
 
   private readonly views: Record<AppRole, DashboardView> = {
     Administrator: {

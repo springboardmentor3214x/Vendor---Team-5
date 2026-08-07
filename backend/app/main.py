@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
@@ -17,6 +17,7 @@ from app.api import (
     documents,
 )
 from app.core.config import settings
+from app.api.auth import require_frontend_route_access
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -35,18 +36,19 @@ app.add_middleware(
 API_PREFIX = getattr(settings, "API_PREFIX", "")
 
 app.include_router(auth.router, prefix=API_PREFIX)
-app.include_router(vendors.router, prefix=API_PREFIX)
-app.include_router(procurement.router, prefix=API_PREFIX)
-app.include_router(performance.router, prefix=API_PREFIX)
-app.include_router(reliability.router, prefix=API_PREFIX)
-app.include_router(contracts.router, prefix=API_PREFIX)
-app.include_router(dashboard.router, prefix=API_PREFIX)
+protected = [Depends(require_frontend_route_access)]
+app.include_router(vendors.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(procurement.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(performance.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(reliability.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(contracts.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(dashboard.router, prefix=API_PREFIX, dependencies=protected)
 app.include_router(communications.router, prefix=API_PREFIX)
-app.include_router(notifications.router, prefix=API_PREFIX)
-app.include_router(reports.router, prefix=API_PREFIX)
-app.include_router(certifications.router, prefix=API_PREFIX)
-app.include_router(compliance.router, prefix=API_PREFIX)
-app.include_router(documents.router, prefix=API_PREFIX)
+app.include_router(notifications.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(reports.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(certifications.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(compliance.router, prefix=API_PREFIX, dependencies=protected)
+app.include_router(documents.router, prefix=API_PREFIX, dependencies=protected)
 
 
 @app.get("/", tags=["System"])

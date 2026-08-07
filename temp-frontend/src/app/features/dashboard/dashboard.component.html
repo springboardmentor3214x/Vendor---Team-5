@@ -9,7 +9,7 @@
   </div>
 
   <div class="kpi-grid" aria-label="Key performance indicators">
-    <article class="kpi-card" *ngFor="let kpi of kpis" [class]="'kpi-card tone-' + kpi.tone">
+    <article class="kpi-card" *ngFor="let kpi of kpis()" [class]="'kpi-card tone-' + kpi.tone">
       <span class="kpi-icon" aria-hidden="true">{{ kpi.icon }}</span>
       <div>
         <span class="kpi-label">{{ kpi.label }}</span>

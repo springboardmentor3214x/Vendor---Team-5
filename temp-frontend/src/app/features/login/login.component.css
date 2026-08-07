@@ -4,8 +4,8 @@
   place-items: center;
   padding: 2rem 1rem;
   background:
-    radial-gradient(circle at top left, rgba(45, 212, 191, 0.16), transparent 28%),
-    linear-gradient(135deg, #06172f 0%, #0b2242 48%, #12345c 100%);
+    radial-gradient(circle at top left, rgba(225, 29, 72, 0.16), transparent 30%),
+    linear-gradient(135deg, #fff1f2 0%, #fff7f7 48%, #ffe4e6 100%);
 }
 
 .auth-card {
@@ -52,15 +52,15 @@
 }
 
 .form-control:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 0.22rem rgba(37, 99, 235, 0.14);
+  border-color: #e11d48;
+  box-shadow: 0 0 0 0.22rem rgba(225, 29, 72, 0.14);
 }
 
 .btn-primary {
   min-height: 50px;
   border-radius: 12px;
   font-weight: 700;
-  background: linear-gradient(135deg, #2563eb, #0f766e);
+  background: linear-gradient(135deg, #e11d48, #9f1239);
 }
 
 .auth-footer {
@@ -74,7 +74,7 @@
 }
 
 .auth-footer a {
-  color: #1d4ed8;
+  color: #9f1239;
   font-weight: 650;
 }
 

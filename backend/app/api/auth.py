@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -73,6 +73,41 @@ def require_roles(*allowed_roles: str):
             )
         return current_user
     return role_checker
+
+
+# Mirrors the Angular route guards so API access cannot be bypassed by calling
+# an endpoint directly.  More-specific paths are matched before module defaults.
+FRONTEND_ROLE_POLICIES: dict[str, tuple[str, ...]] = {
+    "/dashboard/procurement": ("Administrator", "Procurement Manager", "Supply Chain Manager"),
+    "/dashboard/vendor": ("Vendor",),
+    "/dashboard/admin": ("Administrator",),
+    "/dashboard/cost-analysis": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
+    "/dashboard/charts": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
+    "/dashboard": ALLOWED_ROLES,
+    "/procurement/invoices": ("Administrator", "Procurement Manager", "Finance Officer"),
+    "/procurement": ("Administrator", "Procurement Manager", "Supply Chain Manager"),
+    "/performance": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
+    "/reliability": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
+    "/reports": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Finance Officer", "Auditor"),
+    "/contracts": ("Administrator", "Procurement Manager", "Auditor", "Finance Officer"),
+    "/compliance": ("Administrator", "Procurement Manager", "Auditor"),
+    "/certifications": ("Administrator", "Procurement Manager", "Auditor"),
+    "/documents": ("Administrator", "Procurement Manager", "Auditor"),
+    "/notifications": ("Administrator", "Procurement Manager", "Auditor", "Finance Officer"),
+    "/vendors": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor"),
+}
+
+
+def require_frontend_route_access(request: Request, current_user: User = Depends(get_current_user)) -> User:
+    path = request.url.path.rstrip("/") or "/"
+    allowed_roles = next((roles for prefix, roles in FRONTEND_ROLE_POLICIES.items() if path == prefix or path.startswith(prefix + "/")), None)
+    if allowed_roles and normalize_user_role(current_user) not in allowed_roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this module")
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        manager_only_modules = ("/performance", "/reliability", "/contracts", "/compliance", "/certifications", "/documents")
+        if path.startswith(manager_only_modules) and normalize_user_role(current_user) not in {"Administrator", "Procurement Manager"}:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to modify this module")
+    return current_user
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

@@ -443,6 +443,7 @@ def issue_purchase_order(po_id: int, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(po)
+    refresh_after_procurement_update(po.vendor_id, db)
     return po
 
 

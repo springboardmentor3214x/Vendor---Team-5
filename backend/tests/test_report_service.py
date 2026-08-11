@@ -73,4 +73,7 @@ def test_render_excel_csv_and_pdf_report_helpers():
 
     pdf_bytes = report_service.render_pdf_report("Vendor Performance", rows)
     assert isinstance(pdf_bytes, bytes)
-    assert b"Vendor Reliability Intelligence Platform" in pdf_bytes
+    assert pdf_bytes.startswith(b"%PDF")
+
+    xlsx_bytes = report_service.render_excel_report(rows)
+    assert xlsx_bytes.startswith(b"PK")

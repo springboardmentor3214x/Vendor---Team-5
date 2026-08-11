@@ -34,7 +34,7 @@ def _require_report_access(current_user: User) -> None:
 
 def _export_response(report_type: str, rows: list[dict], format: str = "csv"):
     fmt = format.lower()
-    filename = f"{report_type}_report.{'pdf' if fmt == 'pdf' else 'csv'}"
+    filename = f"{report_type}_report.{'pdf' if fmt == 'pdf' else 'xlsx' if fmt == 'excel' else 'csv'}"
 
     if fmt == "pdf":
         pdf_bytes = report_service.render_pdf_report(report_type.replace("-", " ").title(), rows)
@@ -43,7 +43,13 @@ def _export_response(report_type: str, rows: list[dict], format: str = "csv"):
             media_type="application/pdf",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
-    else:  # csv or excel
+    if fmt == "excel":
+        return Response(
+            content=report_service.render_excel_report(rows, report_type.replace("_", " ").title()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    else:
         csv_str = report_service.render_excel_csv_report(rows)
         return StreamingResponse(
             io.StringIO(csv_str),

@@ -149,10 +149,9 @@ def send_email_notification(
     body: str,
     user_id: Optional[int] = None
 ) -> Dict[str, Any]:
-    """SMTP Email dispatch integration helper."""
-    # In production, SMTP settings send actual mail. Safe logged execution provided here.
+    """Describe an email dispatch without claiming delivery when SMTP is absent."""
     return {
-        "status": "sent",
+        "status": "not_configured",
         "channel": "email",
         "to_email": to_email,
         "subject": subject,
@@ -165,10 +164,9 @@ def send_sms_notification(
     message: str,
     user_id: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Twilio SMS API integration helper (Account SID / Auth Token workflow)."""
-    # In production, Twilio REST API sends SMS. Safe logged execution provided here.
+    """Describe an SMS dispatch without claiming delivery when Twilio is absent."""
     return {
-        "status": "sent",
+        "status": "not_configured",
         "channel": "sms",
         "to_phone": phone_number,
         "message": message,
@@ -222,13 +220,39 @@ def create_notification(
     if target_user:
         if delivery_method.upper() in ["EMAIL", "ALL"] and target_user.email:
             send_email_notification(to_email=target_user.email, subject=title, body=message, user_id=user_id)
-        if delivery_method.upper() in ["SMS", "ALL"] and getattr(target_user, "phone", None):
-            send_sms_notification(phone_number=target_user.phone, message=f"{title}: {message}", user_id=user_id)
+        phone = getattr(target_user, "mobile_number", None) or getattr(target_user, "phone", None)
+        if delivery_method.upper() in ["SMS", "ALL"] and phone:
+            send_sms_notification(phone_number=phone, message=f"{title}: {message}", user_id=user_id)
 
     return notification
 
 
 # --- Specialized Event Trigger Helpers ---
+
+def _event_recipient_ids(db: Session, vendor_id: Optional[int] = None, owner_id: Optional[int] = None) -> list[int]:
+    """Return every active Admin/Procurement Manager plus owner and vendor user.
+
+    Role membership is intentionally resolved in Python: this keeps the rule
+    explicit and works consistently with legacy databases that store role text.
+    """
+    users = list(db.query(User).all() or [])
+    recipient_ids = {
+        getattr(user, "id", None) for user in users
+        if getattr(user, "id", None) is not None
+        and getattr(user, "is_active", True)
+        and str(getattr(user, "role", "")).strip().lower() in {"administrator", "admin", "procurement manager"}
+    }
+    if owner_id:
+        recipient_ids.add(owner_id)
+    if vendor_id:
+        vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+        vendor_email = getattr(vendor, "email", None)
+        recipient_ids.update(getattr(user, "id", None) for user in users
+                             if getattr(user, "id", None) is not None
+                             and (getattr(user, "email", None) == vendor_email
+                                  or (str(getattr(user, "role", "")).lower() == "vendor"
+                                      and getattr(user, "company_name", None) == getattr(vendor, "company_name", None))))
+    return sorted(recipient_ids)
 
 def create_vendor_approval_notification(db: Session, vendor_id: int, approved: bool) -> List[Notification]:
     """Generate approval / rejection notifications when vendor status updates."""
@@ -290,11 +314,10 @@ def create_delivery_delay_notification(db: Session, po_id: int) -> List[Notifica
         return []
 
     notifications = []
-    managers = db.query(User).all()
-    for mgr in managers[:2]:  # Notify primary procurement stakeholders
+    for user_id in _event_recipient_ids(db, po.vendor_id, getattr(po, "assigned_procurement_manager_id", None)):
         notif = create_notification(
             db=db,
-            user_id=mgr.id,
+            user_id=user_id,
             purchase_order_id=po_id,
             vendor_id=po.vendor_id,
             title="DELIVERY DELAY WARNING",
@@ -316,9 +339,6 @@ def trigger_contract_expiry_reminders(db: Session) -> int:
     contracts = db.query(Contract).all()
     created_count = 0
 
-    managers = db.query(User).all()
-    admin_id = managers[0].id if managers else 1
-
     for contract in contracts:
         if not contract.end_date:
             continue
@@ -335,9 +355,10 @@ def trigger_contract_expiry_reminders(db: Session) -> int:
             ).first()
 
             if not existing:
-                create_notification(
+                for user_id in _event_recipient_ids(db, contract.vendor_id, getattr(contract, "responsible_manager_id", None)):
+                    create_notification(
                     db=db,
-                    user_id=admin_id,
+                    user_id=user_id,
                     contract_id=contract.id,
                     vendor_id=contract.vendor_id,
                     title="CONTRACT EXPIRY REMINDER",
@@ -348,8 +369,8 @@ def trigger_contract_expiry_reminders(db: Session) -> int:
                     related_module="Contracts",
                     related_record_id=contract.id,
                     link="/contracts"
-                )
-                created_count += 1
+                    )
+                    created_count += 1
 
     return created_count
 
@@ -359,9 +380,6 @@ def trigger_compliance_expiry_reminders(db: Session) -> int:
     today = date.today()
     certifications = db.query(Certification).all()
     created_count = 0
-
-    managers = db.query(User).all()
-    admin_id = managers[0].id if managers else 1
 
     for cert in certifications:
         if not cert.expiry_date:
@@ -378,9 +396,10 @@ def trigger_compliance_expiry_reminders(db: Session) -> int:
             ).first()
 
             if not existing:
-                create_notification(
+                for user_id in _event_recipient_ids(db, cert.vendor_id):
+                    create_notification(
                     db=db,
-                    user_id=admin_id,
+                    user_id=user_id,
                     vendor_id=cert.vendor_id,
                     title="COMPLIANCE CERTIFICATE EXPIRY",
                     message=f"Certification '{cert.certification_name}' for vendor #{cert.vendor_id} expires in {days_left} days.",
@@ -390,8 +409,8 @@ def trigger_compliance_expiry_reminders(db: Session) -> int:
                     related_module="Compliance",
                     related_record_id=cert.id,
                     link="/compliance"
-                )
-                created_count += 1
+                    )
+                    created_count += 1
 
     return created_count
 

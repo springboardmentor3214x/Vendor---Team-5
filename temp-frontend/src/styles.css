@@ -1,0 +1,314 @@
+:root {
+  --vr-navy: #0b1f3a;
+  --vr-slate: #334155;
+  --vr-muted: #64748b;
+  --vr-border: #dbe4f0;
+  --vr-surface: #ffffff;
+  --vr-page: #f8fafc;
+  --vr-primary: #2563eb;
+  --vr-teal: #0f766e;
+  --vr-focus: rgba(37, 99, 235, 0.16);
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.12), transparent 20%),
+    linear-gradient(135deg, #06172f 0%, #0a2547 50%, #12345c 100%);
+  color: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.page-card {
+  background: var(--vr-page);
+  border: 1px solid rgba(219, 228, 240, 0.9);
+  border-radius: 22px;
+  padding: clamp(1.25rem, 2.6vw, 2rem);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
+  color: var(--vr-navy);
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: var(--vr-slate);
+  margin-bottom: 8px;
+}
+
+.form-control,
+.form-select {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  padding: 12px 14px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--vr-primary);
+  box-shadow: 0 0 0 0.22rem var(--vr-focus);
+}
+
+.required-mark {
+  margin-left: 0.18rem;
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 12px;
+  border: none;
+  padding: 0 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+.btn:focus-visible,
+a:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible {
+  outline: 3px solid var(--vr-focus);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+  transform: none;
+  box-shadow: none;
+}
+
+.text-muted {
+  color: #64748b !important;
+}
+
+.alert {
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.alert-danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.alert-success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.alert-info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+@media (max-width: 768px) {
+  .page-card {
+    border-radius: 18px;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+}
+
+/* Module 3: shared action and responsive list refinements. */
+.workflow-actions > div:last-child,
+.actions-panel > div:last-child,
+.detail-links,
+.action-card form > div,
+.vendor-grid + .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.workflow-note {
+  margin: 0.55rem 0 0;
+  color: #854d0e;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.helper-text {
+  display: block;
+  margin-top: 0.32rem;
+  color: #627d98;
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+@media (max-width: 620px) {
+  .requests-page .table-wrap,
+  .po-page .table-wrap,
+  .invoice-page .table-wrap {
+    overflow: visible;
+  }
+
+  .requests-page table, .requests-page tbody, .requests-page tr, .requests-page td,
+  .po-page table, .po-page tbody, .po-page tr, .po-page td,
+  .invoice-page table, .invoice-page tbody, .invoice-page tr, .invoice-page td {
+    display: block;
+    width: 100%;
+  }
+
+  .requests-page thead, .po-page thead, .invoice-page thead {
+    display: none;
+  }
+
+  .requests-page tbody, .po-page tbody, .invoice-page tbody {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .requests-page tr, .po-page tr, .invoice-page tr {
+    border: 1px solid #e4edf5;
+    border-radius: 10px;
+  }
+
+  .requests-page td, .po-page td, .invoice-page td {
+    display: grid;
+    grid-template-columns: minmax(105px, 0.8fr) minmax(0, 1.2fr);
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-top: 1px solid #edf2f7;
+  }
+
+  .requests-page td:first-child, .po-page td:first-child, .invoice-page td:first-child {
+    border-top: 0;
+  }
+
+  .requests-page td::before, .po-page td::before, .invoice-page td::before {
+    content: attr(data-label);
+    color: #829ab1;
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .requests-page td.action-cell,
+  .po-page td:last-child,
+  .invoice-page td:last-child {
+    display: block;
+  }
+
+  .requests-page td.action-cell::before,
+  .po-page td:last-child::before,
+  .invoice-page td:last-child::before {
+    display: none;
+  }
+
+  .workflow-actions,
+  .actions-panel,
+  .vendor-grid + .actions,
+  .action-card form > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workflow-actions > div:last-child .btn,
+  .actions-panel > div:last-child .btn,
+  .vendor-grid + .actions .btn,
+  .action-card form > div .btn {
+    width: 100%;
+  }
+}
+
+.record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.record-actions strong,
+.record-actions span {
+  display: block;
+}
+
+.record-actions strong {
+  color: #1d4f91;
+}
+
+.record-actions span {
+  margin-top: 0.2rem;
+  color: #627d98;
+  font-size: 0.86rem;
+}
+
+.record-actions > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.success-message {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+@media (max-width: 700px) {
+  .record-actions,
+  .record-actions > div:last-child {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .record-actions > div:last-child .btn {
+    width: 100%;
+  }
+}

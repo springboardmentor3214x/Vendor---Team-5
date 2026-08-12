@@ -38,3 +38,5 @@ from app.models.reliability_history import ReliabilityHistory
 from app.models.procurement_risk_level import ProcurementRiskLevel
 from app.models.procurement_recommendation import ProcurementRecommendation
 from app.models.supplier_reliability_ranking import SupplierReliabilityRanking
+from app.models.message import Message, RelatedEntityType
+

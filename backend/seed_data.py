@@ -23,7 +23,9 @@ from app.models.contract import Contract
 from app.models.contract_renewal import ContractRenewal
 from app.models.certification import Certification
 from app.models.compliance import ComplianceRecord
+from app.models.message import Message, RelatedEntityType
 from datetime import datetime, timedelta
+
 
 db = SessionLocal()
 
@@ -552,5 +554,106 @@ if not existing_compliance:
 else:
     print("Sample compliance record already exists.")
 
+# Seed demo users for direct messaging
+pm_user = db.query(User).filter(User.email == "pm.manager@vendoriq.com").first()
+if not pm_user:
+    pm_user = User(
+        full_name="Priya Sharma",
+        email="pm.manager@vendoriq.com",
+        hashed_password="placeholder_hash",
+        role="Procurement Manager",
+        is_active=True,
+    )
+    db.add(pm_user)
+    db.commit()
+
+vendor_user = db.query(User).filter(User.email == "vendor.contact@samplesupplies.com").first()
+if not vendor_user:
+    vendor_user = User(
+        full_name="Ravi Kumar",
+        email="vendor.contact@samplesupplies.com",
+        hashed_password="placeholder_hash",
+        role="Vendor",
+        company_name="Sample Supplies Pvt Ltd",
+        is_active=True,
+    )
+    db.add(vendor_user)
+    db.commit()
+
+admin_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
+
+# Seed sample direct messages for demo conversations
+existing_messages = db.query(Message).first()
+if not existing_messages:
+    demo_messages = [
+        Message(
+            sender_id=admin_user.id,
+            receiver_id=pm_user.id,
+            content="Hi Priya, please review the budget allocation for procurement request REQ-2026-001.",
+            related_entity_type=RelatedEntityType.PROCUREMENT_REQUEST,
+            related_entity_id=procurement_request.id,
+            is_read=True,
+            created_at=datetime.utcnow() - timedelta(hours=12),
+            read_at=datetime.utcnow() - timedelta(hours=11),
+        ),
+        Message(
+            sender_id=pm_user.id,
+            receiver_id=vendor_user.id,
+            content="Hello Ravi, could you confirm the expected dispatch timeline for Purchase Order PO-2026-001?",
+            related_entity_type=RelatedEntityType.PURCHASE_ORDER,
+            related_entity_id=purchase_order.id,
+            is_read=True,
+            created_at=datetime.utcnow() - timedelta(hours=8),
+            read_at=datetime.utcnow() - timedelta(hours=7),
+        ),
+        Message(
+            sender_id=vendor_user.id,
+            receiver_id=pm_user.id,
+            content="Hi Priya, the batch for PO-2026-001 has been dispatched and quality compliance certificate is attached.",
+            related_entity_type=RelatedEntityType.PURCHASE_ORDER,
+            related_entity_id=purchase_order.id,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(hours=4),
+            read_at=None,
+        ),
+        Message(
+            sender_id=admin_user.id,
+            receiver_id=vendor_user.id,
+            content="Ravi, please submit the renewed ISO certification documents for contract CON-2026-001 before month-end.",
+            related_entity_type=RelatedEntityType.CONTRACT,
+            related_entity_id=contract.id,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(hours=2),
+            read_at=None,
+        ),
+        Message(
+            sender_id=vendor_user.id,
+            receiver_id=admin_user.id,
+            content="Understood. We will upload the verified certificates by tomorrow.",
+            related_entity_type=RelatedEntityType.VENDOR,
+            related_entity_id=sample_vendor.id,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(minutes=30),
+            read_at=None,
+        ),
+        Message(
+            sender_id=pm_user.id,
+            receiver_id=admin_user.id,
+            content="Hi Admin, all pending vendor evaluations for Module 7 are up to date.",
+            related_entity_type=RelatedEntityType.NONE,
+            related_entity_id=None,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(minutes=10),
+            read_at=None,
+        ),
+    ]
+    for msg in demo_messages:
+        db.add(msg)
+    db.commit()
+    print(f"Seeded {len(demo_messages)} sample direct messages.")
+else:
+    print("Sample messages already exist.")
+
 db.close()
 print("Seeding complete.")
+

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -5,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.api.auth import get_current_user, require_roles
+from app.api.auth import get_current_user, normalize_user_role, require_roles
 from app.core.database import get_db
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
@@ -27,6 +28,39 @@ from app.schemas.vendor import (
 
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
 VENDOR_DOCUMENTS_DIRECTORY = Path(__file__).resolve().parents[2] / "uploads" / "vendor_documents"
+
+# Upload policy is intentionally kept at the API boundary so the same contract
+# is enforced before local storage or service-layer persistence is reached.
+ALLOWED_DOCUMENT_EXTENSIONS = frozenset({"pdf", "xlsx", "xls", "docx", "doc", "png", "jpg", "jpeg", "zip"})
+MAX_DOCUMENT_UPLOAD_BYTES = int(os.getenv("VENDOR_DOCUMENT_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+
+
+def _validate_vendor_document_upload(file: UploadFile) -> None:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="A document file is required")
+    extension = Path(file.filename).suffix.lower().lstrip(".")
+    if extension not in ALLOWED_DOCUMENT_EXTENSIONS:
+        raise HTTPException(status_code=415, detail="Unsupported document file type")
+
+
+def _vendor_for_authenticated_user(db: Session, current_user: User) -> Vendor | None:
+    """Resolve the Vendor record that belongs to a vendor-role account.
+
+    The current schema links a user account to a vendor through the shared email
+    address.  Keep that lookup in one place so all record-level checks use the
+    same rule until a direct user_id foreign key is introduced.
+    """
+    return db.query(Vendor).filter(Vendor.email == current_user.email).first()
+
+
+def _require_vendor_record_access(db: Session, vendor_id: int, current_user: User) -> None:
+    """Prevent vendor accounts from reading or changing another vendor's data."""
+    if normalize_user_role(current_user) != "Vendor":
+        return
+
+    own_vendor = _vendor_for_authenticated_user(db, current_user)
+    if not own_vendor or own_vendor.id != vendor_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this vendor record")
 
 
 def _category_or_400(db: Session, category_id: int) -> VendorCategory:
@@ -78,17 +112,22 @@ def list_vendor_categories(db: Session = Depends(get_db)):
 
 
 @router.get("/", dependencies=[Depends(get_current_user)])
-def list_vendors(db: Session = Depends(get_db)):
+def list_vendors(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if normalize_user_role(current_user) == "Vendor":
+        own_vendor = _vendor_for_authenticated_user(db, current_user)
+        return [own_vendor] if own_vendor else []
     return db.query(Vendor).all()
 
 
 @router.get("/{vendor_id}", dependencies=[Depends(get_current_user)])
-def get_vendor(vendor_id: int, db: Session = Depends(get_db)):
+def get_vendor(vendor_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _require_vendor_record_access(db, vendor_id, current_user)
     return _vendor_or_404(db, vendor_id)
 
 
 @router.get("/{vendor_id}/documents", response_model=list[VendorDocumentResponse], dependencies=[Depends(get_current_user)])
-def list_vendor_documents(vendor_id: int, db: Session = Depends(get_db)):
+def list_vendor_documents(vendor_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _require_vendor_record_access(db, vendor_id, current_user)
     _vendor_or_404(db, vendor_id)
     documents = (
         db.query(VendorDocument)
@@ -108,9 +147,9 @@ async def upload_vendor_document(
     db: Session = Depends(get_db),
 ):
     """Store a vendor document and its metadata using the DB contract from Milestone 1."""
+    _require_vendor_record_access(db, vendor_id, current_user)
     _vendor_or_404(db, vendor_id)
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="A document file is required")
+    _validate_vendor_document_upload(file)
     if not document_type.strip():
         raise HTTPException(status_code=400, detail="Document type is required")
 
@@ -118,10 +157,18 @@ async def upload_vendor_document(
     safe_name = Path(file.filename).name
     stored_path = VENDOR_DOCUMENTS_DIRECTORY / f"{uuid4().hex}_{safe_name}"
     try:
+        bytes_written = 0
         with stored_path.open("wb") as output_file:
             while chunk := await file.read(1024 * 1024):
+                bytes_written += len(chunk)
+                if bytes_written > MAX_DOCUMENT_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="Document file exceeds the 10 MB upload limit")
                 output_file.write(chunk)
+    except HTTPException:
+        stored_path.unlink(missing_ok=True)
+        raise
     except OSError as exc:
+        stored_path.unlink(missing_ok=True)
         raise HTTPException(status_code=500, detail="Unable to store vendor document") from exc
     finally:
         await file.close()
@@ -141,7 +188,13 @@ async def upload_vendor_document(
 
 
 @router.get("/{vendor_id}/documents/{document_id}/download", dependencies=[Depends(get_current_user)])
-def download_vendor_document(document_id: int, vendor_id: int, db: Session = Depends(get_db)):
+def download_vendor_document(
+    document_id: int,
+    vendor_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_vendor_record_access(db, vendor_id, current_user)
     document = (
         db.query(VendorDocument)
         .filter(VendorDocument.id == document_id, VendorDocument.vendor_id == vendor_id)
@@ -160,7 +213,12 @@ def download_vendor_document(document_id: int, vendor_id: int, db: Session = Dep
 
 
 @router.get("/{vendor_id}/approval-history", response_model=list[VendorApprovalHistoryResponse], dependencies=[Depends(get_current_user)])
-def list_vendor_approval_history(vendor_id: int, db: Session = Depends(get_db)):
+def list_vendor_approval_history(
+    vendor_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_vendor_record_access(db, vendor_id, current_user)
     _vendor_or_404(db, vendor_id)
     return (
         db.query(VendorApprovalHistory)

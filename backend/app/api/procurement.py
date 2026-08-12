@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, normalize_user_role
 from app.models.invoice import Invoice
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_approval import ProcurementApproval
 from app.models.procurement_request import ProcurementRequest
 from app.models.procurement_status_history import ProcurementStatusHistory
 from app.models.purchase_order import PurchaseOrder
+from app.models.user import User
 from app.models.vendor import Vendor
 
 from app.schemas.procurement import (
@@ -60,6 +61,38 @@ VALID_PO_STATUSES = {"Draft", "Issued", "Delivered", "Cancelled", "Completed"}
 VALID_DELIVERY_STATUSES = {"Awaiting Shipment", "In Transit", "Delivered", "Delayed", "Completed"}
 VALID_PAYMENT_STATUSES = {"Pending", "Verified", "Approved", "Paid", "Rejected"}
 
+ADMINISTRATOR = "Administrator"
+PROCUREMENT_MANAGER = "Procurement Manager"
+SUPPLY_CHAIN_MANAGER = "Supply Chain Manager"
+DEPARTMENT_USER = "Department User"
+VENDOR_ROLE = "Vendor"
+FINANCE_OFFICER = "Finance Officer"
+
+
+def _require_procurement_role(current_user: User, *allowed_roles: str) -> str:
+    """Enforce the action-level workflow role, after router-level JWT access."""
+    role = normalize_user_role(current_user)
+    if role not in allowed_roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to perform this procurement action")
+    return role
+
+
+def _vendor_id_for_user(db: Session, current_user: User) -> int:
+    vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
+    if not vendor:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No vendor record is linked to this user")
+    return vendor.id
+
+
+def _require_vendor_purchase_order_access(db: Session, purchase_order: PurchaseOrder, current_user: User) -> None:
+    if normalize_user_role(current_user) == VENDOR_ROLE and purchase_order.vendor_id != _vendor_id_for_user(db, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this purchase order")
+
+
+def _require_request_owner(request: ProcurementRequest, current_user: User) -> None:
+    if normalize_user_role(current_user) == DEPARTMENT_USER and request.requested_by != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this procurement request")
+
 
 def log_status_change(db: Session, request_id: int, old_status: str, new_status: str, changed_by: int | None, remarks: str | None = None):
     history = ProcurementStatusHistory(
@@ -87,7 +120,12 @@ def log_approval_action(db: Session, request_id: int, approved_by: int | None, a
 # ---------------- Procurement Requests ----------------
 
 @router.post("/procurement-requests", response_model=ProcurementRequestOut, status_code=status.HTTP_201_CREATED)
-def create_request(payload: ProcurementRequestCreate, db: Session = Depends(get_db)):
+def create_request(
+    payload: ProcurementRequestCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, DEPARTMENT_USER)
     if payload.required_delivery_date < date.today():
         raise HTTPException(status_code=400, detail="Required delivery date cannot be in the past")
 
@@ -96,6 +134,9 @@ def create_request(payload: ProcurementRequestCreate, db: Session = Depends(get_
 
     count = db.query(ProcurementRequest).count() + 1
     request_data = payload.model_dump(exclude={"request_number"})
+    # Request ownership is derived from the authenticated actor, never a
+    # client-supplied requestedBy value.
+    request_data["requested_by"] = current_user.id
     request = ProcurementRequest(
         **request_data,
         request_number=generate_procurement_request_number(count),
@@ -118,9 +159,14 @@ def list_requests(
     approval_status: str | None = None,
     priority: str | None = None,
     requested_by: int | None = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    role = _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, SUPPLY_CHAIN_MANAGER, DEPARTMENT_USER)
     query = db.query(ProcurementRequest)
+
+    if role == DEPARTMENT_USER:
+        query = query.filter(ProcurementRequest.requested_by == current_user.id)
 
     if department:
         query = query.filter(ProcurementRequest.department == department)
@@ -129,25 +175,40 @@ def list_requests(
     if priority:
         query = query.filter(ProcurementRequest.priority == priority)
     if requested_by:
+        if role == DEPARTMENT_USER and requested_by != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view your own procurement requests")
         query = query.filter(ProcurementRequest.requested_by == requested_by)
 
     return query.order_by(ProcurementRequest.created_at.desc()).all()
 
 
 @router.get("/procurement-requests/{request_id}", response_model=ProcurementRequestOut, dependencies=[Depends(get_current_user)])
-def get_request(request_id: int, db: Session = Depends(get_db)):
+def get_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, SUPPLY_CHAIN_MANAGER, DEPARTMENT_USER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
+    _require_request_owner(request, current_user)
     return request
 
 
 @router.patch("/procurement-requests/{request_id}", response_model=ProcurementRequestOut)
-def update_request(request_id: int, payload: ProcurementRequestUpdate, db: Session = Depends(get_db)):
+def update_request(
+    request_id: int,
+    payload: ProcurementRequestUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, DEPARTMENT_USER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
+    _require_request_owner(request, current_user)
     if not can_edit_sent_back_request(request.approval_status):
         raise HTTPException(status_code=400, detail="Only sent-back requests can be edited and resubmitted")
 
@@ -172,11 +233,17 @@ def update_request(request_id: int, payload: ProcurementRequestUpdate, db: Sessi
 
 
 @router.delete("/procurement-requests/{request_id}")
-def delete_request(request_id: int, db: Session = Depends(get_db)):
+def delete_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, DEPARTMENT_USER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
+    _require_request_owner(request, current_user)
     if request.approval_status != "Pending":
         raise HTTPException(status_code=400, detail="Only pending requests can be deleted")
 
@@ -186,7 +253,13 @@ def delete_request(request_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/procurement-requests/{request_id}/approve", response_model=ProcurementRequestOut)
-def approve_request(request_id: int, payload: ProcurementApprovalAction, db: Session = Depends(get_db)):
+def approve_request(
+    request_id: int,
+    payload: ProcurementApprovalAction,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -197,12 +270,12 @@ def approve_request(request_id: int, payload: ProcurementApprovalAction, db: Ses
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    request.approved_by = payload.approved_by
+    request.approved_by = current_user.id
     request.approved_date = datetime.utcnow()
     request.approval_remarks = payload.remarks
 
-    log_approval_action(db, request_id, payload.approved_by, "Approved", payload.remarks)
-    log_status_change(db, request_id, old_status, request.approval_status, payload.approved_by, payload.remarks)
+    log_approval_action(db, request_id, current_user.id, "Approved", payload.remarks)
+    log_status_change(db, request_id, old_status, request.approval_status, current_user.id, payload.remarks)
 
     db.commit()
     db.refresh(request)
@@ -210,7 +283,13 @@ def approve_request(request_id: int, payload: ProcurementApprovalAction, db: Ses
 
 
 @router.patch("/procurement-requests/{request_id}/reject", response_model=ProcurementRequestOut)
-def reject_request(request_id: int, payload: ProcurementApprovalAction, db: Session = Depends(get_db)):
+def reject_request(
+    request_id: int,
+    payload: ProcurementApprovalAction,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -221,12 +300,12 @@ def reject_request(request_id: int, payload: ProcurementApprovalAction, db: Sess
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    request.approved_by = payload.approved_by
+    request.approved_by = current_user.id
     request.approved_date = datetime.utcnow()
     request.approval_remarks = payload.remarks
 
-    log_approval_action(db, request_id, payload.approved_by, "Rejected", payload.remarks)
-    log_status_change(db, request_id, old_status, request.approval_status, payload.approved_by, payload.remarks)
+    log_approval_action(db, request_id, current_user.id, "Rejected", payload.remarks)
+    log_status_change(db, request_id, old_status, request.approval_status, current_user.id, payload.remarks)
 
     db.commit()
     db.refresh(request)
@@ -234,7 +313,13 @@ def reject_request(request_id: int, payload: ProcurementApprovalAction, db: Sess
 
 
 @router.patch("/procurement-requests/{request_id}/send-back", response_model=ProcurementRequestOut)
-def send_back_request(request_id: int, payload: ProcurementApprovalAction, db: Session = Depends(get_db)):
+def send_back_request(
+    request_id: int,
+    payload: ProcurementApprovalAction,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -246,8 +331,8 @@ def send_back_request(request_id: int, payload: ProcurementApprovalAction, db: S
     request.approval_status = "Sent Back"
     request.approval_remarks = payload.remarks
 
-    log_approval_action(db, request_id, payload.approved_by, "Sent Back", payload.remarks)
-    log_status_change(db, request_id, old_status, request.approval_status, payload.approved_by, payload.remarks)
+    log_approval_action(db, request_id, current_user.id, "Sent Back", payload.remarks)
+    log_status_change(db, request_id, old_status, request.approval_status, current_user.id, payload.remarks)
 
     db.commit()
     db.refresh(request)
@@ -255,25 +340,40 @@ def send_back_request(request_id: int, payload: ProcurementApprovalAction, db: S
 
 
 @router.patch("/procurement-requests/{request_id}/cancel", response_model=ProcurementRequestOut)
-def cancel_request(request_id: int, db: Session = Depends(get_db)):
+def cancel_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, DEPARTMENT_USER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
+    _require_request_owner(request, current_user)
     old_status = request.approval_status
     try:
         request.approval_status = cancel_procurement_request(request.approval_status)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    log_status_change(db, request_id, old_status, request.approval_status, None, "Cancelled")
+    log_status_change(db, request_id, old_status, request.approval_status, current_user.id, "Cancelled")
     db.commit()
     db.refresh(request)
     return request
 
 
 @router.get("/procurement-requests/{request_id}/status-history", dependencies=[Depends(get_current_user)])
-def get_status_history(request_id: int, db: Session = Depends(get_db)):
+def get_status_history(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, SUPPLY_CHAIN_MANAGER, DEPARTMENT_USER)
+    request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    _require_request_owner(request, current_user)
     history = (
         db.query(ProcurementStatusHistory)
         .filter(ProcurementStatusHistory.procurement_request_id == request_id)
@@ -286,7 +386,12 @@ def get_status_history(request_id: int, db: Session = Depends(get_db)):
 # ---------------- Vendor Assignment ----------------
 
 @router.get("/procurement-requests/{request_id}/approved-vendors", response_model=list[ApprovedVendorOut], dependencies=[Depends(get_current_user)])
-def get_approved_vendors_for_request(request_id: int, db: Session = Depends(get_db)):
+def get_approved_vendors_for_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -300,7 +405,13 @@ def get_approved_vendors_for_request(request_id: int, db: Session = Depends(get_
 
 
 @router.patch("/procurement-requests/{request_id}/assign-vendor", response_model=ProcurementRequestOut)
-def assign_vendor(request_id: int, payload: VendorAssignmentAction, db: Session = Depends(get_db)):
+def assign_vendor(
+    request_id: int,
+    payload: VendorAssignmentAction,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
@@ -324,7 +435,12 @@ def assign_vendor(request_id: int, payload: VendorAssignmentAction, db: Session 
 # ---------------- Purchase Orders ----------------
 
 @router.post("/purchase-orders", response_model=PurchaseOrderOut, status_code=status.HTTP_201_CREATED)
-def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(get_db)):
+def create_purchase_order(
+    payload: PurchaseOrderCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     request = db.query(ProcurementRequest).filter(
         ProcurementRequest.id == payload.procurement_request_id
     ).first()
@@ -366,7 +482,11 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
         expected_delivery_date=payload.expected_delivery_date,
         payment_terms=payload.payment_terms,
         po_status="Draft",
-        created_by=payload.created_by,
+        created_by=current_user.id,
+        assigned_procurement_manager_id=payload.assigned_procurement_manager_id or (
+            current_user.id if normalize_user_role(current_user) == PROCUREMENT_MANAGER else None
+        ),
+        project_name=payload.project_name or request.project_name,
         po_date=datetime.utcnow(),
     )
     db.add(po)
@@ -389,9 +509,16 @@ def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(ge
 def list_purchase_orders(
     vendor_id: int | None = None,
     po_status: str | None = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    role = _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, SUPPLY_CHAIN_MANAGER, VENDOR_ROLE)
     query = db.query(PurchaseOrder)
+    if role == VENDOR_ROLE:
+        own_vendor_id = _vendor_id_for_user(db, current_user)
+        if vendor_id is not None and vendor_id != own_vendor_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view your own purchase orders")
+        query = query.filter(PurchaseOrder.vendor_id == own_vendor_id)
     if vendor_id:
         query = query.filter(PurchaseOrder.vendor_id == vendor_id)
     if po_status:
@@ -400,15 +527,27 @@ def list_purchase_orders(
 
 
 @router.get("/purchase-orders/{po_id}", response_model=PurchaseOrderOut, dependencies=[Depends(get_current_user)])
-def get_purchase_order(po_id: int, db: Session = Depends(get_db)):
+def get_purchase_order(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, SUPPLY_CHAIN_MANAGER, VENDOR_ROLE)
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, po, current_user)
     return po
 
 
 @router.patch("/purchase-orders/{po_id}/status", response_model=PurchaseOrderOut)
-def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate, db: Session = Depends(get_db)):
+def update_purchase_order_status(
+    po_id: int,
+    payload: PurchaseOrderStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
@@ -417,8 +556,8 @@ def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate,
         raise HTTPException(status_code=400, detail="Invalid purchase order status")
 
     po.po_status = payload.po_status
-    if payload.approved_by:
-        po.approved_by = payload.approved_by
+    if payload.approved_by or payload.po_status in {"Issued", "Delivered", "Completed"}:
+        po.approved_by = current_user.id
 
     db.commit()
     db.refresh(po)
@@ -427,7 +566,12 @@ def update_purchase_order_status(po_id: int, payload: PurchaseOrderStatusUpdate,
 
 
 @router.patch("/purchase-orders/{po_id}/issue", response_model=PurchaseOrderOut)
-def issue_purchase_order(po_id: int, db: Session = Depends(get_db)):
+def issue_purchase_order(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
@@ -447,10 +591,16 @@ def issue_purchase_order(po_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/purchase-orders/{po_id}/deliver", response_model=PurchaseOrderOut)
-def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
+def deliver_purchase_order(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, VENDOR_ROLE)
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, po, current_user)
     try:
         po.po_status = mark_purchase_order_delivered(po.po_status)
         if po.actual_delivery_date is None:
@@ -475,7 +625,12 @@ def deliver_purchase_order(po_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/purchase-orders/{po_id}/cancel", response_model=PurchaseOrderOut)
-def cancel_purchase_order_route(po_id: int, db: Session = Depends(get_db)):
+def cancel_purchase_order_route(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
@@ -522,30 +677,63 @@ def _completion_check(po_id: int, db: Session, *, apply_completion: bool):
 
 
 @router.get("/purchase-orders/{po_id}/completion-check", dependencies=[Depends(get_current_user)])
-def preview_completion(po_id: int, db: Session = Depends(get_db)):
+def preview_completion(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Return completion eligibility without changing the purchase order."""
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, SUPPLY_CHAIN_MANAGER, VENDOR_ROLE)
+    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    if not po:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, po, current_user)
     return _completion_check(po_id, db, apply_completion=False)
 
 
 @router.post("/purchase-orders/{po_id}/completion-check")
-def complete_if_eligible(po_id: int, db: Session = Depends(get_db)):
+def complete_if_eligible(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Apply the supported completion transition after an explicit user action."""
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER)
     return _completion_check(po_id, db, apply_completion=True)
 
 
 @router.get("/order-tracking/{po_id}", response_model=OrderTrackingOut, dependencies=[Depends(get_current_user)])
-def get_order_tracking(po_id: int, db: Session = Depends(get_db)):
+def get_order_tracking(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, SUPPLY_CHAIN_MANAGER, VENDOR_ROLE)
     tracking = db.query(OrderTracking).filter(OrderTracking.purchase_order_id == po_id).first()
     if not tracking:
         raise HTTPException(status_code=404, detail="Order tracking record not found")
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    if not purchase_order:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, purchase_order, current_user)
     return tracking
 
 
 @router.patch("/order-tracking/{po_id}", response_model=OrderTrackingOut)
-def update_order_tracking(po_id: int, payload: OrderTrackingUpdate, db: Session = Depends(get_db)):
+def update_order_tracking(
+    po_id: int,
+    payload: OrderTrackingUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, VENDOR_ROLE)
     tracking = db.query(OrderTracking).filter(OrderTracking.purchase_order_id == po_id).first()
     if not tracking:
         raise HTTPException(status_code=404, detail="Order tracking record not found")
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    if not purchase_order:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, purchase_order, current_user)
     if payload.delivery_status and payload.delivery_status not in VALID_DELIVERY_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid delivery status")
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -557,17 +745,21 @@ def update_order_tracking(po_id: int, payload: OrderTrackingUpdate, db: Session 
                 tracking.delivery_status = "Delayed"
     db.commit()
     db.refresh(tracking)
-    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
-    if purchase_order:
-        refresh_after_procurement_update(purchase_order.vendor_id, db)
+    refresh_after_procurement_update(purchase_order.vendor_id, db)
     return tracking
 
 
 @router.post("/invoices", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED)
-def upload_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
+def upload_invoice(
+    payload: InvoiceCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, VENDOR_ROLE)
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == payload.purchase_order_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, po, current_user)
     invoice = Invoice(
         purchase_order_id=payload.purchase_order_id,
         invoice_number=payload.invoice_number,
@@ -586,8 +778,18 @@ def upload_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/invoices", response_model=list[InvoiceOut], dependencies=[Depends(get_current_user)])
-def list_invoices(purchase_order_id: int | None = None, payment_status: str | None = None, db: Session = Depends(get_db)):
+def list_invoices(
+    purchase_order_id: int | None = None,
+    payment_status: str | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    role = _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, FINANCE_OFFICER, VENDOR_ROLE)
     query = db.query(Invoice)
+    if role == VENDOR_ROLE:
+        own_vendor_id = _vendor_id_for_user(db, current_user)
+        po_ids = [row.id for row in db.query(PurchaseOrder).filter(PurchaseOrder.vendor_id == own_vendor_id).all()]
+        query = query.filter(Invoice.purchase_order_id.in_(po_ids))
     if purchase_order_id:
         query = query.filter(Invoice.purchase_order_id == purchase_order_id)
     if payment_status:
@@ -596,15 +798,30 @@ def list_invoices(purchase_order_id: int | None = None, payment_status: str | No
 
 
 @router.get("/invoices/{invoice_id}", response_model=InvoiceOut, dependencies=[Depends(get_current_user)])
-def get_invoice(invoice_id: int, db: Session = Depends(get_db)):
+def get_invoice(
+    invoice_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, PROCUREMENT_MANAGER, FINANCE_OFFICER, VENDOR_ROLE)
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if not purchase_order:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, purchase_order, current_user)
     return invoice
 
 
 @router.patch("/invoices/{invoice_id}/verify", response_model=InvoiceOut)
-def verify_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = Depends(get_db)):
+def verify_invoice(
+    invoice_id: int,
+    payload: InvoiceVerifyAction,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, FINANCE_OFFICER)
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
@@ -620,7 +837,13 @@ def verify_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
 
 
 @router.patch("/invoices/{invoice_id}/reject", response_model=InvoiceOut)
-def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = Depends(get_db)):
+def reject_invoice(
+    invoice_id: int,
+    payload: InvoiceVerifyAction,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, FINANCE_OFFICER)
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
@@ -636,7 +859,13 @@ def reject_invoice(invoice_id: int, payload: InvoiceVerifyAction, db: Session = 
 
 
 @router.patch("/invoices/{invoice_id}/payment-status", response_model=InvoiceOut)
-def update_payment_status(invoice_id: int, payload: PaymentStatusUpdate, db: Session = Depends(get_db)):
+def update_payment_status(
+    invoice_id: int,
+    payload: PaymentStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_procurement_role(current_user, ADMINISTRATOR, FINANCE_OFFICER)
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")

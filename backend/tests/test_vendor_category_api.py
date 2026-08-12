@@ -1,7 +1,15 @@
 import pytest
+from fastapi.testclient import TestClient
 from fastapi import HTTPException
+from types import SimpleNamespace
 
+from app.api.auth import get_current_user
 from app.api.vendors import create_vendor, list_vendor_categories, update_vendor
+from app.core.database import get_db
+from app.core.security import create_access_token
+from app.main import app
+from app.models.user import User
+from app.models.vendor import Vendor
 from app.schemas.vendor import VendorCreate, VendorUpdate
 
 
@@ -91,3 +99,68 @@ def test_update_vendor_category_label_updates_category_id():
 def test_category_list_returns_id_and_name():
     categories = list_vendor_categories(Db())
     assert [(category.id, category.name) for category in categories] == [(7, "IT Vendors")]
+
+
+class AccessQuery(Query):
+    """Small SQLAlchemy-query double for authenticated vendor route checks."""
+
+
+class AccessDb:
+    def __init__(self):
+        self.vendor_a = SimpleNamespace(id=1, email="vendor-a@example.test")
+        self.vendor_b = SimpleNamespace(id=2, email="vendor-b@example.test")
+        self.user_a = SimpleNamespace(
+            id=101,
+            email="vendor-a@example.test",
+            role="Vendor",
+            is_active=True,
+        )
+
+    def query(self, model):
+        if model is User:
+            return AccessQuery([self.user_a])
+        if model is Vendor:
+            return AccessQuery([self.vendor_a, self.vendor_b])
+        return AccessQuery([])
+
+
+def test_vendor_a_token_cannot_read_vendor_b_detail_or_documents():
+    """A valid Vendor JWT must not grant record-level access to another vendor."""
+    db = AccessDb()
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        token = create_access_token({"sub": db.user_a.email, "role": "Vendor", "user_id": db.user_a.id})
+        headers = {"Authorization": f"Bearer {token}"}
+        with TestClient(app) as client:
+            detail = client.get("/vendors/2", headers=headers)
+            documents = client.get("/vendors/2/documents", headers=headers)
+
+        assert detail.status_code == 403, detail.text
+        assert documents.status_code == 403, documents.text
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize(
+    ("filename", "contents", "expected_status"),
+    [
+        ("not-allowed.exe", b"x", 415),
+        ("too-large.pdf", b"x" * (10 * 1024 * 1024 + 1), 413),
+    ],
+    ids=["disallowed_type", "oversized_file"],
+)
+def test_vendor_document_upload_enforces_type_and_size_limits(filename, contents, expected_status):
+    db = AccessDb()
+    admin = SimpleNamespace(id=1, email="admin@example.test", role="Administrator", is_active=True)
+    app.dependency_overrides[get_current_user] = lambda: admin
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/vendors/1/documents",
+                data={"document_type": "Supporting document"},
+                files={"file": (filename, contents, "application/octet-stream")},
+            )
+        assert response.status_code == expected_status, response.text
+    finally:
+        app.dependency_overrides.clear()

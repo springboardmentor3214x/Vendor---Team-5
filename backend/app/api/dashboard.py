@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, normalize_user_role
 from app.core.database import get_db
 from app.models.user import User
 from app.models.vendor import Vendor
@@ -72,16 +72,19 @@ def get_vendor_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Personalized Vendor Dashboard metrics (scoped to logged in vendor or requested vendor ID)."""
-    target_vendor_id = vendor_id
-    if not target_vendor_id:
-        # Resolve vendor linked to current user
+    """Personalized Vendor Dashboard metrics scoped to a real linked vendor."""
+    role = normalize_user_role(current_user)
+    if role == "Vendor":
         vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
-        if vendor:
-            target_vendor_id = vendor.id
-        else:
-            first_vendor = db.query(Vendor).first()
-            target_vendor_id = first_vendor.id if first_vendor else 1
+        if not vendor:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No vendor record is linked to this user")
+        if vendor_id is not None and vendor_id != vendor.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this vendor dashboard")
+        target_vendor_id = vendor.id
+    else:
+        if vendor_id is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="vendorId is required for a non-vendor dashboard request")
+        target_vendor_id = vendor_id
 
     return get_personalized_vendor_dashboard(
         db=db,

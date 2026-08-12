@@ -32,7 +32,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 ALLOWED_ROLES = {
     "Administrator", "Procurement Manager", "Supply Chain Manager",
-    "Vendor", "Finance Officer", "Auditor",
+    "Vendor", "Finance Officer", "Auditor", "Department User",
 }
 
 
@@ -84,8 +84,12 @@ FRONTEND_ROLE_POLICIES: dict[str, tuple[str, ...]] = {
     "/dashboard/cost-analysis": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
     "/dashboard/charts": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
     "/dashboard": ALLOWED_ROLES,
-    "/procurement/invoices": ("Administrator", "Procurement Manager", "Finance Officer"),
-    "/procurement": ("Administrator", "Procurement Manager", "Supply Chain Manager"),
+    # Endpoint-level checks in procurement.py enforce the finer workflow rules.
+    # This module-level policy only controls authenticated entry to the router.
+    "/procurement/invoices": ("Administrator", "Procurement Manager", "Finance Officer", "Vendor"),
+    "/procurement/purchase-orders": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor"),
+    "/procurement/order-tracking": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor"),
+    "/procurement": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Department User"),
     "/performance": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
     "/reliability": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
     "/reports": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Finance Officer", "Auditor"),
@@ -159,6 +163,7 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
         "Vendor": "/dashboard/vendor",
         "Finance Officer": "/dashboard/finance",
         "Auditor": "/dashboard/auditor",
+        "Department User": "/dashboard",
     }
     return {
         "access_token": access_token,

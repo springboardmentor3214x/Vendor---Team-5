@@ -33,7 +33,10 @@ from app.models.procurement_approval import ProcurementApproval
 from app.models.order_tracking import OrderTracking
 from app.models.procurement_status_history import ProcurementStatusHistory
 from app.models.vendor_reliability_score import VendorReliabilityScore
+from app.models.reliability import VendorReliability, PerformanceTrend
 from app.models.reliability_history import ReliabilityHistory
 from app.models.procurement_risk_level import ProcurementRiskLevel
 from app.models.procurement_recommendation import ProcurementRecommendation
 from app.models.supplier_reliability_ranking import SupplierReliabilityRanking
+from app.models.message import Message, RelatedEntityType
+

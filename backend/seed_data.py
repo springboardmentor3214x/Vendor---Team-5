@@ -2,7 +2,6 @@ from app.core.database import SessionLocal
 from app.models.role import Role
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
-from app.models.vendor_contact import VendorContact
 from app.models.user import User
 from app.models.procurement_request import ProcurementRequest
 from app.models.purchase_order import PurchaseOrder
@@ -24,12 +23,9 @@ from app.models.contract import Contract
 from app.models.contract_renewal import ContractRenewal
 from app.models.certification import Certification
 from app.models.compliance import ComplianceRecord
-from app.models.discussion import Discussion
-from app.models.discussion_participant import DiscussionParticipant
-from app.models.communication_file import CommunicationFile
-from app.models.activity_log import ActivityLog
-from app.models.notification import Notification
+from app.models.message import Message, RelatedEntityType
 from datetime import datetime, timedelta
+
 
 db = SessionLocal()
 
@@ -95,14 +91,12 @@ else:
     print("Sample vendor already exists.")
 
 # Seed one sample admin user
-from app.core.security import get_password_hash
-
 sample_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
 if not sample_user:
     sample_user = User(
         full_name="Admin User",
         email="admin@vendoriq.com",
-        hashed_password=get_password_hash("Password123!"),
+        hashed_password="placeholder_hash",  # Pranjali/auth team will replace with real bcrypt hash
         role="Administrator",
         is_active=True,
     )
@@ -110,9 +104,7 @@ if not sample_user:
     db.commit()
     print("Seeded 1 sample admin user.")
 else:
-    sample_user.hashed_password = get_password_hash("Password123!")
-    db.commit()
-    print("Sample user password updated.")
+    print("Sample user already exists.")
 
 # Seed one additional vendor contact
 existing_contact = db.query(VendorContact).filter(VendorContact.vendor_id == sample_vendor.id).first()
@@ -169,6 +161,7 @@ if not existing_request:
         request_number="REQ-2026-001",
         title="Monthly Steel Procurement",
         department="Production",
+        project_name="Alpha Expansion",
         item_description="Steel rods - 500 units",
         product_name="Grade 50 Steel Rods",
         product_category="Raw Materials",
@@ -253,6 +246,8 @@ if not existing_po:
         po_status="Delivered",
         created_by=sample_user.id,
         approved_by=sample_user.id,
+        assigned_procurement_manager_id=sample_user.id,
+        project_name="Alpha Expansion",
         po_date=datetime.utcnow() - timedelta(days=17)
     )
     db.add(purchase_order)
@@ -486,8 +481,8 @@ existing_rec = db.query(ProcurementRecommendation).filter(ProcurementRecommendat
 if not existing_rec:
     rec = ProcurementRecommendation(
         vendor_id=sample_vendor.id,
-        category_id=raw_material_category.id if raw_material_category else None,
-        recommendation_score=93.5,
+        reliability_score=93.5,
+        risk_level="Low",
         recommendation_status="Recommended",
         reason="Vendor shows high delivery rate, strong product quality, and verified compliance.",
     )
@@ -559,103 +554,106 @@ if not existing_compliance:
 else:
     print("Sample compliance record already exists.")
 
-# Seed Module 7 Discussion & Messages
-existing_disc = db.query(Discussion).filter(Discussion.title == "Steel Shipment Schedule Clarification").first()
-if not existing_disc:
-    admin_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
-    po = db.query(PurchaseOrder).first()
-    disc = Discussion(
-        title="Steel Shipment Schedule Clarification",
-        created_by_id=admin_user.id if admin_user else 1,
-        vendor_id=sample_vendor.id,
-        purchase_order_id=po.id if po else None,
-        status="OPEN"
+# Seed demo users for direct messaging
+pm_user = db.query(User).filter(User.email == "pm.manager@vendoriq.com").first()
+if not pm_user:
+    pm_user = User(
+        full_name="Priya Sharma",
+        email="pm.manager@vendoriq.com",
+        hashed_password="placeholder_hash",
+        role="Procurement Manager",
+        is_active=True,
     )
-    db.add(disc)
+    db.add(pm_user)
     db.commit()
 
-    disc_participant = DiscussionParticipant(
-        discussion_id=disc.id,
-        user_id=admin_user.id if admin_user else 1
+vendor_user = db.query(User).filter(User.email == "vendor.contact@samplesupplies.com").first()
+if not vendor_user:
+    vendor_user = User(
+        full_name="Ravi Kumar",
+        email="vendor.contact@samplesupplies.com",
+        hashed_password="placeholder_hash",
+        role="Vendor",
+        company_name="Sample Supplies Pvt Ltd",
+        is_active=True,
     )
-    db.add(disc_participant)
-
-    disc_msg = Communication(
-        sender_id=admin_user.id if admin_user else 1,
-        vendor_id=sample_vendor.id,
-        purchase_order_id=po.id if po else None,
-        discussion_id=disc.id,
-        subject="Steel Shipment Schedule Clarification",
-        message="Please provide updated delivery timeline for PO-2026-001.",
-        message_type="DISCUSSION"
-    )
-    db.add(disc_msg)
-
-    comm_file = CommunicationFile(
-        filename="Revised_Shipment_Schedule.pdf",
-        file_path="uploads/communication_files/Revised_Shipment_Schedule.pdf",
-        file_type="application/pdf",
-        file_size=102450,
-        uploaded_by_id=admin_user.id if admin_user else 1,
-        discussion_id=disc.id,
-        vendor_id=sample_vendor.id,
-        purchase_order_id=po.id if po else None
-    )
-    db.add(comm_file)
-
-    act_log = ActivityLog(
-        user_id=admin_user.id if admin_user else 1,
-        module="Communication",
-        action="DISCUSSION_CREATED",
-        description="Created discussion thread 'Steel Shipment Schedule Clarification'",
-        related_entity_type="PurchaseOrder",
-        related_entity_id=po.id if po else 1
-    )
-    db.add(act_log)
+    db.add(vendor_user)
     db.commit()
-    print("Seeded Module 7 communication discussion, file, and activity log.")
+
+admin_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
+
+# Seed sample direct messages for demo conversations
+existing_messages = db.query(Message).first()
+if not existing_messages:
+    demo_messages = [
+        Message(
+            sender_id=admin_user.id,
+            receiver_id=pm_user.id,
+            content="Hi Priya, please review the budget allocation for procurement request REQ-2026-001.",
+            related_entity_type=RelatedEntityType.PROCUREMENT_REQUEST,
+            related_entity_id=procurement_request.id,
+            is_read=True,
+            created_at=datetime.utcnow() - timedelta(hours=12),
+            read_at=datetime.utcnow() - timedelta(hours=11),
+        ),
+        Message(
+            sender_id=pm_user.id,
+            receiver_id=vendor_user.id,
+            content="Hello Ravi, could you confirm the expected dispatch timeline for Purchase Order PO-2026-001?",
+            related_entity_type=RelatedEntityType.PURCHASE_ORDER,
+            related_entity_id=purchase_order.id,
+            is_read=True,
+            created_at=datetime.utcnow() - timedelta(hours=8),
+            read_at=datetime.utcnow() - timedelta(hours=7),
+        ),
+        Message(
+            sender_id=vendor_user.id,
+            receiver_id=pm_user.id,
+            content="Hi Priya, the batch for PO-2026-001 has been dispatched and quality compliance certificate is attached.",
+            related_entity_type=RelatedEntityType.PURCHASE_ORDER,
+            related_entity_id=purchase_order.id,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(hours=4),
+            read_at=None,
+        ),
+        Message(
+            sender_id=admin_user.id,
+            receiver_id=vendor_user.id,
+            content="Ravi, please submit the renewed ISO certification documents for contract CON-2026-001 before month-end.",
+            related_entity_type=RelatedEntityType.CONTRACT,
+            related_entity_id=contract.id,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(hours=2),
+            read_at=None,
+        ),
+        Message(
+            sender_id=vendor_user.id,
+            receiver_id=admin_user.id,
+            content="Understood. We will upload the verified certificates by tomorrow.",
+            related_entity_type=RelatedEntityType.VENDOR,
+            related_entity_id=sample_vendor.id,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(minutes=30),
+            read_at=None,
+        ),
+        Message(
+            sender_id=pm_user.id,
+            receiver_id=admin_user.id,
+            content="Hi Admin, all pending vendor evaluations for Module 7 are up to date.",
+            related_entity_type=RelatedEntityType.NONE,
+            related_entity_id=None,
+            is_read=False,
+            created_at=datetime.utcnow() - timedelta(minutes=10),
+            read_at=None,
+        ),
+    ]
+    for msg in demo_messages:
+        db.add(msg)
+    db.commit()
+    print(f"Seeded {len(demo_messages)} sample direct messages.")
 else:
-    print("Module 7 discussion seed already exists.")
-
-# Team demo records: idempotent data for dashboards and cross-module testing.
-demo_vendors = [
-    ("Apex Industrial Components", "apex.industrial@example.com", "Equipment Vendors", 91.0, "Low Risk"),
-    ("Nimbus Cloud Systems", "nimbus.cloud@example.com", "IT Vendors", 86.5, "Low Risk"),
-    ("SwiftRoute Logistics", "swiftroute.logistics@example.com", "Logistics Partners", 72.0, "Medium Risk"),
-    ("Evergreen Facility Services", "evergreen.facilities@example.com", "Service Providers", 64.0, "High Risk"),
-    ("Northstar Packaging Solutions", "northstar.packaging@example.com", "Service Providers", 78.0, "Medium Risk"),
-]
-for index, (name, email, category_name, score, risk) in enumerate(demo_vendors, start=1):
-    vendor = db.query(Vendor).filter(Vendor.email == email).first()
-    if not vendor:
-        category = db.query(VendorCategory).filter(VendorCategory.name == category_name).first()
-        vendor = Vendor(company_name=name, category_id=category.id, contact_person_name=f"Demo Contact {index}", email=email, phone_number=f"9800000{index:03d}", city="Hyderabad", state="Telangana", country="India", vendor_status="Active", approval_status="Approved")
-        db.add(vendor); db.flush()
-    if not db.query(PerformanceRecord).filter(PerformanceRecord.vendor_id == vendor.id).first():
-        db.add(PerformanceRecord(vendor_id=vendor.id, total_completed_orders=3, on_time_delivery_rate=score, delayed_delivery_count=0 if score >= 85 else 1, average_quality_score=round(score / 20, 1), average_response_time=90.0, average_service_rating_score=round(score / 20, 1), overall_performance_score=score, performance_status="Excellent" if score >= 85 else "Good", notes="Shared demo data."))
-    if not db.query(VendorReliability).filter(VendorReliability.vendor_id == vendor.id).first():
-        db.add(VendorReliability(vendor_id=vendor.id, delivery_score=score, quality_score=score, communication_score=score, compliance_score=score, issue_resolution_score=score, reliability_score=score, risk_level=risk, recommendation="Shared demo evaluation."))
-    if not db.query(Notification).filter(Notification.vendor_id == vendor.id, Notification.title == "Vendor approved").first():
-        db.add(Notification(user_id=sample_user.id, vendor_id=vendor.id, title="Vendor approved", message=f"{name} is ready for evaluation.", type="VENDOR_APPROVAL", notification_type="VENDOR_APPROVAL", related_module="Vendor", related_record_id=vendor.id, link=f"/vendors/{vendor.id}"))
-db.commit()
-print("Seeded shared vendor performance, reliability, and notification demo data.")
-
-# Shared Module 6/7 records used by the compliance and communication demos.
-# These checks make the script safe to run repeatedly on every teammate's DB.
-for vendor_email, compliance_type, compliance_status, remarks in [
-    ("apex.industrial@example.com", "Safety Regulation", "Pending Verification", "Safety audit scheduled for this procurement cycle."),
-    ("nimbus.cloud@example.com", "ISO 9001", "Compliant", "Quality-management certificate verified."),
-]:
-    vendor = db.query(Vendor).filter(Vendor.email == vendor_email).first()
-    if vendor and not db.query(ComplianceRecord).filter(ComplianceRecord.vendor_id == vendor.id, ComplianceRecord.compliance_type == compliance_type).first():
-        db.add(ComplianceRecord(vendor_id=vendor.id, compliance_type=compliance_type, status=compliance_status, verified_by=sample_user.id, verification_date=datetime.utcnow(), remarks=remarks))
-
-apex_vendor = db.query(Vendor).filter(Vendor.email == "apex.industrial@example.com").first()
-if apex_vendor and not db.query(Communication).filter(Communication.subject == "Demo communication", Communication.vendor_id == apex_vendor.id).first():
-    db.add(Communication(sender_id=sample_user.id, vendor_id=apex_vendor.id, subject="Demo communication", message="Vendor reliability demonstration message.", message_type="DIRECT"))
-
-db.commit()
-print("Seeded shared compliance and communication demo records.")
+    print("Sample messages already exist.")
 
 db.close()
 print("Seeding complete.")
+

@@ -93,6 +93,19 @@ _STATUS_FIELD_BY_REPORT = {
     "contracts": "status",
 }
 
+# Only reports whose persisted rows have a meaningful numeric measure are
+# shaped as charts.  The other report types return a clear empty chart payload
+# instead of accepting a route and then failing with a 422 response.
+_REPORT_CHART_FIELDS: dict[str, tuple[str, str, str] | None] = {
+    "vendor-performance": ("vendor_id", "overall_performance_score", "bar"),
+    "procurement": ("department", "total_cost", "bar"),
+    "purchase-orders": ("vendor_name", "order_value", "bar"),
+    "contracts": ("status", "contract_value", "bar"),
+    "compliance": None,
+    "vendor-documents": None,
+    "executive-summary": None,
+}
+
 
 def _parse_iso_date(value: str | None, parameter_name: str) -> date | None:
     if value is None:
@@ -253,13 +266,13 @@ def list_reports(current_user: User = Depends(get_current_user)):
     _require_report_access(current_user)
     return {
         "items": [
-            {"key": "vendor-performance", "title": "Vendor Performance Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
-            {"key": "procurement", "title": "Procurement Summary Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
-            {"key": "purchase-orders", "title": "Purchase Order Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
-            {"key": "compliance", "title": "Compliance Status Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
-            {"key": "contracts", "title": "Contract Status Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
-            {"key": "executive-summary", "title": "Executive Summary Report", "formats": ["json", "pdf"], "status": "ready"},
-            {"key": "vendor-documents", "title": "Vendor Document Report", "formats": ["json", "csv", "pdf"], "status": "ready"},
+            {"key": "vendor-performance", "title": "Vendor Performance Report", "formats": ["json", "csv", "pdf", "excel"], "status": "ready"},
+            {"key": "procurement", "title": "Procurement Summary Report", "formats": ["json", "csv", "pdf", "excel"], "status": "ready"},
+            {"key": "purchase-orders", "title": "Purchase Order Report", "formats": ["json", "csv", "pdf", "excel"], "status": "ready"},
+            {"key": "compliance", "title": "Compliance Status Report", "formats": ["json", "csv", "pdf", "excel"], "status": "ready"},
+            {"key": "contracts", "title": "Contract Status Report", "formats": ["json", "csv", "pdf", "excel"], "status": "ready"},
+            {"key": "executive-summary", "title": "Executive Summary Report", "formats": ["json", "csv", "pdf", "excel"], "status": "ready"},
+            {"key": "vendor-documents", "title": "Vendor Document Report", "formats": ["json", "csv", "pdf", "excel"], "status": "ready"},
         ],
         "generated_at": datetime.utcnow()
     }
@@ -267,7 +280,7 @@ def list_reports(current_user: User = Depends(get_current_user)):
 
 @router.get("/vendor-performance")
 def get_vendor_performance_report_endpoint(
-    format: str = Query("json", description="json, csv, or pdf"),
+    format: str = Query("json", description="json, csv, pdf, or excel"),
     category_id: Optional[int] = Query(None, alias="categoryId"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -284,7 +297,7 @@ def get_vendor_performance_report_endpoint(
 
 @router.get("/procurement")
 def get_procurement_report_endpoint(
-    format: str = Query("json", description="json, csv, or pdf"),
+    format: str = Query("json", description="json, csv, pdf, or excel"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -299,7 +312,7 @@ def get_procurement_report_endpoint(
 
 @router.get("/purchase-orders")
 def get_purchase_order_report_endpoint(
-    format: str = Query("json", description="json, csv, or pdf"),
+    format: str = Query("json", description="json, csv, pdf, or excel"),
     vendor_id: Optional[int] = Query(None, alias="vendorId"),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -322,7 +335,7 @@ def get_purchase_order_report_endpoint(
 
 @router.get("/compliance")
 def get_compliance_report_endpoint(
-    format: str = Query("json", description="json, csv, or pdf"),
+    format: str = Query("json", description="json, csv, pdf, or excel"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -337,7 +350,7 @@ def get_compliance_report_endpoint(
 
 @router.get("/contracts")
 def get_contract_report_endpoint(
-    format: str = Query("json", description="json, csv, or pdf"),
+    format: str = Query("json", description="json, csv, pdf, or excel"),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -382,7 +395,7 @@ def get_executive_summary_report_endpoint(
 
 @router.get("/vendor-documents")
 def get_vendor_document_report_endpoint(
-    format: str = Query("json", description="json, csv, or pdf"),
+    format: str = Query("json", description="json, csv, pdf, or excel"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -420,10 +433,48 @@ def preview_report_endpoint(
     return {"report_type": report_key, "rows": rows, "total_rows": len(rows)}
 
 
+@router.get("/{report_key}/charts")
+def report_chart_data_endpoint(
+    report_key: str,
+    start_date: str | None = Query(None, alias="startDate"),
+    end_date: str | None = Query(None, alias="endDate"),
+    department: str | None = Query(None),
+    vendor_id: int | None = Query(None, alias="vendorId"),
+    category_id: int | None = Query(None, alias="categoryId"),
+    status_value: str | None = Query(None, alias="status"),
+    reliability_level: str | None = Query(None, alias="reliabilityLevel"),
+    sort_by: str | None = Query(None, alias="sortBy"),
+    sort_order: str = Query("asc", alias="sortOrder"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return chart-ready data for the same filtered report rows as preview."""
+    _require_report_access(current_user)
+    rows = _report_rows(
+        report_key, db, start_date=start_date, end_date=end_date, department=department,
+        vendor_id=vendor_id, category_id=category_id, status_value=status_value,
+        reliability_level=reliability_level, sort_by=sort_by, sort_order=sort_order,
+    )
+    fields = _REPORT_CHART_FIELDS.get(report_key)
+    if fields is None:
+        return {
+            "report_type": report_key,
+            "total_rows": len(rows),
+            "chart_data": {"chart_type": "none", "labels": [], "datasets": []},
+            "reason": "This report has no meaningful persisted numeric chart series.",
+        }
+    label_field, value_field, chart_type = fields
+    return {
+        "report_type": report_key,
+        "total_rows": len(rows),
+        "chart_data": report_service.shape_chart_data(rows, label_field, value_field, chart_type),
+    }
+
+
 @router.get("/{report_key}/export")
 def export_report_endpoint(
     report_key: str,
-    format: str = Query("csv", description="csv or pdf"),
+    format: str = Query("csv", description="csv, pdf, or excel"),
     start_date: str | None = Query(None, alias="startDate"),
     end_date: str | None = Query(None, alias="endDate"),
     department: str | None = Query(None),

@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AppRole, AuthService } from '../../core/services/auth.service';
+import { ConversationSummary, DirectMessageService } from '../../core/services/direct-message.service';
 import { environment } from '../../../environments/environment';
 
 interface DashboardView {
@@ -28,6 +29,7 @@ interface ChartResponse { monthlyExpensesChart:ChartSeries; vendorPerformanceTre
 export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly http = inject(HttpClient);
+  private readonly messages = inject(DirectMessageService);
 
   get view(): DashboardView {
     return this.views[this.authService.getUserRole() as AppRole] ?? this.views.Vendor;
@@ -40,27 +42,34 @@ export class DashboardComponent implements OnInit {
     { label: 'Active contracts', value: 0, icon: '📄', tone: 'info' }
   ]);
   readonly charts = signal<ChartResponse | null>(null);
+  readonly conversations = signal<ConversationSummary[]>([]);
+  readonly conversationError = signal('');
+
+  get isVendor(): boolean { return this.authService.getUserRole() === 'Vendor'; }
+  get canViewCharts(): boolean {
+    return ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Auditor'].includes(this.authService.getUserRole() ?? '');
+  }
 
   ngOnInit(): void {
-    if (this.authService.getUserRole() !== 'Administrator') return;
-
-    this.http.get<ChartResponse>(`${environment.apiUrl}/dashboard/charts`).subscribe({ next: charts => this.charts.set(charts) });
-
-    this.http.get<{ approvedVendors: number; totalProcurementRequests: number }>(`${environment.apiUrl}/dashboard/admin`)
-      .subscribe({
-        next: (summary) => {
-          this.kpis.update((kpis) => kpis.map((kpi, index) => {
-            if (index === 0) return { ...kpi, value: summary.approvedVendors };
-            if (index === 1) return { ...kpi, value: summary.totalProcurementRequests };
-            return kpi;
-          }));
-        }
+    const role = this.authService.getUserRole();
+    if (this.canViewCharts) {
+      this.http.get<ChartResponse>(`${environment.apiUrl}/dashboard/charts`).subscribe({
+        next: charts => this.charts.set(charts), error: () => this.charts.set(null)
       });
-    this.http.get<{ status: string }[]>(`${environment.apiUrl}/contracts/`)
-      .subscribe({ next: (contracts) => this.kpis.update((kpis) => kpis.map((kpi, index) =>
-        index === 3 ? { ...kpi, value: contracts.filter((contract) => contract.status === 'Active').length } : kpi
-      )) });
+    }
+    if (role === 'Vendor') {
+      this.messages.listConversations(5).subscribe({
+        next: conversations => this.conversations.set(conversations),
+        error: () => this.conversationError.set('Recent conversations could not be loaded.')
+      });
+    }
+    if (role === 'Administrator') { this.http.get<Record<string, number>>(`${environment.apiUrl}/dashboard/admin`).subscribe({ next: (data) => this.setKpis([{label:'Active vendors',value:data['approvedVendors'] ?? 0,icon:'👥',tone:'success'},{label:'Procurement requests',value:data['totalProcurementRequests'] ?? 0,icon:'📋',tone:'primary'},{label:'Purchase orders',value:data['totalPurchaseOrders'] ?? 0,icon:'🧾',tone:'warning'},{label:'Active users',value:data['activeUsers'] ?? 0,icon:'👤',tone:'info'}]) }); return; }
+    if (role === 'Procurement Manager' || role === 'Supply Chain Manager') { this.http.get<{procurementSummary?:Record<string,number>;deliverySummary?:Record<string,number>}>(`${environment.apiUrl}/dashboard/procurement`).subscribe({ next: (data) => { const s=data.procurementSummary ?? {}; const d=data.deliverySummary ?? {}; this.setKpis([{label:'Procurement requests',value:s['totalRequests'] ?? 0,icon:'📋',tone:'primary'},{label:'Pending approvals',value:s['pendingApprovals'] ?? 0,icon:'⏳',tone:'warning'},{label:'Active purchase orders',value:s['activePurchaseOrders'] ?? 0,icon:'📦',tone:'success'},{label:'Delayed deliveries',value:d['delayedDeliveries'] ?? 0,icon:'🚚',tone:'info'}]); } }); return; }
+    if (role === 'Vendor') { this.http.get<Record<string,number>>(`${environment.apiUrl}/dashboard/vendor`).subscribe({ next: (data) => this.setKpis([{label:'Reliability score',value:data['reliabilityScore'] ?? 0,icon:'⭐',tone:'success'},{label:'Active orders',value:data['activePurchaseOrders'] ?? 0,icon:'📦',tone:'primary'},{label:'Unread messages',value:data['unreadMessages'] ?? 0,icon:'💬',tone:'warning'},{label:'Active contracts',value:data['activeContracts'] ?? 0,icon:'📄',tone:'info'}]) }); return; }
+    this.http.get<{contracts?:Record<string,number>;compliance?:Record<string,number>;documents?:Record<string,number>;notifications?:Record<string,number>}>(`${environment.apiUrl}/dashboard`).subscribe({ next: (data) => this.setKpis([{label:'Active contracts',value:data.contracts?.['activeContracts'] ?? 0,icon:'📄',tone:'success'},{label:'Pending compliance',value:data.compliance?.['pendingCount'] ?? 0,icon:'✓',tone:'primary'},{label:'Documents',value:data.documents?.['totalDocuments'] ?? 0,icon:'📁',tone:'warning'},{label:'Unread alerts',value:data.notifications?.['unreadNotifications'] ?? 0,icon:'🔔',tone:'info'}]) });
   }
+
+  private setKpis(kpis: { label: string; value: number; icon: string; tone: string }[]): void { this.kpis.set(kpis.map((kpi) => ({ ...kpi, value: Number(kpi.value) || 0, }))); }
 
   maximum(data: number[]): number { return Math.max(...data, 1); }
   linePoints(data: number[]): string { const max=this.maximum(data); return data.map((value,index)=>`${index*(300/Math.max(data.length-1,1))},${120-(value/max)*120}`).join(' '); }

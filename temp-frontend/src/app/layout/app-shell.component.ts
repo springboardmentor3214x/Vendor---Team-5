@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService, UserProfile } from '../core/services/auth.service';
+import { Notification, NotificationService } from '../core/services/notification.service';
 
 interface NavItem {
   label: string;
@@ -17,9 +18,13 @@ interface NavItem {
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css'
 })
-export class AppShellComponent {
+export class AppShellComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly notificationService = inject(NotificationService);
+  readonly unreadNotifications = signal(0);
+  readonly recentNotifications = signal<Notification[]>([]);
+  readonly notificationOpen = signal(false);
 
   get currentUser(): UserProfile | null {
     return this.authService.getStoredUser();
@@ -73,7 +78,7 @@ export class AppShellComponent {
       label: 'Contract Repository',
       path: '/contracts',
       exact: true,
-      roles: ['Administrator', 'Procurement Manager', 'Auditor', 'Finance Officer']
+      roles: ['Administrator', 'Procurement Manager', 'Vendor', 'Auditor', 'Finance Officer']
     },
     {
       label: 'Compliance',
@@ -106,6 +111,18 @@ export class AppShellComponent {
       roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Vendor', 'Auditor']
     },
     {
+      label: 'Messages',
+      path: '/messages',
+      exact: false,
+      roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Vendor', 'Finance Officer', 'Auditor']
+    },
+    {
+      label: 'Analytics',
+      path: '/analytics',
+      exact: true,
+      roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Vendor', 'Finance Officer', 'Auditor']
+    },
+    {
       label: 'Reports',
       path: '/reports',
       exact: true,
@@ -134,8 +151,18 @@ export class AppShellComponent {
     return this.navItems.filter((item) => item.roles.includes(role));
   }
 
+  ngOnInit(): void { this.refreshNotifications(); }
+
+  toggleNotifications(event: MouseEvent): void { event.stopPropagation(); this.notificationOpen.update((open) => !open); if (this.notificationOpen()) this.refreshNotifications(); }
+  refreshNotifications(): void { this.notificationService.list().subscribe({ next: (result) => { this.recentNotifications.set(result.items.slice(0, 5)); this.unreadNotifications.set(result.unreadCount); }, error: () => { this.recentNotifications.set([]); this.unreadNotifications.set(0); } }); }
+  openNotification(item: Notification): void { const destination = item.link || this.modulePath(item.relatedModule); const finish = () => { this.notificationOpen.set(false); this.refreshNotifications(); if (destination) this.router.navigateByUrl(destination); }; if (!item.isRead) { this.notificationService.markRead(item.id).subscribe({ next: finish, error: finish }); } else { finish(); } }
+  openAllNotifications(): void { this.notificationOpen.set(false); this.router.navigateByUrl('/notifications'); }
+  @HostListener('document:click') closeNotifications(): void { this.notificationOpen.set(false); }
+
   logout(): void {
     this.authService.logout();
     this.router.navigateByUrl('/login');
   }
+
+  private modulePath(module: string | null): string | null { const value = (module || '').toLowerCase(); if (value.includes('contract')) return '/contracts'; if (value.includes('compliance')) return '/contracts/compliance'; if (value.includes('procurement')) return '/procurement'; if (value.includes('message')) return '/messages'; if (value.includes('performance')) return '/performance'; if (value.includes('reliability')) return '/reliability'; if (value.includes('vendor')) return '/vendors'; return null; }
 }

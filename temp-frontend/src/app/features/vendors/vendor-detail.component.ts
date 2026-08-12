@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import {
   VENDOR_APPROVER_ROLES,
@@ -10,6 +10,7 @@ import {
   VendorDocument,
   VendorService
 } from '../../core/services/vendor.service';
+import { DirectMessageService } from '../../core/services/direct-message.service';
 
 @Component({
   selector: 'app-vendor-detail',
@@ -42,7 +43,9 @@ export class VendorDetailComponent implements OnInit {
     private readonly fb: FormBuilder,
     private readonly vendorService: VendorService,
     private readonly authService: AuthService,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly router: Router,
+    private readonly messageService: DirectMessageService
   ) {
     this.remarksForm = this.fb.nonNullable.group({
       remarks: ['']
@@ -188,6 +191,23 @@ export class VendorDetailComponent implements OnInit {
           this.errorMessage.set(this.readError(err, 'Unable to upload document.'));
         }
       });
+  }
+
+  messageVendor(): void {
+    this.errorMessage.set('');
+    this.messageService.getContextContacts('vendor', this.vendorId).subscribe({
+      next: (contacts) => {
+        const contact = contacts[0];
+        if (!contact) {
+          this.errorMessage.set('No active user account is linked to this vendor, so a direct message cannot be started.');
+          return;
+        }
+        this.router.navigate(['/messages', contact.userId], {
+          queryParams: { relatedEntityType: 'vendor', relatedEntityId: this.vendorId }
+        });
+      },
+      error: (error) => this.errorMessage.set(this.readError(error, 'Unable to resolve the vendor message contact.'))
+    });
   }
 
   private loadDocuments(): void {

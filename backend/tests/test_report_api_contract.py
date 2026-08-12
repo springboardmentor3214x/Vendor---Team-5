@@ -80,9 +80,36 @@ def test_contract_expiry_window_filters_persisted_contract_report_rows(report_cl
     assert [row["contract_number"] for row in response.json()["rows"]] == ["CT-15"]
 
 
-def test_report_discovery_does_not_advertise_xlsx_when_csv_is_the_spreadsheet_export(report_client):
+def test_report_discovery_advertises_excel_when_generic_export_supports_it(report_client):
     response = report_client.get("/reports/")
 
     assert response.status_code == 200, response.text
     for item in response.json()["items"]:
-        assert "xlsx" not in item["formats"]
+        assert "excel" in item["formats"]
+
+
+def test_report_chart_endpoint_uses_the_same_filtered_rows(report_client, monkeypatch):
+    monkeypatch.setitem(
+        reports_api._REPORT_GENERATORS,
+        "vendor-performance",
+        lambda _db, _filters=None: [
+            {"vendor_id": 1, "risk_level": "Low", "overall_performance_score": 72},
+            {"vendor_id": 2, "risk_level": "High", "overall_performance_score": 91},
+        ],
+    )
+
+    response = report_client.get("/reports/vendor-performance/charts?reliabilityLevel=Low")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["chart_data"]["labels"] == ["1"]
+    assert response.json()["chart_data"]["datasets"][0]["data"] == [72.0]
+
+
+def test_report_chart_endpoint_returns_explicit_empty_data_when_not_meaningful(report_client, monkeypatch):
+    monkeypatch.setitem(reports_api._REPORT_GENERATORS, "executive-summary", lambda _db, _filters=None: {"total": 1})
+
+    response = report_client.get("/reports/executive-summary/charts")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["chart_data"]["chart_type"] == "none"
+    assert "reason" in response.json()

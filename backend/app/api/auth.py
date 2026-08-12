@@ -93,11 +93,16 @@ FRONTEND_ROLE_POLICIES: dict[str, tuple[str, ...]] = {
     "/performance": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
     "/reliability": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Auditor"),
     "/reports": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Finance Officer", "Auditor"),
-    "/contracts": ("Administrator", "Procurement Manager", "Auditor", "Finance Officer"),
+    # Contract endpoints scope Vendor reads to their own vendor record in
+    # contracts.py; mutation remains manager-only below.
+    "/contracts": ("Administrator", "Procurement Manager", "Vendor", "Auditor", "Finance Officer"),
     "/compliance": ("Administrator", "Procurement Manager", "Auditor"),
     "/certifications": ("Administrator", "Procurement Manager", "Auditor"),
     "/documents": ("Administrator", "Procurement Manager", "Auditor"),
-    "/notifications": ("Administrator", "Procurement Manager", "Auditor", "Finance Officer"),
+    # Notification reads are always scoped to the authenticated user in
+    # notifications.py, so every supported role may access their own inbox.
+    "/notifications": ALLOWED_ROLES,
+    "/messages": ALLOWED_ROLES,
     "/vendors": ("Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor"),
 }
 

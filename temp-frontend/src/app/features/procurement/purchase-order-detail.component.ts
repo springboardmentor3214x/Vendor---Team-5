@@ -1,19 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ProcurementService, PurchaseOrder } from '../../core/services/procurement.service';
+import { DirectMessageService, MessageContact } from '../../core/services/direct-message.service';
 
 type PoAction = 'issue' | 'deliver' | 'cancel';
 @Component({ selector: 'app-purchase-order-detail', standalone: true, imports: [CommonModule, RouterLink], templateUrl: './purchase-order-detail.component.html', styleUrl: './purchase-order-detail.component.css' })
 export class PurchaseOrderDetailComponent {
-  private readonly route = inject(ActivatedRoute); private readonly procurementService = inject(ProcurementService); private readonly authService = inject(AuthService);
+  private readonly route = inject(ActivatedRoute); private readonly router = inject(Router); private readonly procurementService = inject(ProcurementService); private readonly authService = inject(AuthService); private readonly messages = inject(DirectMessageService);
   readonly order = signal<PurchaseOrder | null>(null); readonly loading = signal(true); readonly actionLoading = signal<PoAction | null>(null); readonly errorMessage = signal(''); readonly successMessage = signal('');
   ngOnInit(): void { const success = history.state?.successMessage; if (typeof success === 'string') this.successMessage.set(success); const poId = Number(this.route.snapshot.paramMap.get('id')); if (!Number.isInteger(poId) || poId <= 0) { this.errorMessage.set('Invalid purchase order id.'); this.loading.set(false); return; } this.load(poId); }
   get canManage(): boolean { return ['Administrator', 'Procurement Manager'].includes(this.authService.getStoredUser()?.role ?? ''); }
   statusClass(status: string | null): string { return `status-${(status ?? 'unknown').toLowerCase().replace(/\s+/g, '-')}`; }
   action(action: PoAction): void { const order = this.order(); if (!order || !this.canManage || this.actionLoading()) return; if (action === 'cancel' && !window.confirm('Cancel this purchase order? This cannot be reversed from the current frontend workflow.')) return; this.errorMessage.set(''); this.successMessage.set(''); this.actionLoading.set(action); const call = action === 'issue' ? this.procurementService.issuePurchaseOrder(order.id) : action === 'deliver' ? this.procurementService.deliverPurchaseOrder(order.id) : this.procurementService.cancelPurchaseOrder(order.id); call.subscribe({ next: (updated) => { this.order.set(updated); this.successMessage.set(`Purchase order ${action === 'deliver' ? 'marked as delivered' : `${action}d`} successfully.`); this.actionLoading.set(null); }, error: (error: unknown) => { this.errorMessage.set(this.readError(error)); this.actionLoading.set(null); } }); }
+  messageContact(kind: 'vendor' | 'manager'): void { const order=this.order(); if(!order)return; this.errorMessage.set(''); this.messages.getContextContacts('purchase_order', order.id).subscribe({next:(contacts)=>{const contact=this.findContact(contacts,kind);if(!contact){this.errorMessage.set(kind==='vendor'?'No active user account is linked to this order vendor.':'No assigned procurement-manager account is available for this order.');return;}this.router.navigate(['/messages',contact.userId],{queryParams:{relatedEntityType:'purchase_order',relatedEntityId:order.id}});},error:(error)=>this.errorMessage.set(this.readError(error))}); }
   retry(): void { const poId = Number(this.route.snapshot.paramMap.get('id')); if (Number.isInteger(poId) && poId > 0) this.load(poId); }
   private load(poId: number): void { this.loading.set(true); this.errorMessage.set(''); this.procurementService.getPurchaseOrder(poId).subscribe({ next: (order) => { this.order.set(order); this.loading.set(false); }, error: (error: unknown) => { this.errorMessage.set(this.readError(error)); this.loading.set(false); } }); }
+  private findContact(contacts: MessageContact[], kind: 'vendor' | 'manager'): MessageContact | undefined { return kind === 'vendor' ? contacts.find((contact) => contact.role === 'Vendor') : contacts.find((contact) => contact.role === 'Procurement Manager') ?? contacts.find((contact) => contact.role !== 'Vendor'); }
   private readError(error: unknown): string { const detail = typeof error === 'object' && error !== null && 'error' in error ? (error as { error?: { detail?: unknown } }).error?.detail : null; return typeof detail === 'string' ? detail : 'Unable to update this purchase order. Please try again.'; }
 }

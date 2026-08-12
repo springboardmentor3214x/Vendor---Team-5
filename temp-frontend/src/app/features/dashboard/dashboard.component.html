@@ -29,6 +29,13 @@
     </div>
   </section>
 
+  <section class="panel conversation-panel" *ngIf="isVendor">
+    <div class="panel-heading"><span class="panel-icon" aria-hidden="true">Messages</span><h4 class="panel-title">Recent conversations</h4><a class="panel-link" routerLink="/messages">Open messages</a></div>
+    <p *ngIf="conversationError()" class="text-muted mb-2">{{ conversationError() }}</p>
+    <p *ngIf="!conversationError() && !conversations().length" class="text-muted mb-0">No direct messages yet.</p>
+    <a *ngFor="let conversation of conversations()" class="conversation-preview" [routerLink]="['/messages', conversation.counterpartUserId]" [queryParams]="conversation.relatedEntityType && conversation.relatedEntityId ? { relatedEntityType: conversation.relatedEntityType, relatedEntityId: conversation.relatedEntityId } : {}"><span><strong>{{ conversation.counterpartName || conversation.counterpartEmail }}</strong><small>{{ conversation.lastMessageContent }}</small></span><b *ngIf="conversation.unreadCount" class="unread-badge">{{ conversation.unreadCount }}</b></a>
+  </section>
+
   <div class="section-heading">
     <div>
       <span class="eyebrow">Your workspace</span>

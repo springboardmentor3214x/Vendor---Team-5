@@ -40,6 +40,16 @@
         <p *ngIf="currentUser as user">{{ user.role }} workspace</p>
         <p *ngIf="!currentUser">Authentication, roles, and vendor operations.</p>
       </div>
+      <div class="notification-menu" (click)="$event.stopPropagation()" *ngIf="currentUser">
+        <button type="button" class="bell-button" (click)="toggleNotifications($event)" aria-label="Open notifications" [attr.aria-expanded]="notificationOpen()">
+          <span aria-hidden="true">🔔</span><span class="notification-badge" *ngIf="unreadNotifications()">{{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}</span>
+        </button>
+        <section class="notification-dropdown" *ngIf="notificationOpen()" aria-label="Recent notifications">
+          <header><strong>Notifications</strong><a routerLink="/notifications" (click)="notificationOpen.set(false)">View all</a></header>
+          <button class="recent-notification" type="button" *ngFor="let item of recentNotifications" (click)="openNotification(item)" [class.unread]="!item.isRead"><span class="notification-dot" [class]="'notification-dot ' + item.priority.toLowerCase()"></span><span><b>{{ item.title }}</b><small>{{ item.message }}</small></span></button>
+          <p class="empty-notification" *ngIf="!recentNotifications().length">No notifications yet.</p>
+        </section>
+      </div>
     </header>
 
     <main class="page-body">

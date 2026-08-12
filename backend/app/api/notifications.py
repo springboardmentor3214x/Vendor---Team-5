@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, require_roles
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.notification import (
@@ -114,7 +114,7 @@ def mark_all_notifications_read(
 @router.post("/trigger-background-checks", response_model=BackgroundCheckResultOut)
 def trigger_background_checks_endpoint(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("Administrator", "Procurement Manager", "Supply Chain Manager")),
 ):
     """Trigger background check scanners for contract expiry, delivery delays, and compliance alerts."""
     return notification_service.execute_all_background_notification_checks(db=db)

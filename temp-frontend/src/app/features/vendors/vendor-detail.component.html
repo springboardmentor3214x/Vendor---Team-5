@@ -12,6 +12,7 @@
       <a class="btn btn-outline-primary" *ngIf="canViewPerformance && vendor() as current" [routerLink]="['/performance/vendors', current.id]">
         View performance
       </a>
+      <button class="btn btn-outline-primary" type="button" *ngIf="vendor()" (click)="messageVendor()">Message vendor</button>
     </div>
   </div>
 

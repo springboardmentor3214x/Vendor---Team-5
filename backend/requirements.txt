@@ -11,3 +11,4 @@ passlib[bcrypt]
 python-multipart
 openpyxl
 reportlab
+APScheduler>=3.10,<4

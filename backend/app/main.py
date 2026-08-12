@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,12 +19,29 @@ from app.api import (
     documents,
 )
 from app.core.config import settings
+from app.core.notification_scheduler import (
+    create_notification_scheduler,
+    stop_notification_scheduler,
+)
 from app.api.auth import require_frontend_route_access
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start and stop Module 9's recurring notification scanner safely."""
+    scheduler = create_notification_scheduler()
+    app.state.notification_scheduler = scheduler
+    try:
+        yield
+    finally:
+        stop_notification_scheduler(scheduler)
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.API_VERSION,
     description="Vendor Reliability Intelligence Platform API",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

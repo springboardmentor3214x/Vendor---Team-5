@@ -69,11 +69,11 @@ def test_mark_all_user_notifications_as_read():
 
 def test_email_and_sms_notification_helpers():
     email_res = send_email_notification("user@vendoriq.com", "Test Subject", "Test Body")
-    assert email_res["status"] == "sent"
+    assert email_res["status"] == "not_configured"
     assert email_res["channel"] == "email"
 
     sms_res = send_sms_notification("+919876543210", "Test SMS")
-    assert sms_res["status"] == "sent"
+    assert sms_res["status"] == "not_configured"
     assert sms_res["channel"] == "sms"
 
 

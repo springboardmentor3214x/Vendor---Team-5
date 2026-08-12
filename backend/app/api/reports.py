@@ -34,15 +34,22 @@ def _require_report_access(current_user: User) -> None:
 
 def _export_response(report_type: str, rows: list[dict], format: str = "csv"):
     fmt = format.lower()
-    if fmt not in {"csv", "pdf"}:
-        raise HTTPException(status_code=400, detail="Only csv and pdf export formats are currently supported")
-    filename = f"{report_type}_report.{'pdf' if fmt == 'pdf' else 'csv'}"
+
+    if fmt not in {"csv", "pdf", "excel"}:
+        raise HTTPException(status_code=400, detail="Only csv, pdf, and excel export formats are currently supported")
+    filename = f"{report_type}_report.{'pdf' if fmt == 'pdf' else 'xlsx' if fmt == 'excel' else 'csv'}"
 
     if fmt == "pdf":
         pdf_bytes = report_service.render_pdf_report(report_type.replace("-", " ").title(), rows)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    if fmt == "excel":
+        return Response(
+            content=report_service.render_excel_report(rows, report_type.replace("_", " ").title()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
     else:

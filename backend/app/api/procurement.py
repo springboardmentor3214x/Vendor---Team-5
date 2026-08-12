@@ -587,6 +587,7 @@ def issue_purchase_order(
 
     db.commit()
     db.refresh(po)
+    refresh_after_procurement_update(po.vendor_id, db)
     return po
 
 

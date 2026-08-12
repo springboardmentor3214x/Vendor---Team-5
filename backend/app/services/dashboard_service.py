@@ -136,10 +136,11 @@ def get_procurement_manager_dashboard_summary(
     # Purchase Orders
     po_query = db.query(PurchaseOrder)
     all_pos = po_query.all()
-    active_pos = sum(1 for po in all_pos if getattr(po, "status", "").lower() in ["active", "issued", "in_progress", "pending"])
-    completed_orders = sum(1 for po in all_pos if getattr(po, "status", "").lower() in ["completed", "fulfilled", "delivered"])
-    cancelled_orders = sum(1 for po in all_pos if getattr(po, "status", "").lower() in ["cancelled"])
-    weekly_completed = sum(1 for po in all_pos if getattr(po, "status", "").lower() in ["completed", "fulfilled", "delivered"] and po.created_at and po.created_at >= week_ago)
+    _po_state = lambda po: str(getattr(po, "po_status", None) or getattr(po, "status", "")).lower()
+    active_pos = sum(1 for po in all_pos if _po_state(po) in ["active", "issued", "in_progress", "pending"])
+    completed_orders = sum(1 for po in all_pos if _po_state(po) in ["completed", "fulfilled", "delivered"])
+    cancelled_orders = sum(1 for po in all_pos if _po_state(po) in ["cancelled"])
+    weekly_completed = sum(1 for po in all_pos if _po_state(po) in ["completed", "fulfilled", "delivered"] and po.created_at and po.created_at >= week_ago)
 
     total_cost = sum(float(getattr(po, "total_amount", 0) or getattr(po, "amount", 0) or 0) for po in all_pos)
     monthly_spending = sum(
@@ -147,6 +148,24 @@ def get_procurement_manager_dashboard_summary(
         for po in all_pos
         if po.created_at and po.created_at >= month_start
     )
+
+    # These records are consumed by the manager dashboard as well as exports.
+    # Resolve the relationship from the persisted FK when it was not eagerly
+    # loaded, rather than displaying a made-up manager name.
+    users_by_id = {getattr(user, "id", None): user for user in _rows(db, User)}
+    active_po_details = []
+    for po in all_pos:
+        if getattr(po, "po_status", getattr(po, "status", "")).lower() not in {"active", "issued", "in_progress", "pending"}:
+            continue
+        manager = getattr(po, "assigned_procurement_manager", None) or users_by_id.get(
+            getattr(po, "assigned_procurement_manager_id", None)
+        )
+        active_po_details.append({
+            "purchase_order_id": getattr(po, "id", None),
+            "po_number": getattr(po, "po_number", None),
+            "assigned_manager_id": getattr(po, "assigned_procurement_manager_id", None),
+            "assigned_manager_name": getattr(manager, "full_name", None),
+        })
 
     # Delivery Performance Summary
     dp_records = db.query(DeliveryPerformance).all()
@@ -190,6 +209,7 @@ def get_procurement_manager_dashboard_summary(
             "today_requests": today_requests,
             "weekly_completed_orders": weekly_completed,
             "monthly_spending": monthly_spending,
+            "active_purchase_order_details": active_po_details,
         },
         "delivery_summary": {
             "on_time_deliveries": on_time or 12,
@@ -300,7 +320,9 @@ def get_procurement_cost_analysis(db: Any) -> Dict[str, Any]:
     dept_spending: Dict[str, float] = {}
     cat_spending: Dict[str, float] = {}
     monthly_trend: Dict[str, float] = {}
+    project_spending: Dict[str, float] = {}
     total = 0.0
+    requests_by_id = {getattr(request, "id", None): request for request in _rows(db, ProcurementRequest)}
 
     for po in pos:
         # PurchaseOrder persists its financial amount as total_cost.  Keep the
@@ -317,23 +339,22 @@ def get_procurement_cost_analysis(db: Any) -> Dict[str, Any]:
                 cat_name = cat.name
 
         cat_spending[cat_name] = cat_spending.get(cat_name, 0.0) + amt
-        dept_spending["Procurement"] = dept_spending.get("Procurement", 0.0) + amt
+        request = requests_by_id.get(getattr(po, "procurement_request_id", None))
+        department = getattr(request, "department", None) or "Unassigned"
+        project = (getattr(po, "project_name", None) or getattr(request, "project_name", None)
+                   or "Unassigned")
+        dept_spending[department] = dept_spending.get(department, 0.0) + amt
+        project_spending[project] = project_spending.get(project, 0.0) + amt
 
         month_str = po.created_at.strftime("%Y-%m") if po.created_at else "2026-08"
         monthly_trend[month_str] = monthly_trend.get(month_str, 0.0) + amt
 
-    if not dept_spending:
-        dept_spending = {"IT": 450000.0, "Operations": 850000.0, "Logistics": 300000.0}
-    if not cat_spending:
-        cat_spending = {"Raw Material Suppliers": 900000.0, "Equipment Vendors": 400000.0, "IT Vendors": 300000.0}
-    if not monthly_trend:
-        monthly_trend = {"2026-05": 300000.0, "2026-06": 450000.0, "2026-07": 550000.0, "2026-08": 300000.0}
-
     return {
         "spending_by_department": dept_spending,
         "spending_by_category": cat_spending,
+        "spending_by_project": project_spending,
         "monthly_spending_trend": monthly_trend,
-        "total_expenses": total or 1600000.0,
+        "total_expenses": total,
     }
 
 
@@ -358,19 +379,24 @@ def get_chart_datasets_summary(db: Any) -> Dict[str, Any]:
         ]
     }
 
-    # 2. Line Chart: Vendor Performance Trends
+    # 2. Line Chart: persisted vendor reliability history (never sample data).
+    reliability_rows = _rows(db, VendorReliabilityScore)
+    vendors = {getattr(v, "id", None): v for v in _rows(db, Vendor)}
+    trend_by_vendor: Dict[str, list[tuple[str, float]]] = {}
+    for score in reliability_rows:
+        vendor = vendors.get(getattr(score, "vendor_id", None))
+        name = getattr(vendor, "company_name", None) or f"Vendor {getattr(score, 'vendor_id', '')}"
+        timestamp = getattr(score, "updated_at", None) or getattr(score, "created_at", None)
+        label = timestamp.strftime("%Y-%m") if timestamp else "Current"
+        trend_by_vendor.setdefault(name, []).append((label, float(getattr(score, "overall_score", 0) or 0)))
+    trend_labels = sorted({label for values in trend_by_vendor.values() for label, _ in values})
     line_chart = {
         "chart_type": "line",
         "title": "Vendor Reliability Score Trends",
-        "labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
-        "datasets": [
-            {
-                "label": "Sample Supplies Pvt Ltd",
-                "data": [82.0, 84.5, 86.0, 85.0, 89.0, 91.0, 92.5, 94.0],
-                "borderColor": "rgba(75, 192, 192, 1)",
-                "fill": False
-            }
-        ]
+        "labels": trend_labels,
+        "datasets": [{"label": name, "data": [dict(values).get(label) for label in trend_labels],
+                      "borderColor": "rgba(75, 192, 192, 1)", "fill": False}
+                     for name, values in trend_by_vendor.items()]
     }
 
     # 3. Pie Chart: Procurement Category Distribution

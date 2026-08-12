@@ -58,7 +58,7 @@ def test_get_procurement_cost_analysis():
     assert "spending_by_department" in res
     assert "spending_by_category" in res
     assert "monthly_spending_trend" in res
-    assert res["total_expenses"] > 0
+    assert res["total_expenses"] == 0
 
 
 def test_get_chart_datasets_summary():

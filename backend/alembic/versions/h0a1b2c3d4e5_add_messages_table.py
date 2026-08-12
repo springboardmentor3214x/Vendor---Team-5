@@ -1,9 +1,7 @@
 """add dedicated messages table with composite indexes
-
 Revision ID: h0a1b2c3d4e5
-Revises: b2c3d4e5f6a7, g9b0c1d2e3f4
+Revises: g9b0c1d2e3f4
 Create Date: 2026-08-12 11:30:00.000000
-
 """
 from alembic import op
 import sqlalchemy as sa
@@ -11,10 +9,9 @@ from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision = 'h0a1b2c3d4e5'
-down_revision = ('b2c3d4e5f6a7', 'g9b0c1d2e3f4')
+down_revision = 'g9b0c1d2e3f4'
 branch_labels = None
 depends_on = None
-
 
 def upgrade():
     bind = op.get_bind()

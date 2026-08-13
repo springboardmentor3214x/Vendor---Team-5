@@ -28,7 +28,7 @@ class ProcurementRequest(Base):
     request_date = Column(DateTime, default=datetime.utcnow)
 
     approval_status = Column(String(50), default="Pending", index=True)
-    # Allowed: Pending, Approved, Rejected, Cancelled, Sent Back
+    # Allowed: Draft, Pending, Approved, Rejected, Cancelled, Sent Back
     approval_remarks = Column(String(1000), nullable=True)
 
     approved_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)

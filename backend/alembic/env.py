@@ -48,7 +48,10 @@ from app.models.reliability_history import ReliabilityHistory
 from app.models.procurement_risk_level import ProcurementRiskLevel
 from app.models.procurement_recommendation import ProcurementRecommendation
 from app.models.supplier_reliability_ranking import SupplierReliabilityRanking
-
+from app.models.message import Message
+from app.models.procurement_request_document import ProcurementRequestDocument
+from app.models.invoice_document import InvoiceDocument
+from app.models.vendor_issue import VendorIssue
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

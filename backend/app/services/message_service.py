@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.models.message import Message, RelatedEntityType
 from app.models.user import User
+from app.services.notification_service import create_notification
 
 
 def send_message(
@@ -36,6 +37,21 @@ def send_message(
     db.add(message)
     db.commit()
     db.refresh(message)
+    if sender_id != receiver_id:
+        # A direct message is a real receiver-facing event.  Its persisted
+        # message id makes the notification distinct without inventing a
+        # recipient or conflating it with procurement communications.
+        create_notification(
+            db=db,
+            user_id=receiver_id,
+            title="New direct message",
+            message="You received a new direct message.",
+            notification_type="INFO",
+            related_module="Messages",
+            related_record_id=message.id,
+            delivery_method="IN_APP",
+            link=f"/messages?messageId={message.id}",
+        )
     return message
 
 

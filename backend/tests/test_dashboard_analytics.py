@@ -17,6 +17,14 @@ def test_get_procurement_manager_dashboard_summary():
     assert "requests_by_department" in res
     assert "top_vendors" in res
     assert res["procurement_summary"]["total_requests"] == 0
+    assert res["delivery_summary"] == {
+        "on_time_deliveries": 0,
+        "delayed_deliveries": 0,
+        "delivered_orders": 0,
+        "pending_shipments": 0,
+        "completed_deliveries": 0,
+    }
+    assert res["requests_by_department"] == {}
 
 
 def test_get_personalized_vendor_dashboard():

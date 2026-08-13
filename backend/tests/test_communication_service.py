@@ -2,6 +2,7 @@ import os
 from unittest.mock import MagicMock
 from datetime import datetime
 import pytest
+from fastapi import HTTPException
 
 from app.services import communication_service, discussion_service, activity_log_service
 from app.schemas.communication import CommunicationCreate, DiscussionCreate
@@ -37,7 +38,7 @@ def test_send_message():
 
 def test_mark_message_as_read():
     db = MagicMock()
-    mock_msg = Communication(id=1, is_read=False, read_at=None)
+    mock_msg = Communication(id=1, receiver_id=2, is_read=False, read_at=None)
     db.query().filter().first.return_value = mock_msg
 
     updated_msg = communication_service.mark_message_as_read(db=db, message_id=1, user_id=2)
@@ -45,6 +46,14 @@ def test_mark_message_as_read():
     assert updated_msg.is_read is True
     assert updated_msg.read_at is not None
     assert db.commit.called
+
+
+def test_only_receiver_can_mark_communication_message_read():
+    db = MagicMock()
+    db.query().filter().first.return_value = Communication(id=1, receiver_id=2, is_read=False)
+
+    with pytest.raises(HTTPException, match="Only the message receiver"):
+        communication_service.mark_message_as_read(db=db, message_id=1, user_id=3)
 
 
 def test_create_discussion_thread():

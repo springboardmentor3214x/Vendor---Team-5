@@ -79,6 +79,8 @@ def mark_message_as_read(db: Session, message_id: int, user_id: int) -> Communic
     message = db.query(Communication).filter(Communication.id == message_id).first()
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
+    if message.receiver_id != user_id:
+        raise HTTPException(status_code=403, detail="Only the message receiver can mark it as read")
 
     message.is_read = True
     message.read_at = datetime.utcnow()

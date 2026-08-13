@@ -14,6 +14,7 @@ from app.api.auth import get_current_user
 from app.core.database import Base, get_db
 from app.main import app
 from app.models.message import Message
+from app.models.notification import Notification
 from app.models.purchase_order import PurchaseOrder
 from app.models.user import User
 from app.models.vendor import Vendor
@@ -59,6 +60,10 @@ def test_send_message_uses_jwt_sender_and_ignores_spoofed_sender(message_client)
     assert response.json()["senderId"] == sender.id
     assert response.json()["receiverId"] == receiver.id
     assert session.query(Message).one().sender_id == sender.id
+    notification = session.query(Notification).one()
+    assert notification.user_id == receiver.id
+    assert notification.related_record_id == response.json()["id"]
+    assert notification.related_module == "Messages"
 
 
 def test_only_receiver_can_mark_message_read_and_unread_count_updates(message_client):

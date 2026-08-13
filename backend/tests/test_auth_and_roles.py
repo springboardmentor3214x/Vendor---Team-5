@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api import auth as auth_api
 from app.main import app
 
 client = TestClient(app)
@@ -88,6 +89,29 @@ def test_login_returns_access_token() -> None:
     data = response.json()
     assert "access_token" in data
     assert data["token_type"] == "bearer"
+
+
+def test_login_with_invalid_stored_hash_returns_401(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A malformed legacy password hash must not turn an invalid login into a 500."""
+    email = "invalid-hash-login@example.com"
+    payload = {
+        "fullName": "Invalid Hash Login Test",
+        "email": email,
+        "password": ADMIN_PASSWORD,
+        "confirmPassword": ADMIN_PASSWORD,
+        "role": "Administrator",
+    }
+    response = client.post("/auth/register", json=payload)
+    assert response.status_code in (200, 201, 400), response.text
+
+    def invalid_hash(*_: object) -> bool:
+        raise ValueError("hash could not be identified")
+
+    monkeypatch.setattr(auth_api, "verify_password", invalid_hash)
+    response = client.post("/auth/login", json={"email": email, "password": ADMIN_PASSWORD})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
 
 
 def test_auth_me_returns_current_user_for_bearer_token(auth_tokens: dict[str, str]) -> None:

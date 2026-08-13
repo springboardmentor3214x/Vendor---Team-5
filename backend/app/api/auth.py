@@ -147,7 +147,16 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 def login_user(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
+    password_valid = False
+    if db_user:
+        try:
+            password_valid = verify_password(user.password, db_user.hashed_password)
+        except (TypeError, ValueError):
+            # Legacy/imported records can contain an invalid password hash.
+            # Authentication must fail safely instead of exposing a 500 error.
+            password_valid = False
+
+    if not db_user or not password_valid:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     if hasattr(db_user, "is_active") and not db_user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive")

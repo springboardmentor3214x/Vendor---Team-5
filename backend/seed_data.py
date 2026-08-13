@@ -2,7 +2,6 @@ from app.core.database import SessionLocal
 from app.models.role import Role
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
-from app.models.vendor_contact import VendorContact
 from app.models.user import User
 from app.models.procurement_request import ProcurementRequest
 from app.models.purchase_order import PurchaseOrder
@@ -25,12 +24,10 @@ from app.models.contract_renewal import ContractRenewal
 from app.models.certification import Certification
 from app.models.compliance import ComplianceRecord
 from app.models.message import Message, RelatedEntityType
-from app.core.security import get_password_hash
 from datetime import datetime, timedelta
 
 
 db = SessionLocal()
-DEMO_PASSWORD = "Demo@123"
 
 # Seed roles
 roles = [
@@ -99,7 +96,7 @@ if not sample_user:
     sample_user = User(
         full_name="Admin User",
         email="admin@vendoriq.com",
-        hashed_password=get_password_hash(DEMO_PASSWORD),
+        hashed_password="placeholder_hash",  # Pranjali/auth team will replace with real bcrypt hash
         role="Administrator",
         is_active=True,
     )
@@ -108,12 +105,6 @@ if not sample_user:
     print("Seeded 1 sample admin user.")
 else:
     print("Sample user already exists.")
-
-# Older seed runs created demo accounts with a non-login placeholder hash.  Keep
-# the seed idempotent while making the documented local demo account usable.
-if sample_user.hashed_password == "placeholder_hash":
-    sample_user.hashed_password = get_password_hash(DEMO_PASSWORD)
-    db.commit()
 
 # Seed one additional vendor contact
 existing_contact = db.query(VendorContact).filter(VendorContact.vendor_id == sample_vendor.id).first()
@@ -569,7 +560,7 @@ if not pm_user:
     pm_user = User(
         full_name="Priya Sharma",
         email="pm.manager@vendoriq.com",
-        hashed_password=get_password_hash(DEMO_PASSWORD),
+        hashed_password="placeholder_hash",
         role="Procurement Manager",
         is_active=True,
     )
@@ -581,7 +572,7 @@ if not vendor_user:
     vendor_user = User(
         full_name="Ravi Kumar",
         email="vendor.contact@samplesupplies.com",
-        hashed_password=get_password_hash(DEMO_PASSWORD),
+        hashed_password="placeholder_hash",
         role="Vendor",
         company_name="Sample Supplies Pvt Ltd",
         is_active=True,
@@ -590,11 +581,6 @@ if not vendor_user:
     db.commit()
 
 admin_user = db.query(User).filter(User.email == "admin@vendoriq.com").first()
-
-for demo_user in (pm_user, vendor_user):
-    if demo_user.hashed_password == "placeholder_hash":
-        demo_user.hashed_password = get_password_hash(DEMO_PASSWORD)
-db.commit()
 
 # Seed sample direct messages for demo conversations
 existing_messages = db.query(Message).first()

@@ -15,6 +15,7 @@ class VendorReliability(Base):
     communication_score = Column(Float, default=0.0)
     compliance_score = Column(Float, default=0.0)
     issue_resolution_score = Column(Float, default=0.0)
+    procurement_history_score = Column(Float, default=0.0)
 
     reliability_score = Column(Float, default=0.0)
     risk_level = Column(String(50), default="Medium", index=True)
@@ -37,5 +38,6 @@ class PerformanceTrend(Base):
     communication_score = Column(Float, default=0.0)
     compliance_score = Column(Float, default=0.0)
     issue_resolution_score = Column(Float, default=0.0)
+    procurement_history_score = Column(Float, default=0.0)
 
     created_at = Column(DateTime, default=datetime.utcnow)

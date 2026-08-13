@@ -39,4 +39,7 @@ from app.models.procurement_risk_level import ProcurementRiskLevel
 from app.models.procurement_recommendation import ProcurementRecommendation
 from app.models.supplier_reliability_ranking import SupplierReliabilityRanking
 from app.models.message import Message, RelatedEntityType
+from app.models.procurement_request_document import ProcurementRequestDocument
+from app.models.invoice_document import InvoiceDocument
+from app.models.vendor_issue import VendorIssue
 

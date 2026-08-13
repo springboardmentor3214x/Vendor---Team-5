@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock
 from app.services import report_service
 import pytest
+from types import SimpleNamespace
+from app.models.compliance import ComplianceRecord
 
 
 class EmptyQuery:
@@ -63,6 +65,29 @@ def test_executive_summary_report_generator():
     assert "total_registered_vendors" in exec_summary
     assert "total_procurement_expenditure" in exec_summary
     assert "compliance_percentage" in exec_summary
+    assert exec_summary["compliance_percentage"] is None
+
+
+def test_executive_summary_calculates_compliance_percentage_from_records(monkeypatch):
+    records = [SimpleNamespace(status="Compliant"), SimpleNamespace(status="Pending Verification")]
+    original_filtered = report_service._filtered
+
+    def filtered(db, model, filters=None):
+        return records if model is ComplianceRecord else original_filtered(db, model, filters)
+
+    monkeypatch.setattr(report_service, "_filtered", filtered)
+    assert report_service.generate_executive_summary_report(EmptyDb())["compliance_percentage"] == 50.0
+
+
+def test_export_uses_report_specific_chart_fields(monkeypatch):
+    monkeypatch.setattr(
+        report_service,
+        "generate_compliance_report",
+        lambda _db, _filters=None: [{"status": "Compliant", "id": 7}],
+    )
+    chart = report_service.export_report_data(EmptyDb(), "compliance")["chart_data"]
+    assert chart["labels"] == ["Compliant"]
+    assert chart["datasets"][0]["label"] == "Id"
 
 
 def test_render_excel_csv_and_pdf_report_helpers():

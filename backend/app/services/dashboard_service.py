@@ -34,13 +34,10 @@ def _day(value: date | datetime | None) -> date | None:
 
 
 def _rows(db: Any, model: Any) -> list[Any]:
-    """Return query results, treating unavailable optional tables as empty."""
+    """Return actual query results; production query failures must remain visible."""
     if db is None:
         return []
-    try:
-        return list(db.query(model).all() or [])
-    except Exception:
-        return []
+    return list(db.query(model).all() or [])
 
 
 def get_contract_dashboard_summary(db: Any) -> dict[str, int]:
@@ -177,23 +174,23 @@ def get_procurement_manager_dashboard_summary(
     top_vendors_list = []
     for v in vendors:
         rel_score = db.query(VendorReliabilityScore).filter(VendorReliabilityScore.vendor_id == v.id).first()
-        raw_val = rel_score.overall_score if rel_score else getattr(v, "reliability_score", 4.0)
+        raw_val = rel_score.overall_score if rel_score else getattr(v, "reliability_score", 0.0)
         try:
             score_val = float(raw_val)
         except (TypeError, ValueError):
-            score_val = 4.0
+            score_val = 0.0
         risk = db.query(ProcurementRiskLevel).filter(ProcurementRiskLevel.vendor_id == v.id).first()
 
         top_vendors_list.append({
             "vendor_id": getattr(v, "id", 1),
             "vendor_name": str(getattr(v, "company_name", "Vendor")),
             "overall_performance_rating": round(score_val / 20.0, 2) if score_val > 5.0 else round(score_val, 2),
-            "delivery_accuracy": 92.5,
-            "product_quality_score": 94.0,
-            "communication_efficiency": 90.0,
-            "service_rating": 4.5,
+            "delivery_accuracy": None,
+            "product_quality_score": None,
+            "communication_efficiency": None,
+            "service_rating": None,
             "reliability_score": round(score_val, 2),
-            "risk_level": risk.risk_level if risk else "LOW"
+            "risk_level": risk.risk_level if risk else None
         })
 
     return {
@@ -212,13 +209,13 @@ def get_procurement_manager_dashboard_summary(
             "active_purchase_order_details": active_po_details,
         },
         "delivery_summary": {
-            "on_time_deliveries": on_time or 12,
-            "delayed_deliveries": delayed or 2,
-            "delivered_orders": completed_orders or 14,
-            "pending_shipments": active_pos or 5,
-            "completed_deliveries": completed_orders or 14,
+            "on_time_deliveries": on_time,
+            "delayed_deliveries": delayed,
+            "delivered_orders": completed_orders,
+            "pending_shipments": active_pos,
+            "completed_deliveries": completed_orders,
         },
-        "requests_by_department": depts or {"IT": 10, "Operations": 15, "Logistics": 8},
+        "requests_by_department": depts,
         "top_vendors": top_vendors_list,
     }
 
@@ -245,15 +242,16 @@ def get_personalized_vendor_dashboard(db: Any, vendor_id: int, user_id: Optional
         }
 
     rel_score = db.query(VendorReliabilityScore).filter(VendorReliabilityScore.vendor_id == vendor_id).first()
-    raw_val = rel_score.overall_score if rel_score else getattr(vendor, "reliability_score", 4.0)
+    raw_val = rel_score.overall_score if rel_score else getattr(vendor, "reliability_score", 0.0)
     try:
         score_val = float(raw_val)
     except (TypeError, ValueError):
-        score_val = 4.0
+        score_val = 0.0
 
     pos = db.query(PurchaseOrder).filter(PurchaseOrder.vendor_id == vendor_id).all()
-    active_pos = sum(1 for po in pos if getattr(po, "status", "").lower() in ["active", "issued", "in_progress", "pending"])
-    completed_pos = sum(1 for po in pos if getattr(po, "status", "").lower() in ["completed", "fulfilled", "delivered"])
+    po_state = lambda po: str(getattr(po, "po_status", None) or getattr(po, "status", "")).lower()
+    active_pos = sum(1 for po in pos if po_state(po) in ["active", "issued", "in_progress", "pending"])
+    completed_pos = sum(1 for po in pos if po_state(po) in ["completed", "fulfilled", "delivered"])
 
     contracts = db.query(Contract).filter(Contract.vendor_id == vendor_id).all()
     today = date.today()
@@ -268,9 +266,9 @@ def get_personalized_vendor_dashboard(db: Any, vendor_id: int, user_id: Optional
         "company_name": str(getattr(vendor, "company_name", "Vendor")),
         "reliability_score": round(score_val, 2),
         "overall_performance_score": round(score_val / 20.0, 2) if score_val > 5.0 else round(score_val, 2),
-        "delivery_accuracy": 94.0,
-        "product_quality_rating": 95.0,
-        "communication_efficiency": 92.0,
+        "delivery_accuracy": None,
+        "product_quality_rating": None,
+        "communication_efficiency": None,
         "active_purchase_orders": active_pos,
         "completed_orders": completed_pos,
         "pending_deliveries": active_pos,
@@ -346,7 +344,7 @@ def get_procurement_cost_analysis(db: Any) -> Dict[str, Any]:
         dept_spending[department] = dept_spending.get(department, 0.0) + amt
         project_spending[project] = project_spending.get(project, 0.0) + amt
 
-        month_str = po.created_at.strftime("%Y-%m") if po.created_at else "2026-08"
+        month_str = po.created_at.strftime("%Y-%m") if po.created_at else "Unknown"
         monthly_trend[month_str] = monthly_trend.get(month_str, 0.0) + amt
 
     return {

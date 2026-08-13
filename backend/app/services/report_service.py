@@ -33,10 +33,7 @@ def _value(value: Any) -> Any:
     return value.isoformat() if isinstance(value, (date, datetime)) else value
 
 def _rows(db: Any, model: Any) -> list[Any]:
-    try:
-        return list(db.query(model).all() or []) if db is not None else []
-    except Exception:
-        return []
+    return list(db.query(model).all() or []) if db is not None else []
 
 def _matches(item: Any, filters: Optional[Dict[str, Any]]) -> bool:
     if not filters:
@@ -114,19 +111,36 @@ def generate_notification_report(db: Any, filters: Optional[Dict[str, Any]] = No
 
 def generate_executive_summary_report(db: Any, filters: Optional[Dict[str, Any]] = None) -> dict[str, Any]:
     pos, contracts, vendors = generate_purchase_order_report(db, filters), generate_contract_report(db, filters), _filtered(db, Vendor, filters)
-    return {"total_registered_vendors": len(vendors), "total_procurement_expenditure": sum(row["order_value"] for row in pos), "completed_purchase_orders": sum(str(row["current_status"]).lower() in {"completed", "delivered"} for row in pos), "contracts_near_expiry_count": sum(0 <= (row["days_to_expiry"] or -1) <= 30 for row in contracts), "compliance_percentage": 0}
+    compliance_records = _filtered(db, ComplianceRecord, filters)
+    compliance_percentage = None
+    if compliance_records:
+        compliance_percentage = round(
+            100 * sum(str(getattr(record, "status", "")).casefold() == "compliant" for record in compliance_records) / len(compliance_records),
+            2,
+        )
+    return {"total_registered_vendors": len(vendors), "total_procurement_expenditure": sum(row["order_value"] for row in pos), "completed_purchase_orders": sum(str(row["current_status"]).lower() in {"completed", "delivered"} for row in pos), "contracts_near_expiry_count": sum(0 <= (row["days_to_expiry"] or -1) <= 30 for row in contracts), "compliance_percentage": compliance_percentage}
 
 def shape_chart_data(rows: list[dict[str, Any]], label_field: str, value_field: str, chart_type: str = "bar") -> dict[str, Any]:
     totals: dict[str, float] = defaultdict(float)
     for row in rows: totals[str(row.get(label_field) or "Unspecified")] += float(row.get(value_field) or 0)
     return {"chart_type": chart_type, "labels": list(totals), "datasets": [{"label": value_field.replace("_", " ").title(), "data": list(totals.values())}]}
 
+_REPORT_CHART_FIELDS = {
+    "vendor-performance": ("vendor_id", "overall_performance_score"), "vendor_performance": ("vendor_id", "overall_performance_score"),
+    "procurement": ("department", "estimated_budget"), "procurement_summary": ("department", "estimated_budget"),
+    "purchase-orders": ("purchase_order_number", "order_value"), "purchase_order": ("purchase_order_number", "order_value"),
+    "compliance": ("status", "id"), "contract": ("contract_number", "contract_value"), "contracts": ("contract_number", "contract_value"),
+    "vendor_document": ("document_type", "id"), "notification": ("notification_type", "id"),
+    "executive_summary": ("total_registered_vendors", "total_procurement_expenditure"),
+}
+
 def export_report_data(db: Any, report_type: str, format: str = "csv", filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     generators = {"vendor-performance": generate_vendor_performance_report, "vendor_performance": generate_vendor_performance_report, "procurement": generate_procurement_summary_report, "procurement_summary": generate_procurement_summary_report, "purchase-orders": generate_purchase_order_report, "purchase_order": generate_purchase_order_report, "compliance": generate_compliance_report, "contract": generate_contract_report, "contracts": generate_contract_report, "vendor_document": generate_vendor_document_report, "notification": generate_notification_report, "executive_summary": generate_executive_summary_report}
     if report_type not in generators: raise ValueError(f"Unsupported report type: {report_type}")
     if format.lower() not in {"csv", "pdf", "excel"}: raise ValueError(f"Unsupported export format: {format}")
     rows = generators[report_type](db, filters); rows = rows if isinstance(rows, list) else [rows]
-    return {"report_type": report_type, "format": format.lower(), "rows": rows, "chart_data": shape_chart_data(rows, (filters or {}).get("chart_label", "vendor_name"), (filters or {}).get("chart_value", "order_value"), (filters or {}).get("chart_type", "bar")), "metadata": {"title": f"{report_type.replace('-', ' ').title()} Report", "generated_at": datetime.utcnow().isoformat(), "row_count": len(rows), "status": "prepared"}}
+    default_label, default_value = _REPORT_CHART_FIELDS[report_type]
+    return {"report_type": report_type, "format": format.lower(), "rows": rows, "chart_data": shape_chart_data(rows, (filters or {}).get("chart_label", default_label), (filters or {}).get("chart_value", default_value), (filters or {}).get("chart_type", "bar")), "metadata": {"title": f"{report_type.replace('-', ' ').title()} Report", "generated_at": datetime.utcnow().isoformat(), "row_count": len(rows), "status": "prepared"}}
 
 def render_excel_csv_report(rows: List[Dict[str, Any]]) -> str:
     output = io.StringIO(); fields = list(rows[0]) if rows else ["status_message"]

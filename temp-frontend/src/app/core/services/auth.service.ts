@@ -9,7 +9,8 @@ export const ALLOWED_ROLES = [
   'Supply Chain Manager',
   'Vendor',
   'Finance Officer',
-  'Auditor'
+  'Auditor',
+  'Department User'
 ] as const;
 
 export type AppRole = (typeof ALLOWED_ROLES)[number];

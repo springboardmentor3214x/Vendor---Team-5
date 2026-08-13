@@ -1,7 +1,14 @@
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-ALLOWED_ROLES = {"Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor", "Finance Officer", "Auditor"}
+# Department User is already part of the Procurement API workflow: this role can
+# create, edit while sent back, and cancel its own procurement requests.  Keep
+# registration and API authorization in agreement so those users can log in and
+# use the routes the backend exposes.
+ALLOWED_ROLES = {
+    "Administrator", "Procurement Manager", "Supply Chain Manager", "Vendor",
+    "Finance Officer", "Auditor", "Department User",
+}
 
 class UserCreate(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")

@@ -17,7 +17,7 @@ import {
   styleUrl: './vendor-form.component.css'
 })
 export class VendorFormComponent implements OnInit {
-  readonly categories = VENDOR_CATEGORIES;
+  readonly categories = signal<readonly string[]>(VENDOR_CATEGORIES);
   readonly statuses = VENDOR_STATUSES;
   readonly isEdit = signal(false);
   readonly vendorId = signal<number | null>(null);
@@ -59,6 +59,7 @@ export class VendorFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadCategories();
     const idParam = this.route.snapshot.paramMap.get('id');
     if (!idParam) {
       return;
@@ -106,6 +107,13 @@ export class VendorFormComponent implements OnInit {
         this.loading.set(false);
         this.errorMessage.set(this.readError(err, 'Unable to load vendor.'));
       }
+    });
+  }
+
+  private loadCategories(): void {
+    this.vendorService.listCategories().subscribe({
+      next: (categories) => this.categories.set(categories.filter((category) => category.isActive !== false).map((category) => category.name)),
+      error: () => this.categories.set(VENDOR_CATEGORIES)
     });
   }
 

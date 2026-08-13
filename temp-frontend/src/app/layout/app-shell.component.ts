@@ -41,7 +41,8 @@ export class AppShellComponent implements OnInit {
         'Supply Chain Manager',
         'Vendor',
         'Finance Officer',
-        'Auditor'
+        'Auditor',
+        'Department User'
       ]
     },
     {
@@ -55,6 +56,12 @@ export class AppShellComponent implements OnInit {
       path: '/procurement',
       exact: true,
       roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager']
+    },
+    {
+      label: 'My procurement requests',
+      path: '/procurement/requests',
+      exact: false,
+      roles: ['Department User']
     },
     {
       label: 'Invoices',
@@ -138,7 +145,8 @@ export class AppShellComponent implements OnInit {
         'Supply Chain Manager',
         'Vendor',
         'Finance Officer',
-        'Auditor'
+        'Auditor',
+        'Department User'
       ]
     }
   ];

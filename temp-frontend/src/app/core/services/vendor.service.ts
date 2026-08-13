@@ -17,8 +17,7 @@ export const APPROVAL_STATUSES = ['Pending', 'Approved', 'Rejected'] as const;
 
 export const VENDOR_APPROVER_ROLES = [
   'Administrator',
-  'Procurement Manager',
-  'Supply Chain Manager'
+  'Procurement Manager'
 ] as const;
 
 export const VENDOR_DOCUMENT_TYPES = [
@@ -121,6 +120,17 @@ export interface VendorDocument {
   download_url?: string;
 }
 
+export interface VendorDeleteResponse {
+  message: string;
+}
+
+export interface VendorCategory {
+  id: number;
+  name: string;
+  description?: string | null;
+  isActive?: boolean | null;
+}
+
 interface VendorApiResponse {
   id: number;
   companyName?: string;
@@ -197,18 +207,14 @@ export class VendorService {
       .pipe(map((vendors) => vendors.map((vendor) => this.mapVendor(vendor))));
   }
 
+  listCategories(): Observable<VendorCategory[]> {
+    return this.http.get<VendorCategory[]>(`${this.baseUrl}/categories`);
+  }
+
   getVendor(id: number): Observable<Vendor> {
-    // The current backend exposes the vendor collection but not GET /vendors/{id}.
-    // Resolve the selected record from that confirmed collection endpoint.
-    return this.listVendors().pipe(
-      map((vendors) => {
-        const vendor = vendors.find((item) => item.id === id);
-        if (!vendor) {
-          throw new Error('Vendor not found.');
-        }
-        return vendor;
-      })
-    );
+    return this.http
+      .get<VendorApiResponse>(`${this.baseUrl}/${id}`)
+      .pipe(map((vendor) => this.mapVendor(vendor)));
   }
 
   createVendor(payload: VendorCreatePayload): Observable<Vendor> {
@@ -221,6 +227,10 @@ export class VendorService {
     return this.http
       .put<VendorApiResponse>(`${this.baseUrl}/${id}`, payload)
       .pipe(map((vendor) => this.mapVendor(vendor)));
+  }
+
+  deleteVendor(id: number): Observable<VendorDeleteResponse> {
+    return this.http.delete<VendorDeleteResponse>(`${this.baseUrl}/${id}`);
   }
 
   approveVendor(id: number, payload: VendorApprovalPayload = {}): Observable<Vendor> {

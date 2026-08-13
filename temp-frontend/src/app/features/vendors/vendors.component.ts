@@ -21,13 +21,15 @@ type SortKey = 'company_name' | 'vendor_status' | 'approval_status' | 'reliabili
   styleUrl: './vendors.component.css'
 })
 export class VendorsComponent implements OnInit {
-  readonly categories = VENDOR_CATEGORIES;
+  readonly categories = signal<readonly string[]>(VENDOR_CATEGORIES);
   readonly statuses = VENDOR_STATUSES;
   readonly approvalStatuses = APPROVAL_STATUSES;
 
   readonly vendors = signal<Vendor[]>([]);
   readonly loading = signal(false);
+  readonly deletingVendorId = signal<number | null>(null);
   readonly errorMessage = signal('');
+  readonly successMessage = signal('');
   readonly sortKey = signal<SortKey>('company_name');
   readonly sortAsc = signal(true);
   readonly page = signal(1);
@@ -73,7 +75,15 @@ export class VendorsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadCategories();
     this.loadVendors();
+  }
+
+  private loadCategories(): void {
+    this.vendorService.listCategories().subscribe({
+      next: (categories) => this.categories.set(categories.filter((category) => category.isActive !== false).map((category) => category.name)),
+      error: () => this.categories.set(VENDOR_CATEGORIES)
+    });
   }
 
   loadVendors(): void {
@@ -135,6 +145,36 @@ export class VendorsComponent implements OnInit {
 
   get canEdit(): boolean {
     return this.authService.hasRole('Administrator', 'Procurement Manager');
+  }
+
+  get canDelete(): boolean {
+    return this.authService.hasRole('Administrator');
+  }
+
+  deleteVendor(vendor: Vendor): void {
+    if (!this.canDelete || this.deletingVendorId()) {
+      return;
+    }
+
+    if (!window.confirm(`Delete ${vendor.company_name}? This is available only when the vendor has no related records.`)) {
+      return;
+    }
+
+    this.deletingVendorId.set(vendor.id);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.vendorService.deleteVendor(vendor.id).subscribe({
+      next: (response) => {
+        this.vendors.update((items) => items.filter((item) => item.id !== vendor.id));
+        this.page.set(Math.min(this.page(), this.totalPages()));
+        this.deletingVendorId.set(null);
+        this.successMessage.set(response.message || 'Vendor deleted successfully.');
+      },
+      error: (err) => {
+        this.deletingVendorId.set(null);
+        this.errorMessage.set(this.readError(err, 'Unable to delete vendor.'));
+      }
+    });
   }
 
   hasActiveFilters(): boolean {

@@ -61,7 +61,8 @@ export const routes: Routes = [
             'Supply Chain Manager',
             'Vendor',
             'Finance Officer',
-            'Auditor'
+            'Auditor',
+            'Department User'
           ]
         }
       },
@@ -76,7 +77,8 @@ export const routes: Routes = [
             'Supply Chain Manager',
             'Vendor',
             'Finance Officer',
-            'Auditor'
+            'Auditor',
+            'Department User'
           ]
         }
       },
@@ -188,7 +190,7 @@ export const routes: Routes = [
         path: 'procurement/requests/new',
         component: RequestFormComponent,
         canActivate: [roleGuard],
-        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager'] }
+        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Department User'] }
       },
       {
         path: 'procurement/requests/:id/approval',
@@ -206,13 +208,13 @@ export const routes: Routes = [
         path: 'procurement/requests/:id',
         component: RequestDetailComponent,
         canActivate: [roleGuard],
-        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager'] }
+        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Department User'] }
       },
       {
         path: 'procurement/requests',
         component: RequestListComponent,
         canActivate: [roleGuard],
-        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager'] }
+        data: { roles: ['Administrator', 'Procurement Manager', 'Supply Chain Manager', 'Department User'] }
       },
       {
         path: 'procurement',

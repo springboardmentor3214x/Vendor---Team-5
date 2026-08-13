@@ -36,8 +36,8 @@
 
 .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .section-heading h3 { color: #111827; font-size: 1.05rem; font-weight: 750; margin: .15rem 0 0; }
-.section-kicker { color: #2563EB; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.section-marker { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; padding: 0 .55rem; background: #eff6ff; border-radius: 10px; color: #1E3A8A; font-size: .74rem; font-weight: 800; }
+.section-kicker { color: var(--vr-primary); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.section-marker { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; padding: 0 .55rem; background: #fff1f2; border-radius: 10px; color: var(--vr-primary-dark); font-size: .74rem; font-weight: 800; }
 
 .detail-item {
   background: #fff;
@@ -127,8 +127,8 @@ textarea.form-control {
 
 .form-control:focus,
 textarea.form-control:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+  border-color: var(--vr-primary);
+  box-shadow: 0 0 0 0.2rem var(--vr-focus);
   outline: none;
 }
 
@@ -165,7 +165,7 @@ textarea.form-control:focus {
 
 .btn-primary {
   border: none;
-  background: linear-gradient(135deg, #2563EB, #1E3A8A);
+  background: linear-gradient(135deg, var(--vr-primary), var(--vr-primary-dark));
   color: #fff;
 }
 
@@ -183,8 +183,8 @@ textarea.form-control:focus {
 }
 
 .btn-outline-primary {
-  border-color: #93c5fd;
-  color: #1d4ed8;
+  border-color: #fecdd3;
+  color: var(--vr-primary-dark);
 }
 
 .btn-outline-danger {

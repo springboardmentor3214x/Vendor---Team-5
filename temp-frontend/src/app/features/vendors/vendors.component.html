@@ -16,7 +16,7 @@
       <label class="form-label">Category</label>
       <select class="form-select" formControlName="category" [disabled]="loading()">
         <option value="">All categories</option>
-        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+        <option *ngFor="let category of categories()" [value]="category">{{ category }}</option>
       </select>
     </div>
     <div>
@@ -45,6 +45,7 @@
     <span>{{ errorMessage() }}</span>
     <button class="btn btn-outline-danger btn-sm" type="button" (click)="loadVendors()">Try again</button>
   </div>
+  <div class="alert alert-success" *ngIf="successMessage()">{{ successMessage() }}</div>
   <div class="text-muted" *ngIf="loading()">Loading vendors...</div>
 
   <div class="vendor-table-wrap" *ngIf="!loading() && !errorMessage()">
@@ -86,6 +87,9 @@
             <div class="row-actions">
               <a class="btn btn-sm btn-outline-primary" [routerLink]="['/vendors', vendor.id]">View</a>
               <a class="btn btn-sm btn-outline-secondary" *ngIf="canEdit" [routerLink]="['/vendors', vendor.id, 'edit']">Edit</a>
+              <button class="btn btn-sm btn-outline-danger" type="button" *ngIf="canDelete" (click)="deleteVendor(vendor)" [disabled]="deletingVendorId() === vendor.id">
+                {{ deletingVendorId() === vendor.id ? 'Deleting...' : 'Delete' }}
+              </button>
             </div>
           </td>
         </tr>

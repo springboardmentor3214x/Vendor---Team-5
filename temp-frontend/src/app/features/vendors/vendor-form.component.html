@@ -24,7 +24,7 @@
       <label class="form-label">Category</label>
       <select class="form-select" formControlName="vendor_category">
         <option value="">Select category</option>
-        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+        <option *ngFor="let category of categories()" [value]="category">{{ category }}</option>
       </select>
     </div>
 

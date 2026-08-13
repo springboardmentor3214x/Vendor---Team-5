@@ -12,10 +12,24 @@ from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
 from app.models.vendor_approval_history import VendorApprovalHistory
 from app.models.vendor_document import VendorDocument
+from app.models.vendor_contact import VendorContact
 from app.models.user import User
 from app.models.performance import PerformanceRecord
-from app.models.reliability import VendorReliability
+from app.models.reliability import VendorReliability, PerformanceTrend
 from app.models.notification import Notification
+from app.models.procurement_request import ProcurementRequest
+from app.models.purchase_order import PurchaseOrder
+from app.models.contract import Contract
+from app.models.certification import Certification
+from app.models.compliance_record import ComplianceRecord
+from app.models.delivery_performance import DeliveryPerformance
+from app.models.product_quality_evaluation import ProductQualityEvaluation
+from app.models.communication_log import CommunicationLog
+from app.models.service_rating import ServiceRating
+from app.models.communication import Communication
+from app.models.communication_file import CommunicationFile
+from app.models.discussion import Discussion
+from app.models.procurement_recommendation import ProcurementRecommendation
 from app.schemas.vendor import (
     VendorApprovalAction,
     VendorApprovalHistoryResponse,
@@ -93,6 +107,79 @@ def _vendor_or_404(db: Session, vendor_id: int) -> Vendor:
     return vendor
 
 
+def _linked_vendor_user(db: Session, vendor: Vendor) -> User | None:
+    """Return the vendor-role account that owns this vendor's email address."""
+    return (
+        db.query(User)
+        .filter(User.email == vendor.email, User.role == "Vendor")
+        .first()
+    )
+
+
+def _notify_linked_vendor(db: Session, vendor: Vendor, *, title: str, message: str, notification_type: str) -> None:
+    """Create a visible notification only when the vendor has a linked account."""
+    vendor_user = _linked_vendor_user(db, vendor)
+    if not vendor_user:
+        return
+    db.add(
+        Notification(
+            user_id=vendor_user.id,
+            vendor_id=vendor.id,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            type=notification_type,
+            related_module="Vendor",
+            related_record_id=vendor.id,
+            link=f"/vendors/{vendor.id}",
+        )
+    )
+
+
+def _ensure_vendor_can_be_deleted(db: Session, vendor: Vendor) -> None:
+    """Refuse deletion when business records would be orphaned or hidden.
+
+    This is intentionally conservative.  Administrators can delete a vendor
+    only before it has collected contacts, workflow, contract, performance,
+    communication, or notification history.  It protects data without
+    changing database relationships or relying on a cascade policy.
+    """
+    related_models = (
+        ("vendor contacts", VendorContact),
+        ("vendor documents", VendorDocument),
+        ("approval history", VendorApprovalHistory),
+        ("procurement requests", ProcurementRequest),
+        ("purchase orders", PurchaseOrder),
+        ("contracts", Contract),
+        ("certifications", Certification),
+        ("compliance records", ComplianceRecord),
+        ("delivery performance records", DeliveryPerformance),
+        ("quality evaluations", ProductQualityEvaluation),
+        ("communication performance records", CommunicationLog),
+        ("service ratings", ServiceRating),
+        ("performance summaries", PerformanceRecord),
+        ("reliability summaries", VendorReliability),
+        ("reliability trends", PerformanceTrend),
+        ("procurement recommendations", ProcurementRecommendation),
+        ("communications", Communication),
+        ("communication files", CommunicationFile),
+        ("discussions", Discussion),
+        ("notifications", Notification),
+    )
+    for label, model in related_models:
+        if db.query(model).filter(model.vendor_id == vendor.id).first():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Vendor cannot be deleted because related {label} exist.",
+            )
+
+    if db.query(User).filter(User.email == vendor.email).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vendor cannot be deleted while a linked user account exists.",
+        )
+
+
 def _document_response(document: VendorDocument) -> dict:
     return {
         "id": document.id,
@@ -112,11 +199,33 @@ def list_vendor_categories(db: Session = Depends(get_db)):
 
 
 @router.get("/", dependencies=[Depends(get_current_user)])
-def list_vendors(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_vendors(
+    search: str | None = None,
+    category: str | None = None,
+    status: str | None = None,
+    approval_status: str | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if normalize_user_role(current_user) == "Vendor":
         own_vendor = _vendor_for_authenticated_user(db, current_user)
         return [own_vendor] if own_vendor else []
-    return db.query(Vendor).all()
+
+    query = db.query(Vendor)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            (Vendor.company_name.ilike(term))
+            | (Vendor.contact_person_name.ilike(term))
+            | (Vendor.email.ilike(term))
+        )
+    if category and category.strip():
+        query = query.join(VendorCategory).filter(VendorCategory.name == category.strip())
+    if status and status.strip():
+        query = query.filter(Vendor.vendor_status == status.strip())
+    if approval_status and approval_status.strip():
+        query = query.filter(Vendor.approval_status == approval_status.strip())
+    return query.order_by(Vendor.company_name.asc()).all()
 
 
 @router.get("/{vendor_id}", dependencies=[Depends(get_current_user)])
@@ -264,6 +373,20 @@ def update_vendor(vendor_id: int, payload: VendorUpdate, db: Session = Depends(g
     return vendor
 
 
+@router.delete(
+    "/{vendor_id}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_roles("Administrator"))],
+)
+def delete_vendor(vendor_id: int, db: Session = Depends(get_db)):
+    """Delete only a vendor with no related operational or identity records."""
+    vendor = _vendor_or_404(db, vendor_id)
+    _ensure_vendor_can_be_deleted(db, vendor)
+    db.delete(vendor)
+    db.commit()
+    return {"message": "Vendor deleted successfully"}
+
+
 @router.patch("/{vendor_id}/approve")
 def approve_vendor(
     vendor_id: int,
@@ -294,12 +417,13 @@ def approve_vendor(
         db.add(PerformanceRecord(vendor_id=vendor.id, performance_status="Not Evaluated", notes="Created when vendor was approved."))
     if not db.query(VendorReliability).filter(VendorReliability.vendor_id == vendor.id).first():
         db.add(VendorReliability(vendor_id=vendor.id, risk_level="Medium", recommendation="Awaiting performance evaluation."))
-    db.add(Notification(
-        user_id=current_user.id, vendor_id=vendor.id, title="Vendor approved",
-        message=f"{vendor.company_name} is now active and available for evaluation.",
-        notification_type="VENDOR_APPROVAL", type="VENDOR_APPROVAL", related_module="Vendor",
-        related_record_id=vendor.id, link=f"/vendors/{vendor.id}",
-    ))
+    _notify_linked_vendor(
+        db,
+        vendor,
+        title="Vendor approved",
+        message=f"{vendor.company_name} has been approved and is now active.",
+        notification_type="VENDOR_APPROVAL",
+    )
     db.commit()
     db.refresh(vendor)
     return vendor
@@ -328,6 +452,13 @@ def reject_vendor(
             remarks=payload.remarks,
             acted_by=current_user.id,
         )
+    )
+    _notify_linked_vendor(
+        db,
+        vendor,
+        title="Vendor registration rejected",
+        message=f"{vendor.company_name} was not approved. Review the remarks for next steps.",
+        notification_type="VENDOR_REJECTION",
     )
     db.commit()
     db.refresh(vendor)

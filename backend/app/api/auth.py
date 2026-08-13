@@ -161,20 +161,14 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
         },
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-    redirect_map = {
-        "Administrator": "/dashboard/admin",
-        "Procurement Manager": "/dashboard/procurement-manager",
-        "Supply Chain Manager": "/dashboard/supply-chain-manager",
-        "Vendor": "/dashboard/vendor",
-        "Finance Officer": "/dashboard/finance",
-        "Auditor": "/dashboard/auditor",
-        "Department User": "/dashboard",
-    }
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "role": db_user.role,
-        "redirect_to": redirect_map.get(db_user.role, "/dashboard"),
+        # The Angular application has one protected, role-aware /dashboard
+        # route.  Returning only registered frontend routes avoids successful
+        # logins pointing callers at obsolete role-specific paths.
+        "redirect_to": "/dashboard",
     }
 
 

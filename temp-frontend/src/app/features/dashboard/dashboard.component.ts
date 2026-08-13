@@ -16,6 +16,12 @@ interface DashboardView {
     path: string;
   };
 }
+interface DashboardKpi {
+  label: string;
+  value: number | string;
+  icon: string;
+  tone: string;
+}
 interface ChartSeries { title:string; labels:string[]; datasets:{label?:string;data:number[];backgroundColor?:string|string[];borderColor?:string}[]; }
 interface ChartResponse { monthlyExpensesChart:ChartSeries; vendorPerformanceTrendChart:ChartSeries; categoryDistributionChart:ChartSeries; contractStatusChart:ChartSeries; }
 
@@ -35,7 +41,7 @@ export class DashboardComponent implements OnInit {
     return this.views[this.authService.getUserRole() as AppRole] ?? this.views.Vendor;
   }
 
-  readonly kpis = signal([
+  readonly kpis = signal<DashboardKpi[]>([
     { label: 'Active vendors', value: 0, icon: '👥', tone: 'success' },
     { label: 'Open procurement', value: 0, icon: '📋', tone: 'primary' },
     { label: 'Invoices to review', value: 0, icon: '🧾', tone: 'warning' },
@@ -52,6 +58,10 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     const role = this.authService.getUserRole();
+    if (role === 'Department User') {
+      this.loadDepartmentDashboard();
+      return;
+    }
     if (this.canViewCharts) {
       this.http.get<ChartResponse>(`${environment.apiUrl}/dashboard/charts`).subscribe({
         next: charts => this.charts.set(charts), error: () => this.charts.set(null)
@@ -69,7 +79,21 @@ export class DashboardComponent implements OnInit {
     this.http.get<{contracts?:Record<string,number>;compliance?:Record<string,number>;documents?:Record<string,number>;notifications?:Record<string,number>}>(`${environment.apiUrl}/dashboard`).subscribe({ next: (data) => this.setKpis([{label:'Active contracts',value:data.contracts?.['activeContracts'] ?? 0,icon:'📄',tone:'success'},{label:'Pending compliance',value:data.compliance?.['pendingCount'] ?? 0,icon:'✓',tone:'primary'},{label:'Documents',value:data.documents?.['totalDocuments'] ?? 0,icon:'📁',tone:'warning'},{label:'Unread alerts',value:data.notifications?.['unreadNotifications'] ?? 0,icon:'🔔',tone:'info'}]) });
   }
 
-  private setKpis(kpis: { label: string; value: number; icon: string; tone: string }[]): void { this.kpis.set(kpis.map((kpi) => ({ ...kpi, value: Number(kpi.value) || 0, }))); }
+  private loadDepartmentDashboard(): void {
+    this.setKpis([
+      { label: 'Request workspace', value: 'Available', icon: '📋', tone: 'primary' },
+      { label: 'Approval access', value: 'Manager-led', icon: '⏳', tone: 'warning' },
+      { label: 'Purchase-order access', value: 'Manager-led', icon: '📦', tone: 'info' },
+      { label: 'Profile', value: 'Ready', icon: '👤', tone: 'success' }
+    ]);
+  }
+
+  private setKpis(kpis: DashboardKpi[]): void {
+    this.kpis.set(kpis.map((kpi) => ({
+      ...kpi,
+      value: typeof kpi.value === 'number' ? Number(kpi.value) || 0 : kpi.value,
+    })));
+  }
 
   maximum(data: number[]): number { return Math.max(...data, 1); }
   linePoints(data: number[]): string { const max=this.maximum(data); return data.map((value,index)=>`${index*(300/Math.max(data.length-1,1))},${120-(value/max)*120}`).join(' '); }
@@ -163,6 +187,21 @@ export class DashboardComponent implements OnInit {
         'Your current access remains limited to the permissions assigned to your role.'
       ],
       primaryAction: { label: 'Open profile', path: '/profile' }
+    },
+    'Department User': {
+      title: 'Department dashboard',
+      description: 'Create and follow procurement requests for your department.',
+      cards: [
+        { title: 'New procurement request', description: 'Submit a request for the procurement workflow.', actionLabel: 'Create request', path: '/procurement/requests/new', tone: 'primary', icon: 'ðŸ“‹', badge: 'Requests' },
+        { title: 'My procurement requests', description: 'Review submitted requests and their current approval status.', actionLabel: 'Open requests', path: '/procurement/requests', tone: 'success', icon: 'ðŸ“‚', badge: 'Tracking' },
+        { title: 'Account profile', description: 'Review your registered account details and credentials.', actionLabel: 'Open profile', path: '/profile', tone: 'info', icon: 'ðŸ‘¤', badge: 'Account' }
+      ],
+      highlights: [
+        'Submit complete request details to avoid approval delays.',
+        'Follow request status from the procurement request workspace.',
+        'Approval, vendor assignment, and purchase-order actions remain manager-controlled.'
+      ],
+      primaryAction: { label: 'Create request', path: '/procurement/requests/new' }
     }
   };
 }

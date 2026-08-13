@@ -1,4 +1,8 @@
+import os
+from datetime import datetime, timedelta
 from app.core.database import SessionLocal
+from app.core.security import get_password_hash, verify_password
+
 from app.models.role import Role
 from app.models.vendor import Vendor
 from app.models.vendor_category import VendorCategory
@@ -33,7 +37,21 @@ from app.models.discussion_participant import DiscussionParticipant
 from app.models.communication_file import CommunicationFile
 from app.models.activity_log import ActivityLog
 from app.models.message import Message, RelatedEntityType
-from datetime import datetime, timedelta
+from app.models.procurement_request_document import ProcurementRequestDocument
+from app.models.invoice_document import InvoiceDocument
+from app.models.vendor_issue import VendorIssue
+
+
+def ensure_physical_file(file_path: str, content: str = "Sample fixture file content for demo download.") -> str:
+    """Ensure parent directory and physical file exist so file download endpoints work."""
+    if not file_path:
+        return file_path
+    abs_path = os.path.join(os.getcwd(), file_path) if not os.path.isabs(file_path) else file_path
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    if not os.path.exists(abs_path):
+        with open(abs_path, "w", encoding="utf-8") as f:
+            f.write(content)
+    return file_path
 
 
 def seed_database():
@@ -59,6 +77,7 @@ def seed_database():
     print(f"Seeded {len(roles)} roles.")
 
     # 2. Seed Demo User Accounts
+    demo_hash = get_password_hash("Demo@123")
     user_configs = [
         {"email": "admin@vendoriq.com", "full_name": "Admin User", "role": "Administrator"},
         {"email": "pm.manager@vendoriq.com", "full_name": "Priya Sharma", "role": "Procurement Manager"},
@@ -81,7 +100,7 @@ def seed_database():
             user = User(
                 full_name=cfg["full_name"],
                 email=cfg["email"],
-                hashed_password="placeholder_hash",
+                hashed_password=demo_hash,
                 role=cfg["role"],
                 company_name=cfg.get("company_name"),
                 is_active=True,
@@ -89,9 +108,21 @@ def seed_database():
             db.add(user)
             db.commit()
             db.refresh(user)
+        else:
+            if user.hashed_password == "placeholder_hash" or not verify_password("Demo@123", user.hashed_password):
+                user.hashed_password = demo_hash
+                db.commit()
+                db.refresh(user)
         users_map[cfg["email"]] = user
 
-    print(f"Seeded/Verified {len(users_map)} user demo accounts.")
+    # Safely repair existing seeded demo users currently holding placeholder_hash
+    placeholder_users = db.query(User).filter(User.hashed_password == "placeholder_hash").all()
+    for pu in placeholder_users:
+        pu.hashed_password = demo_hash
+    if placeholder_users:
+        db.commit()
+
+    print(f"Seeded/Verified {len(users_map)} user demo accounts with BCrypt passwords.")
 
     admin_user = users_map["admin@vendoriq.com"]
     pm_user = users_map["pm.manager@vendoriq.com"]
@@ -234,59 +265,105 @@ def seed_database():
     db.commit()
     print("Seeded vendor contacts.")
 
-    # 6. Seed Vendor Documents
+    # 6. Seed Vendor Documents (with document version replacement history)
     docs_data = [
         {
             "vendor_id": vendor1.id,
             "document_type": "GST Certificate",
             "file_name": "gst_cert_sample.pdf",
             "file_path": "uploads/vendors/gst_cert_sample.pdf",
+            "file_size": 102400,
             "content_type": "application/pdf",
-            "uploaded_by": admin_user.id
+            "uploaded_by": admin_user.id,
+            "version": 1,
+            "is_current": False,
+            "replaced_at": datetime.utcnow() - timedelta(days=2),
+            "replaced_by": admin_user.id,
+        },
+        {
+            "vendor_id": vendor1.id,
+            "document_type": "GST Certificate",
+            "file_name": "gst_cert_sample_v2.pdf",
+            "file_path": "uploads/vendors/gst_cert_sample_v2.pdf",
+            "file_size": 115200,
+            "content_type": "application/pdf",
+            "uploaded_by": admin_user.id,
+            "version": 2,
+            "is_current": True,
         },
         {
             "vendor_id": vendor1.id,
             "document_type": "PAN Card",
             "file_name": "pan_card_sample.pdf",
             "file_path": "uploads/vendors/pan_card_sample.pdf",
+            "file_size": 204800,
             "content_type": "application/pdf",
-            "uploaded_by": admin_user.id
+            "uploaded_by": admin_user.id,
+            "version": 1,
+            "is_current": True,
         },
         {
             "vendor_id": vendor1.id,
             "document_type": "ISO Certificate",
             "file_name": "iso9001_sample.pdf",
             "file_path": "uploads/vendors/iso9001_sample.pdf",
+            "file_size": 307200,
             "content_type": "application/pdf",
-            "uploaded_by": admin_user.id
+            "uploaded_by": admin_user.id,
+            "version": 1,
+            "is_current": True,
         },
         {
             "vendor_id": vendor2.id,
             "document_type": "Company Registration Certificate",
             "file_name": "reg_cert_acme.pdf",
             "file_path": "uploads/vendors/reg_cert_acme.pdf",
+            "file_size": 153600,
             "content_type": "application/pdf",
-            "uploaded_by": admin_user.id
+            "uploaded_by": admin_user.id,
+            "version": 1,
+            "is_current": True,
         },
         {
             "vendor_id": vendor3.id,
             "document_type": "Other Supporting Document",
             "file_name": "financials_global.pdf",
             "file_path": "uploads/vendors/financials_global.pdf",
+            "file_size": 409600,
             "content_type": "application/pdf",
-            "uploaded_by": admin_user.id
+            "uploaded_by": admin_user.id,
+            "version": 1,
+            "is_current": True,
         },
     ]
 
     for ddata in docs_data:
+        ensure_physical_file(ddata["file_path"], f"Sample content for vendor doc {ddata['file_name']}")
         ext = db.query(VendorDocument).filter(
             VendorDocument.vendor_id == ddata["vendor_id"],
             VendorDocument.file_name == ddata["file_name"]
         ).first()
         if not ext:
             db.add(VendorDocument(**ddata))
+        else:
+            for k, v in ddata.items():
+                setattr(ext, k, v)
     db.commit()
-    print("Seeded vendor documents.")
+
+    # Link replacement tracking for vendor documents
+    v1_gst = db.query(VendorDocument).filter(
+        VendorDocument.vendor_id == vendor1.id,
+        VendorDocument.file_name == "gst_cert_sample.pdf"
+    ).first()
+    v2_gst = db.query(VendorDocument).filter(
+        VendorDocument.vendor_id == vendor1.id,
+        VendorDocument.file_name == "gst_cert_sample_v2.pdf"
+    ).first()
+    if v1_gst and v2_gst and v2_gst.replaced_document_id is None:
+        v2_gst.replaced_document_id = v1_gst.id
+        db.commit()
+
+    print("Seeded vendor documents with version replacement history.")
 
     # 7. Seed Vendor Approval History
     approval_histories = [
@@ -450,6 +527,29 @@ def seed_database():
             "approved_date": datetime.utcnow() - timedelta(days=15),
             "vendor_id": vendor1.id,
         },
+        {
+            "request_number": "REQ-2026-006",
+            "title": "Draft Safety Equipment Order",
+            "department": "Operations",
+            "project_name": "Safety Compliance 2026",
+            "item_description": "Safety helmets and protective gear - 50 sets",
+            "product_name": "Industrial Safety Gear Set",
+            "product_category": "Safety Equipment",
+            "quantity": 50,
+            "unit_of_measurement": "Sets",
+            "estimated_budget": 45000.0,
+            "required_delivery_date": datetime.utcnow() + timedelta(days=30),
+            "priority": "Medium",
+            "business_justification": "Annual safety gear replacement draft.",
+            "additional_remarks": "Draft request awaiting internal department review.",
+            "requested_by": dept_user.id,
+            "request_date": datetime.utcnow() - timedelta(days=1),
+            "approval_status": "Draft",
+            "approval_remarks": None,
+            "approved_by": None,
+            "approved_date": None,
+            "vendor_id": vendor1.id,
+        },
     ]
 
     req_map = {}
@@ -463,6 +563,83 @@ def seed_database():
         req_map[rdata["request_number"]] = req
 
     print(f"Seeded {len(req_map)} procurement requests.")
+
+    # Seed Procurement Request Supporting Documents
+    pr_docs = [
+        {
+            "request_id": req_map["REQ-2026-001"].id,
+            "document_type": "Technical Specification",
+            "file_name": "steel_spec_v1.pdf",
+            "file_path": "uploads/procurement_requests/steel_spec_v1.pdf",
+            "file_size": 256000,
+            "content_type": "application/pdf",
+            "uploaded_by": dept_user.id,
+            "version": 1,
+            "is_current": False,
+            "replaced_at": datetime.utcnow() - timedelta(days=5),
+            "replaced_by": dept_user.id,
+        },
+        {
+            "request_id": req_map["REQ-2026-001"].id,
+            "document_type": "Technical Specification",
+            "file_name": "steel_spec_v2.pdf",
+            "file_path": "uploads/procurement_requests/steel_spec_v2.pdf",
+            "file_size": 284000,
+            "content_type": "application/pdf",
+            "uploaded_by": dept_user.id,
+            "version": 2,
+            "is_current": True,
+        },
+        {
+            "request_id": req_map["REQ-2026-002"].id,
+            "document_type": "Quotation Comparison",
+            "file_name": "it_laptops_quote.pdf",
+            "file_path": "uploads/procurement_requests/it_laptops_quote.pdf",
+            "file_size": 198000,
+            "content_type": "application/pdf",
+            "uploaded_by": dept_user.id,
+            "version": 1,
+            "is_current": True,
+        },
+        {
+            "request_id": req_map["REQ-2026-006"].id,
+            "document_type": "Draft Requirement Scope",
+            "file_name": "safety_gear_draft_specs.pdf",
+            "file_path": "uploads/procurement_requests/safety_gear_draft_specs.pdf",
+            "file_size": 120000,
+            "content_type": "application/pdf",
+            "uploaded_by": dept_user.id,
+            "version": 1,
+            "is_current": True,
+        },
+    ]
+
+    for prd in pr_docs:
+        ensure_physical_file(prd["file_path"], f"Sample content for procurement request doc {prd['file_name']}")
+        ext = db.query(ProcurementRequestDocument).filter(
+            ProcurementRequestDocument.request_id == prd["request_id"],
+            ProcurementRequestDocument.file_name == prd["file_name"]
+        ).first()
+        if not ext:
+            db.add(ProcurementRequestDocument(**prd))
+        else:
+            for k, v in prd.items():
+                setattr(ext, k, v)
+    db.commit()
+
+    pr_v1 = db.query(ProcurementRequestDocument).filter(
+        ProcurementRequestDocument.request_id == req_map["REQ-2026-001"].id,
+        ProcurementRequestDocument.file_name == "steel_spec_v1.pdf"
+    ).first()
+    pr_v2 = db.query(ProcurementRequestDocument).filter(
+        ProcurementRequestDocument.request_id == req_map["REQ-2026-001"].id,
+        ProcurementRequestDocument.file_name == "steel_spec_v2.pdf"
+    ).first()
+    if pr_v1 and pr_v2 and pr_v2.replaced_document_id is None:
+        pr_v2.replaced_document_id = pr_v1.id
+        db.commit()
+
+    print("Seeded procurement request supporting documents with version replacement history.")
 
     # 10. Seed Procurement Status History & Approvals
     for req_num, req in req_map.items():
@@ -610,18 +787,71 @@ def seed_database():
         db.commit()
         print("Seeded 1 contract renewal.")
 
-    # 13. Seed Contract Document
-    ext_cd = db.query(ContractDocument).filter(ContractDocument.contract_id == contract_map["CON-2026-001"].id).first()
-    if not ext_cd:
-        cd = ContractDocument(
-            contract_id=contract_map["CON-2026-001"].id,
-            document_type="Signed Agreement",
-            file_name="steel_master_agreement_signed.pdf",
-            file_path="uploads/contracts/steel_master_agreement_signed.pdf"
-        )
-        db.add(cd)
+    # 13. Seed Contract Documents (with versioning and document replacement history)
+    contract_docs_data = [
+        {
+            "contract_id": contract_map["CON-2026-001"].id,
+            "document_type": "Signed Agreement",
+            "file_name": "steel_master_agreement_signed_v1.pdf",
+            "file_path": "uploads/contracts/steel_master_agreement_signed_v1.pdf",
+            "file_size": 512000,
+            "content_type": "application/pdf",
+            "uploaded_by": admin_user.id,
+            "version": 1,
+            "is_current": False,
+            "replaced_at": datetime.utcnow() - timedelta(days=10),
+            "replaced_by": admin_user.id,
+        },
+        {
+            "contract_id": contract_map["CON-2026-001"].id,
+            "document_type": "Signed Agreement",
+            "file_name": "steel_master_agreement_signed_v2.pdf",
+            "file_path": "uploads/contracts/steel_master_agreement_signed_v2.pdf",
+            "file_size": 540000,
+            "content_type": "application/pdf",
+            "uploaded_by": admin_user.id,
+            "version": 2,
+            "is_current": True,
+        },
+        {
+            "contract_id": contract_map["CON-2026-002"].id,
+            "document_type": "Amendment",
+            "file_name": "it_maint_amendment_v1.pdf",
+            "file_path": "uploads/contracts/it_maint_amendment_v1.pdf",
+            "file_size": 320000,
+            "content_type": "application/pdf",
+            "uploaded_by": pm_user.id,
+            "version": 1,
+            "is_current": True,
+        },
+    ]
+
+    for cdd in contract_docs_data:
+        ensure_physical_file(cdd["file_path"], f"Sample content for contract doc {cdd['file_name']}")
+        ext = db.query(ContractDocument).filter(
+            ContractDocument.contract_id == cdd["contract_id"],
+            ContractDocument.file_name == cdd["file_name"]
+        ).first()
+        if not ext:
+            db.add(ContractDocument(**cdd))
+        else:
+            for k, v in cdd.items():
+                setattr(ext, k, v)
+    db.commit()
+
+    c_v1 = db.query(ContractDocument).filter(
+        ContractDocument.contract_id == contract_map["CON-2026-001"].id,
+        ContractDocument.file_name == "steel_master_agreement_signed_v1.pdf"
+    ).first()
+    c_v2 = db.query(ContractDocument).filter(
+        ContractDocument.contract_id == contract_map["CON-2026-001"].id,
+        ContractDocument.file_name == "steel_master_agreement_signed_v2.pdf"
+    ).first()
+    if c_v1 and c_v2 and c_v2.replaced_document_id is None:
+        c_v2.replaced_document_id = c_v1.id
         db.commit()
-        print("Seeded contract document.")
+
+    print("Seeded contract documents with version replacement history.")
 
     # 14. Seed Purchase Orders & Order Tracking (Draft, Issued/In Transit, Delivered, Delayed, Completed, Cancelled)
     po_configs = [
@@ -854,6 +1084,131 @@ def seed_database():
             db.add(Invoice(**inv))
     db.commit()
     print(f"Seeded {len(invoices_data)} invoices.")
+
+    inv_map = {inv.invoice_number: inv for inv in db.query(Invoice).all()}
+
+    # Seed Invoice Supporting Documents
+    inv_docs = [
+        {
+            "invoice_id": inv_map["INV-2026-001"].id,
+            "document_type": "Tax Invoice",
+            "file_name": "inv_2026_001_v1.pdf",
+            "file_path": "uploads/invoices/inv_2026_001_v1.pdf",
+            "file_size": 180000,
+            "content_type": "application/pdf",
+            "uploaded_by": vendor_user.id,
+            "version": 1,
+            "is_current": False,
+            "replaced_at": datetime.utcnow() - timedelta(days=7),
+            "replaced_by": vendor_user.id,
+        },
+        {
+            "invoice_id": inv_map["INV-2026-001"].id,
+            "document_type": "Tax Invoice",
+            "file_name": "inv_2026_001_v2.pdf",
+            "file_path": "uploads/invoices/inv_2026_001_v2.pdf",
+            "file_size": 195000,
+            "content_type": "application/pdf",
+            "uploaded_by": vendor_user.id,
+            "version": 2,
+            "is_current": True,
+        },
+        {
+            "invoice_id": inv_map["INV-2026-002"].id,
+            "document_type": "Payment Receipt",
+            "file_name": "inv_2026_002_receipt.pdf",
+            "file_path": "uploads/invoices/inv_2026_002_receipt.pdf",
+            "file_size": 140000,
+            "content_type": "application/pdf",
+            "uploaded_by": users_map["finance.officer@vendoriq.com"].id,
+            "version": 1,
+            "is_current": True,
+        },
+    ]
+
+    for idoc in inv_docs:
+        ensure_physical_file(idoc["file_path"], f"Sample content for invoice doc {idoc['file_name']}")
+        ext = db.query(InvoiceDocument).filter(
+            InvoiceDocument.invoice_id == idoc["invoice_id"],
+            InvoiceDocument.file_name == idoc["file_name"]
+        ).first()
+        if not ext:
+            db.add(InvoiceDocument(**idoc))
+        else:
+            for k, v in idoc.items():
+                setattr(ext, k, v)
+    db.commit()
+
+    inv_v1 = db.query(InvoiceDocument).filter(
+        InvoiceDocument.invoice_id == inv_map["INV-2026-001"].id,
+        InvoiceDocument.file_name == "inv_2026_001_v1.pdf"
+    ).first()
+    inv_v2 = db.query(InvoiceDocument).filter(
+        InvoiceDocument.invoice_id == inv_map["INV-2026-001"].id,
+        InvoiceDocument.file_name == "inv_2026_001_v2.pdf"
+    ).first()
+    if inv_v1 and inv_v2 and inv_v2.replaced_document_id is None:
+        inv_v2.replaced_document_id = inv_v1.id
+        db.commit()
+
+    print("Seeded invoice supporting documents with version replacement history.")
+
+    # Seed Vendor Issues (Module 4 issue/complaint tracking)
+    issues_data = [
+        {
+            "vendor_id": vendor1.id,
+            "purchase_order_id": po_map["PO-2026-003"].id,
+            "issue_category": "Quality Defect",
+            "severity": "High",
+            "description": "Surface scratches and minor rust observed on 5% of delivered steel rod batch.",
+            "status": "Open",
+            "reported_by": pm_user.id,
+            "reported_date": datetime.utcnow() - timedelta(days=3),
+            "assigned_to": admin_user.id,
+            "resolution_notes": None,
+            "resolved_by": None,
+            "resolved_date": None,
+        },
+        {
+            "vendor_id": vendor2.id,
+            "purchase_order_id": po_map["PO-2026-002"].id,
+            "issue_category": "Late Delivery",
+            "severity": "Medium",
+            "description": "Dispatch delayed by 2 days due to inventory stock shortage.",
+            "status": "Resolved",
+            "reported_by": users_map["scm.manager@vendoriq.com"].id,
+            "reported_date": datetime.utcnow() - timedelta(days=8),
+            "assigned_to": pm_user.id,
+            "resolution_notes": "Vendor expedited shipping at zero additional cost and provided 3% credit note.",
+            "resolved_by": pm_user.id,
+            "resolved_date": datetime.utcnow() - timedelta(days=6),
+        },
+        {
+            "vendor_id": vendor3.id,
+            "purchase_order_id": None,
+            "issue_category": "Compliance Violation",
+            "severity": "High",
+            "description": "Failed annual safety audit and missing renewed ISO compliance certificate.",
+            "status": "In Progress",
+            "reported_by": users_map["auditor@vendoriq.com"].id,
+            "reported_date": datetime.utcnow() - timedelta(days=12),
+            "assigned_to": admin_user.id,
+            "resolution_notes": "Vendor requested 14-day extension to submit audit correction plan.",
+            "resolved_by": None,
+            "resolved_date": None,
+        },
+    ]
+
+    for isdata in issues_data:
+        ext = db.query(VendorIssue).filter(
+            VendorIssue.vendor_id == isdata["vendor_id"],
+            VendorIssue.issue_category == isdata["issue_category"],
+            VendorIssue.description == isdata["description"]
+        ).first()
+        if not ext:
+            db.add(VendorIssue(**isdata))
+    db.commit()
+    print("Seeded vendor performance issues and resolution tracking records.")
 
     # 16. Seed Delivery Performance, Quality, Communication Logs & Service Ratings
     po1 = po_map["PO-2026-001"]
@@ -1279,9 +1634,11 @@ def seed_database():
             ))
 
         # Add Communication File Attachment
+        comm_file_path = "uploads/discussions/q3_pricing_breakdown.pdf"
+        ensure_physical_file(comm_file_path, "Sample content for q3 pricing breakdown attachment.")
         db.add(CommunicationFile(
             filename="q3_pricing_breakdown.pdf",
-            file_path="uploads/discussions/q3_pricing_breakdown.pdf",
+            file_path=comm_file_path,
             file_type="application/pdf",
             file_size=245000,
             uploaded_by_id=pm_user.id,

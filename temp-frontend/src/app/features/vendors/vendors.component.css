@@ -63,8 +63,8 @@
 
 .form-control:focus,
 .form-select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+  border-color: var(--vr-primary);
+  box-shadow: 0 0 0 0.2rem var(--vr-focus);
 }
 
 .btn-primary {
@@ -72,7 +72,7 @@
   border-radius: 12px;
   border: none;
   font-weight: 600;
-  background: linear-gradient(135deg, #2563eb, #0f766e);
+  background: linear-gradient(135deg, var(--vr-primary), var(--vr-primary-dark));
   color: #fff;
 }
 
@@ -86,9 +86,9 @@
 }
 
 .btn-outline-primary {
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: var(--vr-primary-dark);
 }
 
 .btn-outline-secondary {
@@ -118,7 +118,7 @@
 
 .table thead th {
   padding: 0.9rem 1rem;
-  background: #f8fafc;
+  background: #fff7f8;
   color: #475569;
   font-size: 0.85rem;
   text-transform: uppercase;
@@ -135,7 +135,7 @@
 }
 
 .table tbody tr:hover {
-  background: #f8fbff;
+  background: #fff7f8;
 }
 
 .contact-name {
@@ -231,6 +231,16 @@
   flex-wrap: wrap;
   gap: 0.75rem;
 }
+
+/* Keep the vendor workspace aligned with the shared enterprise theme. */
+.page-card { background: linear-gradient(135deg, #FFF1F2 0%, #FFF7F7 38%, #FFFFFF 100%); border: 1px solid var(--vr-border); box-shadow: var(--vr-shadow); }
+.filter-grid { border-color: var(--vr-border); background: var(--vr-surface-muted); box-shadow: var(--vr-shadow-sm); }
+.form-control:focus, .form-select:focus { border-color: var(--vr-primary); box-shadow: 0 0 0 .2rem var(--vr-focus); }
+.btn-primary { background: linear-gradient(135deg, var(--vr-primary), var(--vr-primary-dark)); }
+.btn-outline-primary { border-color: #ddd6fe; background: #faf5ff; color: var(--vr-accent); }
+.vendor-table-wrap { border-color: var(--vr-border); box-shadow: var(--vr-shadow-sm); }
+.table thead th { background: #FFF7ED; color: #6B7280; }
+.table tbody tr:hover { background: #fffafb; }
 
 @media (max-width: 1200px) {
   .filter-grid {

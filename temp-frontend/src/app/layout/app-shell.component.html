@@ -42,7 +42,8 @@
       </div>
       <div class="notification-menu" (click)="$event.stopPropagation()" *ngIf="currentUser">
         <button type="button" class="bell-button" (click)="toggleNotifications($event)" aria-label="Open notifications" [attr.aria-expanded]="notificationOpen()">
-          <span aria-hidden="true">🔔</span><span class="notification-badge" *ngIf="unreadNotifications()">{{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}</span>
+          <span aria-hidden="true">&#128276;</span>
+          <span class="notification-badge" *ngIf="unreadNotifications()">{{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}</span>
         </button>
         <section class="notification-dropdown" *ngIf="notificationOpen()" aria-label="Recent notifications">
           <header><strong>Notifications</strong><a routerLink="/notifications" (click)="notificationOpen.set(false)">View all</a></header>

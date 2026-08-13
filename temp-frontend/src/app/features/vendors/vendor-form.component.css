@@ -42,8 +42,8 @@ textarea.form-control {
 .form-control:focus,
 .form-select:focus,
 textarea.form-control:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+  border-color: var(--vr-primary);
+  box-shadow: 0 0 0 0.2rem var(--vr-focus);
   outline: none;
 }
 
@@ -93,7 +93,7 @@ textarea.form-control.ng-invalid.ng-touched {
 
 .btn-primary {
   border: none;
-  background: linear-gradient(135deg, #2563eb, #0f766e);
+  background: linear-gradient(135deg, var(--vr-primary), var(--vr-primary-dark));
   color: #fff;
 }
 
@@ -115,6 +115,11 @@ textarea.form-control.ng-invalid.ng-touched {
   gap: 0.75rem;
   align-items: center;
 }
+
+/* Shared focus and surface treatment without changing the form workflow. */
+.page-card { background: linear-gradient(135deg, #FFF1F2 0%, #FFF7F7 38%, #FFFFFF 100%); border: 1px solid var(--vr-border); box-shadow: var(--vr-shadow); }
+.form-control:focus, .form-select:focus, textarea.form-control:focus { border-color: var(--vr-primary); box-shadow: 0 0 0 .2rem var(--vr-focus); }
+.btn-primary { background: linear-gradient(135deg, var(--vr-primary), var(--vr-primary-dark)); }
 
 .row.g-3 {
   --bs-gutter-x: 1rem;

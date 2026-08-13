@@ -1,11 +1,31 @@
 <section class="auth-shell">
-  <div class="auth-card">
-    <div class="text-center mb-4">
-      <h2>Vendor Reliability</h2>
-      <p>Sign in to the operations portal.</p>
-    </div>
+  <div class="auth-layout">
+    <aside class="auth-hero" aria-label="Vendor Reliability System overview">
+      <span class="auth-kicker">Vendor Reliability System</span>
+      <h1>One workspace for dependable vendor operations.</h1>
+      <p>Track procurement activity, monitor vendor performance, and keep contracts and compliance in control.</p>
+      <ul>
+        <li>Procurement tracking from request to delivery</li>
+        <li>Vendor performance and reliability insights</li>
+        <li>Contract and compliance visibility</li>
+      </ul>
+      <div class="hero-art" aria-hidden="true">
+        <span class="hero-orbit orbit-one"></span>
+        <span class="hero-orbit orbit-two"></span>
+        <span class="hero-core"></span>
+        <span class="hero-spark spark-one"></span>
+        <span class="hero-spark spark-two"></span>
+      </div>
+    </aside>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate [attr.aria-busy]="isSubmitting()">
+    <div class="auth-card">
+      <div class="auth-heading">
+        <span class="secure-label" aria-label="Secure access"><span aria-hidden="true">&#128274;</span> Secure access</span>
+        <h2>Welcome back</h2>
+        <p>Sign in to the operations portal.</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate [attr.aria-busy]="isSubmitting()">
       <div class="mb-3">
         <label for="email" class="form-label">Email<span class="required-mark" aria-hidden="true">*</span></label>
         <input id="email" type="email" class="form-control" formControlName="email" autocomplete="email" [disabled]="isSubmitting()" />
@@ -29,13 +49,14 @@
       <button class="btn btn-primary w-100" type="submit" [disabled]="isSubmitting()">
         {{ isSubmitting() ? 'Signing in...' : 'Login' }}
       </button>
-    </form>
+      </form>
 
-    <div class="auth-footer">
-      <a routerLink="/forgot-password">Forgot password?</a>
-      <div>
-        <span>New here? </span>
-        <a routerLink="/register">Create account</a>
+      <div class="auth-footer">
+        <a routerLink="/forgot-password">Forgot password?</a>
+        <div>
+          <span>New here? </span>
+          <a routerLink="/register">Create account</a>
+        </div>
       </div>
     </div>
   </div>

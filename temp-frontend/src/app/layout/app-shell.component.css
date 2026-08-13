@@ -1,24 +1,22 @@
 .app-shell {
   display: grid;
-  grid-template-columns: 276px minmax(0, 1fr);
+  grid-template-columns: 252px minmax(0, 1fr);
   min-height: 100vh;
-  background: #FFF7F7;
+  background: var(--vr-page);
   color: #f4f9ff;
 }
-
 .sidebar {
-  padding: 1.35rem 1rem;
+  padding: 1rem .8rem;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: .75rem;
   background: #2A0F14;
 }
-
 .brand {
   display: flex;
   align-items: center;
-  padding: 0.45rem 0.55rem 1rem;
+  padding: .35rem .5rem .75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -43,10 +41,10 @@
 .nav-link {
   position: relative;
   text-decoration: none;
-  padding: 0.78rem 0.9rem 0.78rem 1rem;
+  padding: .62rem .75rem .62rem .9rem;
   border-radius: 12px;
   color: #FFF7F7;
-  font-size: 0.94rem;
+  font-size: .88rem;
   font-weight: 600;
   transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
@@ -95,14 +93,14 @@
 
 .sidebar-footer {
   display: grid;
-  gap: 0.85rem;
+  gap: .65rem;
 }
 
 .user-summary {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding: 0.72rem;
+  padding: .6rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   background: #3F1620;
@@ -144,24 +142,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.35rem clamp(1.25rem, 3vw, 2.25rem);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, .94);
+  gap: .75rem;
+  padding: .9rem clamp(1rem, 2.2vw, 1.5rem);
+  border-bottom: 1px solid var(--vr-border);
+  background: rgba(255, 255, 255, .96);
   color: #111827;
   backdrop-filter: blur(14px);
 }
-
 .notification-menu { position: relative; flex: 0 0 auto; }
-.bell-button { position: relative; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #fecdd3; border-radius: 12px; background: #fff; font-size: 1.05rem; }
-.notification-badge { position: absolute; top: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 99px; background: #e11d48; color: #fff; font-size: .67rem; font-weight: 800; line-height: 20px; }
+.bell-button { position: relative; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #fecdd3; border-radius: 12px; background: #fff; font-size: 1.05rem; transition: transform .16s ease, box-shadow .16s ease; }
+.bell-button:hover { transform: translateY(-1px); box-shadow: 0 7px 16px rgba(225,29,72,.14); }
+.notification-badge { position: absolute; top: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 99px; background: #dc2626; color: #fff; font-size: .67rem; font-weight: 800; line-height: 20px; }
 .notification-dropdown { position: absolute; z-index: 20; top: calc(100% + .65rem); right: 0; width: min(360px, calc(100vw - 2rem)); overflow: hidden; border: 1px solid #e2e8f0; border-radius: 15px; background: #fff; box-shadow: 0 18px 40px rgba(15,23,42,.18); color: #1f2937; }
 .notification-dropdown header { display: flex; align-items: center; justify-content: space-between; padding: .85rem 1rem; border-bottom: 1px solid #e2e8f0; }.notification-dropdown header a { font-size: .8rem; }
 .recent-notification { display: flex; width: 100%; gap: .6rem; padding: .75rem 1rem; border: 0; border-bottom: 1px solid #f1f5f9; background: #fff; text-align: left; }.recent-notification:hover,.recent-notification.unread { background: #fff7f8; }.recent-notification b,.recent-notification small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.recent-notification b { font-size:.83rem; }.recent-notification small { margin-top:.18rem; color:#64748b; font-size:.74rem; }.notification-dot { width:8px; height:8px; flex:0 0 8px; margin-top:.35rem; border-radius:50%; background:#94a3b8; }.notification-dot.high{background:#dc2626}.notification-dot.medium{background:#f59e0b}.notification-dot.low{background:#2563eb}.empty-notification{margin:0;padding:1rem;color:#64748b;font-size:.86rem;text-align:center;}
 
 .topbar h1 {
   margin: 0;
-  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  font-size: clamp(1.2rem, 1.8vw, 1.45rem);
   letter-spacing: -0.02em;
 }
 
@@ -178,14 +176,14 @@
 }
 
 .topbar p {
-  margin: 0.35rem 0 0;
+  margin: .2rem 0 0;
   color: #64748B;
 }
 
 .page-body {
   width: min(100%, 1440px);
   margin: 0 auto;
-  padding: clamp(1rem, 3vw, 2rem);
+  padding: clamp(.85rem, 2vw, 1.25rem);
 }
 
 @media (max-width: 900px) {
@@ -222,7 +220,6 @@
     width: auto !important;
   }
 }
-
 @media (max-width: 540px) {
   .topbar {
     padding: 1.05rem 1rem;
@@ -242,3 +239,6 @@
     width: 100% !important;
   }
 }
+
+/* Keep the low-priority notification indicator inside the red/pink palette. */
+.notification-dot.low { background: #fb7185; }

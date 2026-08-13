@@ -38,6 +38,7 @@ from app.schemas.vendor import (
     VendorDocumentResponse,
     VendorUpdate,
 )
+from app.services.notification_service import create_vendor_approval_notification
 
 
 router = APIRouter(prefix="/vendors", tags=["Vendors"])
@@ -105,35 +106,6 @@ def _vendor_or_404(db: Session, vendor_id: int) -> Vendor:
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return vendor
-
-
-def _linked_vendor_user(db: Session, vendor: Vendor) -> User | None:
-    """Return the vendor-role account that owns this vendor's email address."""
-    return (
-        db.query(User)
-        .filter(User.email == vendor.email, User.role == "Vendor")
-        .first()
-    )
-
-
-def _notify_linked_vendor(db: Session, vendor: Vendor, *, title: str, message: str, notification_type: str) -> None:
-    """Create a visible notification only when the vendor has a linked account."""
-    vendor_user = _linked_vendor_user(db, vendor)
-    if not vendor_user:
-        return
-    db.add(
-        Notification(
-            user_id=vendor_user.id,
-            vendor_id=vendor.id,
-            title=title,
-            message=message,
-            notification_type=notification_type,
-            type=notification_type,
-            related_module="Vendor",
-            related_record_id=vendor.id,
-            link=f"/vendors/{vendor.id}",
-        )
-    )
 
 
 def _ensure_vendor_can_be_deleted(db: Session, vendor: Vendor) -> None:
@@ -417,13 +389,9 @@ def approve_vendor(
         db.add(PerformanceRecord(vendor_id=vendor.id, performance_status="Not Evaluated", notes="Created when vendor was approved."))
     if not db.query(VendorReliability).filter(VendorReliability.vendor_id == vendor.id).first():
         db.add(VendorReliability(vendor_id=vendor.id, risk_level="Medium", recommendation="Awaiting performance evaluation."))
-    _notify_linked_vendor(
-        db,
-        vendor,
-        title="Vendor approved",
-        message=f"{vendor.company_name} has been approved and is now active.",
-        notification_type="VENDOR_APPROVAL",
-    )
+    # Recipient targeting, deduplication, and optional delivery channels are
+    # centralized in the Module 9 service helper.
+    create_vendor_approval_notification(db, vendor.id, approved=True)
     db.commit()
     db.refresh(vendor)
     return vendor
@@ -453,13 +421,8 @@ def reject_vendor(
             acted_by=current_user.id,
         )
     )
-    _notify_linked_vendor(
-        db,
-        vendor,
-        title="Vendor registration rejected",
-        message=f"{vendor.company_name} was not approved. Review the remarks for next steps.",
-        notification_type="VENDOR_REJECTION",
-    )
+    # Keep rejection notification rules consistent with the approval path.
+    create_vendor_approval_notification(db, vendor.id, approved=False)
     db.commit()
     db.refresh(vendor)
     return vendor

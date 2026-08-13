@@ -51,7 +51,7 @@ class _SeededScanDb:
         self.purchase_order = SimpleNamespace(
             id=13,
             vendor_id=7,
-            assigned_procurement_manager_id=None,
+            assigned_procurement_manager_id=3,
             expected_delivery_date=today - timedelta(days=1),
             po_status="Issued",
         )

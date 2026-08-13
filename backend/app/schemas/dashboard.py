@@ -96,12 +96,14 @@ class VendorPerformanceSummary(BaseModel):
     vendor_id: int = Field(alias="vendorId")
     vendor_name: str = Field(alias="vendorName")
     overall_performance_rating: float = Field(alias="overallPerformanceRating")
-    delivery_accuracy: float = Field(alias="deliveryAccuracy")
-    product_quality_score: float = Field(alias="productQualityScore")
-    communication_efficiency: float = Field(alias="communicationEfficiency")
-    service_rating: float = Field(alias="serviceRating")
+    # The dashboard deliberately returns null when no persisted source record
+    # exists, rather than manufacturing performance values.
+    delivery_accuracy: Optional[float] = Field(alias="deliveryAccuracy")
+    product_quality_score: Optional[float] = Field(alias="productQualityScore")
+    communication_efficiency: Optional[float] = Field(alias="communicationEfficiency")
+    service_rating: Optional[float] = Field(alias="serviceRating")
     reliability_score: float = Field(alias="reliabilityScore")
-    risk_level: str = Field(alias="riskLevel")
+    risk_level: Optional[str] = Field(alias="riskLevel")
 
 
 class ProcurementDashboardOut(BaseModel):
@@ -120,9 +122,9 @@ class PersonalizedVendorDashboardOut(BaseModel):
     company_name: str = Field(alias="companyName")
     reliability_score: float = Field(alias="reliabilityScore")
     overall_performance_score: float = Field(alias="overallPerformanceScore")
-    delivery_accuracy: float = Field(alias="deliveryAccuracy")
-    product_quality_rating: float = Field(alias="productQualityRating")
-    communication_efficiency: float = Field(alias="communicationEfficiency")
+    delivery_accuracy: Optional[float] = Field(alias="deliveryAccuracy")
+    product_quality_rating: Optional[float] = Field(alias="productQualityRating")
+    communication_efficiency: Optional[float] = Field(alias="communicationEfficiency")
 
     active_purchase_orders: int = Field(alias="activePurchaseOrders")
     completed_orders: int = Field(alias="completedOrders")

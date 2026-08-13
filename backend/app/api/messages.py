@@ -16,7 +16,7 @@ from app.models.purchase_order import PurchaseOrder
 from app.models.user import User
 from app.models.vendor import Vendor
 from app.schemas.messages import ConversationSummary, MessageContact, MessageCreate, MessageOut, UnreadMessageCountOut
-from app.services import message_service, notification_service
+from app.services import message_service
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -222,20 +222,9 @@ def send_direct_message(
         related_entity_id=payload.related_entity_id,
     )
 
-    # The generic service persists the real in-app event and transparently
-    # returns honest `not_configured` results for email/SMS when unavailable.
-    notification_service.create_notification(
-        db=db,
-        user_id=receiver.id,
-        title=f"New message from {current_user.full_name}",
-        message=payload.content.strip()[:500],
-        notification_type="MESSAGE",
-        priority="MEDIUM",
-        delivery_method="ALL",
-        related_module="Messages",
-        related_record_id=message.id,
-        link=f"/messages/{current_user.id}",
-    )
+    # `message_service.send_message` persists the receiver-facing in-app
+    # notification. Keeping that side effect in one place prevents duplicate
+    # alerts for a single direct message.
     return _message_out(message)
 
 

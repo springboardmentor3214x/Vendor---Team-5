@@ -37,7 +37,7 @@ class _SeededScanDb:
         self.contract = SimpleNamespace(
             id=11,
             vendor_id=7,
-            responsible_manager_id=None,
+            responsible_manager_id=3,
             contract_title="Demo renewal",
             contract_number="CT-DEMO-11",
             end_date=today + timedelta(days=7),
@@ -62,6 +62,13 @@ class _SeededScanDb:
             is_active=True,
             company_name=None,
         )
+        self.vendor_user = SimpleNamespace(
+            id=4,
+            email="vendor@example.test",
+            role="Vendor",
+            is_active=True,
+            company_name="Demo Supplier",
+        )
         self.vendor = SimpleNamespace(id=7, email="vendor@example.test", company_name="Demo Supplier")
 
     def query(self, model):
@@ -72,7 +79,7 @@ class _SeededScanDb:
         if model is PurchaseOrder:
             return _Query([self.purchase_order])
         if model is User:
-            return _Query([self.admin])
+            return _Query([self.admin, self.vendor_user])
         if model is Vendor:
             return _Query([self.vendor])
         if model is Notification:
@@ -98,9 +105,9 @@ def test_scheduled_scan_generates_contract_compliance_and_delivery_notifications
     result = notification_scheduler.run_notification_scan_job()
 
     assert result["status"] == "success"
-    assert result["contract_expiry_alerts_generated"] == 1
+    assert result["contract_expiry_alerts_generated"] == 2
     assert result["compliance_expiry_alerts_generated"] == 1
-    assert result["delivery_delay_alerts_generated"] == 1
+    assert result["delivery_delay_alerts_generated"] == 2
     assert {item["notification_type"] for item in created} == {
         "CONTRACT_EXPIRY",
         "COMPLIANCE_ALERT",

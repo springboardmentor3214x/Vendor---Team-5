@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 from datetime import datetime, date, timedelta
+from email.message import EmailMessage
+import os
+import smtplib
 from typing import Any, List, Optional, Dict
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect
 from types import SimpleNamespace
+from urllib.error import URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+import base64
 
 from app.models.notification import Notification
 from app.models.contract import Contract
@@ -149,14 +156,34 @@ def send_email_notification(
     body: str,
     user_id: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Describe an email dispatch without claiming delivery when SMTP is absent."""
-    return {
+    """Send email only when the complete SMTP configuration is present."""
+    host = os.getenv("SMTP_HOST")
+    username = os.getenv("SMTP_USERNAME")
+    password = os.getenv("SMTP_PASSWORD")
+    sender = os.getenv("SMTP_FROM") or username
+    if not all((host, username, password, sender)):
+        return {
         "status": "not_configured",
         "channel": "email",
         "to_email": to_email,
         "subject": subject,
         "dispatched_at": datetime.utcnow().isoformat()
-    }
+        }
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = sender
+    message["To"] = to_email
+    message.set_content(body)
+    try:
+        with smtplib.SMTP(host, int(os.getenv("SMTP_PORT", "587")), timeout=10) as client:
+            if os.getenv("SMTP_USE_TLS", "true").lower() not in {"0", "false", "no"}:
+                client.starttls()
+            client.login(username, password)
+            client.send_message(message)
+    except (OSError, smtplib.SMTPException) as exc:
+        return {"status": "failed", "channel": "email", "to_email": to_email, "error": str(exc)}
+    return {"status": "sent", "channel": "email", "to_email": to_email, "dispatched_at": datetime.utcnow().isoformat()}
 
 
 def send_sms_notification(
@@ -164,14 +191,32 @@ def send_sms_notification(
     message: str,
     user_id: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Describe an SMS dispatch without claiming delivery when Twilio is absent."""
-    return {
+    """Send SMS through Twilio only when its credentials are complete."""
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    sender = os.getenv("TWILIO_FROM_NUMBER")
+    if not all((account_sid, auth_token, sender)):
+        return {
         "status": "not_configured",
         "channel": "sms",
         "to_phone": phone_number,
         "message": message,
         "dispatched_at": datetime.utcnow().isoformat()
-    }
+        }
+    encoded = urlencode({"To": phone_number, "From": sender, "Body": message}).encode()
+    credentials = base64.b64encode(f"{account_sid}:{auth_token}".encode()).decode()
+    request = Request(
+        f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json",
+        data=encoded,
+        headers={"Authorization": f"Basic {credentials}", "Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=10):
+            pass
+    except (OSError, URLError) as exc:
+        return {"status": "failed", "channel": "sms", "to_phone": phone_number, "error": str(exc)}
+    return {"status": "sent", "channel": "sms", "to_phone": phone_number, "dispatched_at": datetime.utcnow().isoformat()}
 
 
 def create_notification(
@@ -254,6 +299,40 @@ def _event_recipient_ids(db: Session, vendor_id: Optional[int] = None, owner_id:
                                       and getattr(user, "company_name", None) == getattr(vendor, "company_name", None))))
     return sorted(recipient_ids)
 
+
+def _linked_vendor_user_ids(db: Session, vendor_id: int) -> list[int]:
+    """Return active user accounts explicitly linked to the vendor email."""
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    if not vendor:
+        return []
+    return [
+        user.id for user in db.query(User).all() or []
+        if getattr(user, "id", None) is not None
+        and getattr(user, "is_active", True)
+        and getattr(user, "email", None) == getattr(vendor, "email", None)
+    ]
+
+
+def _owner_recipient_ids(db: Session, vendor_id: int, owner_id: Optional[int] = None) -> list[int]:
+    """Target record owners: the linked vendor account and an explicit manager."""
+    recipients = set(_linked_vendor_user_ids(db, vendor_id))
+    if owner_id:
+        recipients.add(owner_id)
+    return sorted(recipients)
+
+
+def _notification_exists_for_today(
+    db: Session, *, user_id: int, notification_type: str, related_record_id: int
+) -> bool:
+    """Check idempotency at the recipient + event-record level."""
+    start_of_today = datetime.combine(date.today(), datetime.min.time())
+    return db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.notification_type == notification_type,
+        Notification.related_record_id == related_record_id,
+        Notification.created_at >= start_of_today,
+    ).first() is not None
+
 def create_vendor_approval_notification(db: Session, vendor_id: int, approved: bool) -> List[Notification]:
     """Generate approval / rejection notifications when vendor status updates."""
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
@@ -264,23 +343,16 @@ def create_vendor_approval_notification(db: Session, vendor_id: int, approved: b
     msg = f"Your vendor account '{vendor.company_name}' has been approved." if approved else f"Your vendor account '{vendor.company_name}' registration requires additional document verification."
     priority = "MEDIUM" if approved else "HIGH"
 
-    user = db.query(User).filter(User.email == vendor.email).first()
-    user_id = user.id if user else 1
-
-    notif = create_notification(
-        db=db,
-        user_id=user_id,
-        vendor_id=vendor_id,
-        title=title,
-        message=msg,
-        notification_type="VENDOR_APPROVAL" if approved else "VENDOR_REJECTION",
-        priority=priority,
-        delivery_method="ALL",
-        related_module="Vendor",
-        related_record_id=vendor_id,
-        link=f"/vendors/{vendor_id}"
-    )
-    return [notif]
+    notification_type = "VENDOR_APPROVAL" if approved else "VENDOR_REJECTION"
+    notifications = []
+    for user_id in _linked_vendor_user_ids(db, vendor_id):
+        if not _notification_exists_for_today(db, user_id=user_id, notification_type=notification_type, related_record_id=vendor_id):
+            notifications.append(create_notification(
+                db=db, user_id=user_id, vendor_id=vendor_id, title=title, message=msg,
+                notification_type=notification_type, priority=priority, delivery_method="ALL",
+                related_module="Vendor", related_record_id=vendor_id, link=f"/vendors/{vendor_id}",
+            ))
+    return notifications
 
 
 def create_procurement_alert(
@@ -314,7 +386,9 @@ def create_delivery_delay_notification(db: Session, po_id: int) -> List[Notifica
         return []
 
     notifications = []
-    for user_id in _event_recipient_ids(db, po.vendor_id, getattr(po, "assigned_procurement_manager_id", None)):
+    for user_id in _owner_recipient_ids(db, po.vendor_id, getattr(po, "assigned_procurement_manager_id", None)):
+        if _notification_exists_for_today(db, user_id=user_id, notification_type="DELIVERY_DELAY", related_record_id=po_id):
+            continue
         notif = create_notification(
             db=db,
             user_id=user_id,
@@ -346,17 +420,12 @@ def trigger_contract_expiry_reminders(db: Session) -> int:
         end = contract.end_date.date() if isinstance(contract.end_date, datetime) else contract.end_date
         days_left = (end - today).days
 
-        if days_left in [90, 30, 7, 1]:
-            # Avoid duplicating same notification today
-            existing = db.query(Notification).filter(
-                Notification.contract_id == contract.id,
-                Notification.notification_type == "CONTRACT_EXPIRY",
-                Notification.created_at >= datetime(today.year, today.month, today.day)
-            ).first()
-
-            if not existing:
-                for user_id in _event_recipient_ids(db, contract.vendor_id, getattr(contract, "responsible_manager_id", None)):
-                    create_notification(
+        contract_status = str(getattr(contract, "status", "Active")).strip().casefold()
+        if days_left in [90, 30, 7, 1] and contract_status not in {"cancelled", "terminated", "expired"}:
+            for user_id in _owner_recipient_ids(db, contract.vendor_id, getattr(contract, "responsible_manager_id", None)):
+                if _notification_exists_for_today(db, user_id=user_id, notification_type="CONTRACT_EXPIRY", related_record_id=contract.id):
+                    continue
+                create_notification(
                     db=db,
                     user_id=user_id,
                     contract_id=contract.id,
@@ -369,8 +438,8 @@ def trigger_contract_expiry_reminders(db: Session) -> int:
                     related_module="Contracts",
                     related_record_id=contract.id,
                     link="/contracts"
-                    )
-                    created_count += 1
+                )
+                created_count += 1
 
     return created_count
 
@@ -389,15 +458,10 @@ def trigger_compliance_expiry_reminders(db: Session) -> int:
         days_left = (exp - today).days
 
         if 0 <= days_left <= 30:
-            existing = db.query(Notification).filter(
-                Notification.vendor_id == cert.vendor_id,
-                Notification.notification_type == "COMPLIANCE_ALERT",
-                Notification.created_at >= datetime(today.year, today.month, today.day)
-            ).first()
-
-            if not existing:
-                for user_id in _event_recipient_ids(db, cert.vendor_id):
-                    create_notification(
+            for user_id in _owner_recipient_ids(db, cert.vendor_id):
+                if _notification_exists_for_today(db, user_id=user_id, notification_type="COMPLIANCE_ALERT", related_record_id=cert.id):
+                    continue
+                create_notification(
                     db=db,
                     user_id=user_id,
                     vendor_id=cert.vendor_id,
@@ -409,8 +473,8 @@ def trigger_compliance_expiry_reminders(db: Session) -> int:
                     related_module="Compliance",
                     related_record_id=cert.id,
                     link="/compliance"
-                    )
-                    created_count += 1
+                )
+                created_count += 1
 
     return created_count
 
@@ -429,9 +493,8 @@ def execute_all_background_notification_checks(db: Session) -> Dict[str, Any]:
         exp_date = getattr(po, "expected_delivery_date", None)
         if exp_date:
             d_val = exp_date.date() if isinstance(exp_date, datetime) else exp_date
-            if d_val < today and getattr(po, "status", "").lower() not in ["completed", "fulfilled", "delivered", "cancelled"]:
-                create_delivery_delay_notification(db, po.id)
-                delivery_alerts += 1
+            if d_val < today and getattr(po, "po_status", "").lower() not in ["completed", "fulfilled", "delivered", "cancelled"]:
+                delivery_alerts += len(create_delivery_delay_notification(db, po.id))
 
     return {
         "status": "success",

@@ -15,6 +15,28 @@ from app.utils.constants import (
 )
 
 
+def prepare_purchase_order_print_data(purchase_order: object, request: object, vendor: object) -> dict:
+    """Return a PDF/print-ready PO payload exclusively from persisted PO, request and vendor rows."""
+    if purchase_order is None or request is None or vendor is None:
+        raise ValueError("Purchase order, procurement request, and vendor data are required")
+    quantity = getattr(purchase_order, "quantity", None)
+    unit_price = getattr(purchase_order, "unit_price", None)
+    total_cost = getattr(purchase_order, "total_cost", None)
+    return {
+        "purchase_order": {key: getattr(purchase_order, key, None) for key in (
+            "id", "po_number", "po_date", "po_status", "quantity", "unit_price", "total_cost", "tax_details",
+            "shipping_address", "expected_delivery_date", "actual_delivery_date", "payment_terms", "project_name")},
+        "request": {key: getattr(request, key, None) for key in (
+            "id", "request_number", "title", "department", "project_name", "item_description", "product_name",
+            "product_category", "quantity", "unit_of_measurement", "business_justification", "required_delivery_date")},
+        "vendor": {key: getattr(vendor, key, None) for key in (
+            "id", "company_name", "contact_person_name", "email", "phone_number", "address_line1", "address_line2",
+            "city", "state", "country", "pincode", "gst_number", "pan_number")},
+        "line_items": [{"description": getattr(request, "item_description", None) or getattr(request, "product_name", None),
+                        "quantity": quantity, "unit_price": unit_price, "line_total": total_cost}],
+    }
+
+
 def generate_purchase_order_number(sequence_number: int) -> str:
     """
     Generate purchase order number automatically.

@@ -9,7 +9,9 @@ from app.services.procurement_service import (
     can_edit_sent_back_request,
     resubmit_procurement_request,
     can_assign_vendor_to_request,
-    can_user_manage_procurement_request
+    can_user_manage_procurement_request,
+    submit_procurement_request,
+    validate_procurement_request_for_submission,
 )
 from app.utils.constants import (
     PROCUREMENT_REQUEST_STATUS_APPROVED,
@@ -22,6 +24,16 @@ import pytest
 
 def test_generate_procurement_request_number():
     assert generate_procurement_request_number(1) == "PR-2026-0001"
+
+
+def test_only_draft_request_can_be_submitted_after_required_fields_validate():
+    request = type("Request", (), {"title": "Steel", "department": "Ops", "item_description": "Sheet steel",
+        "product_name": "Steel", "product_category": "Raw", "quantity": 1, "estimated_budget": 10.0,
+        "required_delivery_date": date.today(), "business_justification": "Production"})()
+    validate_procurement_request_for_submission(request)
+    assert submit_procurement_request("Draft") == PROCUREMENT_REQUEST_STATUS_PENDING
+    with pytest.raises(ValueError, match="Only draft"):
+        submit_procurement_request("Approved")
 
 
 def test_can_assign_vendor_after_approval():

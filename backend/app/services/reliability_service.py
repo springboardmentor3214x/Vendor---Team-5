@@ -341,7 +341,7 @@ def _upsert_derived_rows(db: Session, vendor_id: int, reliability: VendorReliabi
     if trend is None:
         trend = PerformanceTrend(vendor_id=vendor_id, year=now.year, month=now.month)
         db.add(trend)
-    for field in ("reliability_score", "delivery_score", "quality_score", "communication_score", "compliance_score", "issue_resolution_score"):
+    for field in ("reliability_score", "delivery_score", "quality_score", "communication_score", "compliance_score", "issue_resolution_score", "procurement_history_score"):
         setattr(trend, field, getattr(reliability, field, 0.0) or 0.0)
     recommendation_row = next((row for row in _vendor_rows(db, ProcurementRecommendation, vendor_id)), None)
     if recommendation_row is None:

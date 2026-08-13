@@ -49,6 +49,8 @@ def test_export_rejects_unsupported_report_types_and_formats():
         report_service.export_report_data(EmptyDb(), "unknown")
     with pytest.raises(ValueError, match="Unsupported export format"):
         report_service.export_report_data(EmptyDb(), "contract", "json")
+    with pytest.raises(ValueError, match="reliability_level"):
+        report_service.export_report_data(EmptyDb(), "contract", filters={"reliability_level": "Low"})
 
 
 def test_vendor_performance_and_procurement_report_generators():

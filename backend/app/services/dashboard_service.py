@@ -20,6 +20,7 @@ from app.models.delivery_performance import DeliveryPerformance
 from app.models.product_quality_evaluation import ProductQualityEvaluation
 from app.models.service_rating import ServiceRating
 from app.models.vendor_reliability_score import VendorReliabilityScore
+from app.models.reliability import PerformanceTrend
 from app.models.procurement_risk_level import ProcurementRiskLevel
 from app.models.communication import Communication
 from app.models.communication_file import CommunicationFile
@@ -174,7 +175,7 @@ def get_procurement_manager_dashboard_summary(
     top_vendors_list = []
     for v in vendors:
         rel_score = db.query(VendorReliabilityScore).filter(VendorReliabilityScore.vendor_id == v.id).first()
-        raw_val = rel_score.overall_score if rel_score else getattr(v, "reliability_score", 0.0)
+        raw_val = rel_score.reliability_score if rel_score else getattr(v, "reliability_score", 0.0)
         try:
             score_val = float(raw_val)
         except (TypeError, ValueError):
@@ -242,7 +243,7 @@ def get_personalized_vendor_dashboard(db: Any, vendor_id: int, user_id: Optional
         }
 
     rel_score = db.query(VendorReliabilityScore).filter(VendorReliabilityScore.vendor_id == vendor_id).first()
-    raw_val = rel_score.overall_score if rel_score else getattr(vendor, "reliability_score", 0.0)
+    raw_val = rel_score.reliability_score if rel_score else getattr(vendor, "reliability_score", 0.0)
     try:
         score_val = float(raw_val)
     except (TypeError, ValueError):
@@ -356,6 +357,47 @@ def get_procurement_cost_analysis(db: Any) -> Dict[str, Any]:
     }
 
 
+def get_performance_trend_aggregation(db: Any, vendor_id: Optional[int] = None) -> Dict[str, Any]:
+    """Shape real persisted performance rows into chart-ready score series.
+
+    ``average_response_time`` intentionally is not a communication-score
+    substitute: it remains a separate minutes series.
+    """
+    trend_rows = _rows(db, PerformanceTrend)
+    if vendor_id is not None:
+        trend_rows = [row for row in trend_rows if getattr(row, "vendor_id", None) == vendor_id]
+    trend_rows.sort(key=lambda row: (getattr(row, "year", 0), getattr(row, "month", 0), getattr(row, "id", 0)))
+    labels = [f"{getattr(row, 'year', '')}-{int(getattr(row, 'month', 0) or 0):02d}" for row in trend_rows]
+    series = {
+        "delivery": [getattr(row, "delivery_score", None) for row in trend_rows],
+        "quality": [getattr(row, "quality_score", None) for row in trend_rows],
+        "communication": [getattr(row, "communication_score", None) for row in trend_rows],
+        "overall": [getattr(row, "reliability_score", None) for row in trend_rows],
+    }
+    records = _rows(db, PerformanceRecord)
+    if vendor_id is not None:
+        records = [row for row in records if getattr(row, "vendor_id", None) == vendor_id]
+    # PerformanceRecord is one current record per vendor. It is useful as a
+    # current-point chart only when a monthly trend does not exist yet.
+    if not trend_rows:
+        records.sort(key=lambda row: getattr(row, "evaluation_date", None) or datetime.min)
+        labels = [(getattr(row, "evaluation_date", None) or getattr(row, "created_at", None) or "Current").strftime("%Y-%m") if isinstance((getattr(row, "evaluation_date", None) or getattr(row, "created_at", None)), datetime) else "Current" for row in records]
+        series = {
+            "delivery": [getattr(row, "on_time_delivery_rate", None) for row in records],
+            "quality": [getattr(row, "average_quality_score", None) for row in records],
+            "communication": [getattr(row, "average_communication_score", None) for row in records],
+            "service_rating": [getattr(row, "average_service_rating_score", None) for row in records],
+            "overall": [getattr(row, "overall_performance_score", None) for row in records],
+            "response_time_minutes": [getattr(row, "average_response_time", None) for row in records],
+        }
+    else:
+        # Service ratings and response times are only stored as current records.
+        latest = {getattr(row, "vendor_id", None): row for row in records}
+        series["service_rating"] = [getattr(latest.get(vendor_id), "average_service_rating_score", None)] if vendor_id is not None else []
+        series["response_time_minutes"] = [getattr(latest.get(vendor_id), "average_response_time", None)] if vendor_id is not None else []
+    return {"labels": labels, "datasets": [{"label": key.replace("_", " ").title(), "data": values} for key, values in series.items()]}
+
+
 def get_chart_datasets_summary(db: Any) -> Dict[str, Any]:
     """Generates structured chart datasets for frontend visualization libraries (Bar, Line, Pie, Doughnut)."""
     cost_data = get_procurement_cost_analysis(db)
@@ -386,7 +428,7 @@ def get_chart_datasets_summary(db: Any) -> Dict[str, Any]:
         name = getattr(vendor, "company_name", None) or f"Vendor {getattr(score, 'vendor_id', '')}"
         timestamp = getattr(score, "updated_at", None) or getattr(score, "created_at", None)
         label = timestamp.strftime("%Y-%m") if timestamp else "Current"
-        trend_by_vendor.setdefault(name, []).append((label, float(getattr(score, "overall_score", 0) or 0)))
+        trend_by_vendor.setdefault(name, []).append((label, float(getattr(score, "reliability_score", 0) or 0)))
     trend_labels = sorted({label for values in trend_by_vendor.values() for label, _ in values})
     line_chart = {
         "chart_type": "line",

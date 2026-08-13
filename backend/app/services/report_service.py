@@ -98,7 +98,16 @@ def generate_vendor_document_report(db: Any, filters: Optional[Dict[str, Any]] =
 
 def generate_vendor_performance_report(db: Any, filters: Optional[Dict[str, Any]] = None) -> list[dict[str, Any]]:
     reliability = {r.vendor_id: r for r in _rows(db, VendorReliability)}
-    return _shape([{**{key: _value(getattr(r, key, None)) for key in ("id", "vendor_id", "total_completed_orders", "on_time_delivery_rate", "average_quality_score", "overall_performance_score", "performance_status", "evaluation_date")}, "reliability_score": _value(getattr(reliability.get(r.vendor_id), "reliability_score", None))} for r in _filtered(db, PerformanceRecord, filters)], filters)
+    _validate_report_filters("vendor-performance", filters)
+    requested_level = (filters or {}).get("reliability_level")
+    records = _filtered(db, PerformanceRecord, filters)
+    if requested_level is not None:
+        records = [record for record in records if str(getattr(reliability.get(record.vendor_id), "risk_level", "")).casefold() == str(requested_level).casefold()]
+    return _shape([{**{key: _value(getattr(r, key, None)) for key in ("id", "vendor_id", "total_completed_orders", "on_time_delivery_rate", "average_quality_score", "overall_performance_score", "performance_status", "evaluation_date")}, "reliability_score": _value(getattr(reliability.get(r.vendor_id), "reliability_score", None))} for r in records], filters)
+
+def _validate_report_filters(report_type: str, filters: Optional[Dict[str, Any]]) -> None:
+    if filters and filters.get("reliability_level") is not None and report_type not in {"vendor-performance", "vendor_performance"}:
+        raise ValueError("reliability_level is supported only for vendor-performance reports")
 
 def generate_procurement_summary_report(db: Any, filters: Optional[Dict[str, Any]] = None) -> list[dict[str, Any]]:
     orders = {o.procurement_request_id: o for o in _rows(db, PurchaseOrder)}
@@ -137,6 +146,7 @@ _REPORT_CHART_FIELDS = {
 def export_report_data(db: Any, report_type: str, format: str = "csv", filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     generators = {"vendor-performance": generate_vendor_performance_report, "vendor_performance": generate_vendor_performance_report, "procurement": generate_procurement_summary_report, "procurement_summary": generate_procurement_summary_report, "purchase-orders": generate_purchase_order_report, "purchase_order": generate_purchase_order_report, "compliance": generate_compliance_report, "contract": generate_contract_report, "contracts": generate_contract_report, "vendor_document": generate_vendor_document_report, "notification": generate_notification_report, "executive_summary": generate_executive_summary_report}
     if report_type not in generators: raise ValueError(f"Unsupported report type: {report_type}")
+    _validate_report_filters(report_type, filters)
     if format.lower() not in {"csv", "pdf", "excel"}: raise ValueError(f"Unsupported export format: {format}")
     rows = generators[report_type](db, filters); rows = rows if isinstance(rows, list) else [rows]
     default_label, default_value = _REPORT_CHART_FIELDS[report_type]

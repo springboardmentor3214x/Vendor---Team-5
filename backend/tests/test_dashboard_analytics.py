@@ -84,3 +84,28 @@ def test_get_chart_datasets_summary():
     assert res["vendor_performance_trend_chart"]["chart_type"] == "line"
     assert res["category_distribution_chart"]["chart_type"] == "pie"
     assert res["contract_status_chart"]["chart_type"] == "doughnut"
+
+
+def test_dashboard_uses_vendor_reliability_score_field_not_removed_overall_score(monkeypatch):
+    vendor = type("Vendor", (), {"id": 3, "company_name": "Real Vendor", "reliability_score": 0})()
+    score = type("Score", (), {"vendor_id": 3, "reliability_score": 88.0})()
+
+    class Query:
+        def __init__(self, model): self.model = model
+        def all(self): return [vendor] if self.model.__name__ == "Vendor" else []
+        def limit(self, _): return self
+        def filter(self, *_): return self
+        def first(self): return score if self.model.__name__ == "VendorReliabilityScore" else None
+    class Db:
+        def query(self, model): return Query(model)
+    result = dashboard_service.get_procurement_manager_dashboard_summary(Db())
+    assert result["top_vendors"][0]["reliability_score"] == 88.0
+
+
+def test_performance_trend_aggregation_uses_communication_score_not_response_minutes(monkeypatch):
+    trend = type("Trend", (), {"vendor_id": 3, "year": 2026, "month": 8, "id": 1, "delivery_score": 90,
+        "quality_score": 85, "communication_score": 80, "reliability_score": 84})()
+    monkeypatch.setattr(dashboard_service, "_rows", lambda _db, model: [trend] if model.__name__ == "PerformanceTrend" else [])
+    data = dashboard_service.get_performance_trend_aggregation(object(), 3)
+    assert data["labels"] == ["2026-08"]
+    assert next(row for row in data["datasets"] if row["label"] == "Communication")["data"] == [80]

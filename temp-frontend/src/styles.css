@@ -525,3 +525,17 @@ td { border-color: #f7e4e8 !important; }
     width: 100%;
   }
 }
+
+/* Compact enterprise density: shared Module 1-10 spacing only; brand colours stay red/pink. */
+.detail-page, .requests-page, .po-page, .invoice-page, .tracking-page, .approval-page, .assignment-page, .form-page, .entry-page, .performance-detail-page, .performance-page, .reliability-page, .reports-page, .contracts-page { gap: .85rem !important; }
+.detail-page header, .detail-header, .approval-header, .tracking-page header, .assignment-page header, .performance-detail-page header, .entry-page header, .form-page header, .invoice-page header, .po-page .page-header, .requests-page .page-header, .contracts-page header { padding: .8rem 1rem !important; border-radius: 14px !important; }
+.detail-card, .action-card, .review-card, .history-card, .tracking-card, .form-card, .dashboard-panel, .guidance-card, .preview-panel, .report-chart, .reliability-page .panel, .performance-page .panel, .contracts-page .panel, .requests-page .filter-card, .po-page .filters, .reports-page .filter-panel { padding: .85rem .95rem !important; border-radius: 13px !important; }
+.detail-grid, .review-grid, .tracking-grid, .content-grid, .two-column, .form-grid, .filter-panel, .filter-card, .po-page .filters { gap: .75rem !important; }
+.detail-card h3, .action-card h3, .review-card h3, .history-card h3, .tracking-card h3, .form-card h3, .preview-panel h3, .report-chart h3 { margin-bottom: .65rem !important; font-size: .98rem !important; }
+.detail-card h4, .review-card h4, .detail-card p, .review-card p, .tracking-card p, .form-card p, .guidance-card p { line-height: 1.42 !important; }
+.requests-page th, .po-page th, .invoice-page th, .reliability-page th, .performance-page th, .reports-page th { padding: .62rem .72rem !important; }
+.requests-page td, .po-page td, .invoice-page td, .reliability-page td, .performance-page td, .reports-page td { padding: .68rem .72rem !important; }
+.requests-page .pagination, .po-page .pagination, .invoice-page .pagination, .reports-page .report-catalog, .reports-page .applied-filters { padding: .65rem .8rem !important; }
+.requests-page .empty-state, .po-page .empty, .invoice-page .empty, .performance-page .empty-state, .reliability-page .empty-state { padding: 1.15rem .8rem !important; }
+.reports-page .mini-bars { min-height: 125px !important; padding: .55rem 0 !important; }.reports-page .report-selector button { min-height: 68px !important; padding: .7rem .8rem !important; }
+@media (max-width: 760px) { .detail-page, .requests-page, .po-page, .invoice-page, .tracking-page, .approval-page, .assignment-page, .form-page, .entry-page, .performance-detail-page, .performance-page, .reliability-page, .reports-page, .contracts-page { gap: .7rem !important; } }

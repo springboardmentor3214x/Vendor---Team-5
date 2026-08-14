@@ -98,7 +98,17 @@ export class DashboardComponent implements OnInit {
   maximum(data: number[]): number { return Math.max(...data, 1); }
   linePoints(data: number[]): string { const max=this.maximum(data); return data.map((value,index)=>`${index*(300/Math.max(data.length-1,1))},${120-(value/max)*120}`).join(' '); }
   doughnut(data: number[], colors: string[]): string { const total=data.reduce((sum,value)=>sum+value,0)||1; let current=0; return data.map((value,index)=>{const start=current/total*360;current+=value;return `${colors[index%colors.length]} ${start}deg ${current/total*360}deg`;}).join(','); }
-  chartColors(colors: string|string[]|undefined): string[] { return Array.isArray(colors) ? colors : ['#2563eb','#16a34a','#f59e0b','#dc2626','#7c3aed']; }
+  hasChartData(chart: ChartSeries | undefined): boolean {
+    return !!chart?.labels?.length && !!chart.datasets?.some((dataset) =>
+      dataset.data?.some((value) => Number.isFinite(value))
+    );
+  }
+
+  chartColors(_colors: string|string[]|undefined): string[] {
+    // Keep analytics aligned with the application's existing red/pink palette,
+    // regardless of the legacy colour hints returned by a dashboard endpoint.
+    return ['#e11d48', '#fb7185', '#be123c', '#fda4af', '#9f1239'];
+  }
 
   private readonly views: Record<AppRole, DashboardView> = {
     Administrator: {

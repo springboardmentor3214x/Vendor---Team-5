@@ -5,7 +5,7 @@
       <h2 class="mb-1">{{ view.title }}</h2>
       <p class="mb-0 text-muted">{{ view.description }}</p>
     </div>
-    <a class="primary-action" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }} <span aria-hidden="true">→</span></a>
+    <a class="primary-action" [routerLink]="view.primaryAction.path">{{ view.primaryAction.label }} <span aria-hidden="true">&rarr;</span></a>
   </div>
 
   <div class="kpi-grid" aria-label="Key performance indicators">
@@ -20,12 +20,47 @@
   </div>
 
   <section class="analytics" *ngIf="charts() as charts">
-    <div class="section-heading"><div><span class="eyebrow">Module 8 analytics</span><h3>Business insights</h3></div><span class="section-note">Live FastAPI datasets</span></div>
-    <div class="chart-grid">
-      <article class="chart-card"><h4>{{charts.monthlyExpensesChart.title}}</h4><div class="bar-chart"><div class="bar-group" *ngFor="let value of charts.monthlyExpensesChart.datasets[0].data; let i=index"><span class="bar" [style.height.%]="value / maximum(charts.monthlyExpensesChart.datasets[0].data) * 100"></span><small>{{charts.monthlyExpensesChart.labels[i]}}</small><b>₹{{value}}</b></div></div></article>
-      <article class="chart-card"><h4>{{charts.vendorPerformanceTrendChart.title}}</h4><svg class="line-chart" viewBox="0 0 300 150"><polyline [attr.points]="linePoints(charts.vendorPerformanceTrendChart.datasets[0].data)" fill="none" stroke="#e11d48" stroke-width="4"/><line x1="0" y1="120" x2="300" y2="120" stroke="#cbd5e1"/></svg><div class="chart-labels"><small *ngFor="let label of charts.vendorPerformanceTrendChart.labels">{{label}}</small></div></article>
-      <article class="chart-card"><h4>{{charts.categoryDistributionChart.title}}</h4><div class="split"><div class="pie" [style.background]="'conic-gradient(' + doughnut(charts.categoryDistributionChart.datasets[0].data, chartColors(charts.categoryDistributionChart.datasets[0].backgroundColor)) + ')' "></div><ul><li *ngFor="let label of charts.categoryDistributionChart.labels; let i=index">{{label}}: {{charts.categoryDistributionChart.datasets[0].data[i]}}</li></ul></div></article>
-      <article class="chart-card"><h4>{{charts.contractStatusChart.title}}</h4><div class="split"><div class="pie doughnut" [style.background]="'conic-gradient(' + doughnut(charts.contractStatusChart.datasets[0].data, chartColors(charts.contractStatusChart.datasets[0].backgroundColor)) + ')' "></div><ul><li *ngFor="let label of charts.contractStatusChart.labels; let i=index">{{label}}: {{charts.contractStatusChart.datasets[0].data[i]}}</li></ul></div></article>
+    <div class="section-heading">
+      <div><span class="eyebrow">Module 8 analytics</span><h3>Business insights</h3></div>
+      <span class="section-note">Live FastAPI datasets</span>
+    </div>
+
+    <div class="chart-grid" *ngIf="hasChartData(charts.monthlyExpensesChart) || hasChartData(charts.vendorPerformanceTrendChart) || hasChartData(charts.categoryDistributionChart) || hasChartData(charts.contractStatusChart)">
+      <article class="chart-card" *ngIf="hasChartData(charts.monthlyExpensesChart)">
+        <h4>{{ charts.monthlyExpensesChart.title }}</h4>
+        <div class="bar-chart">
+          <div class="bar-group" *ngFor="let value of charts.monthlyExpensesChart.datasets[0].data; let i = index">
+            <span class="bar" [style.height.%]="value / maximum(charts.monthlyExpensesChart.datasets[0].data) * 100"></span>
+            <small>{{ charts.monthlyExpensesChart.labels[i] }}</small><b>&#8377;{{ value }}</b>
+          </div>
+        </div>
+      </article>
+
+      <article class="chart-card" *ngIf="hasChartData(charts.vendorPerformanceTrendChart)">
+        <h4>{{ charts.vendorPerformanceTrendChart.title }}</h4>
+        <svg class="line-chart" viewBox="0 0 300 150" role="img" aria-label="Vendor reliability score trend">
+          <polyline [attr.points]="linePoints(charts.vendorPerformanceTrendChart.datasets[0].data)" fill="none" stroke="#e11d48" stroke-width="4" />
+          <circle *ngIf="charts.vendorPerformanceTrendChart.datasets[0].data.length === 1" cx="150" [attr.cy]="120 - (charts.vendorPerformanceTrendChart.datasets[0].data[0] / maximum(charts.vendorPerformanceTrendChart.datasets[0].data) * 120)" r="6" fill="#e11d48" />
+          <line x1="0" y1="120" x2="300" y2="120" stroke="#fbc4d0" />
+        </svg>
+        <div class="chart-labels"><small *ngFor="let label of charts.vendorPerformanceTrendChart.labels">{{ label }}</small></div>
+      </article>
+
+      <article class="chart-card" *ngIf="hasChartData(charts.categoryDistributionChart)">
+        <h4>{{ charts.categoryDistributionChart.title }}</h4>
+        <div class="split">
+          <div class="pie" [style.background]="'conic-gradient(' + doughnut(charts.categoryDistributionChart.datasets[0].data, chartColors(charts.categoryDistributionChart.datasets[0].backgroundColor)) + ')' "></div>
+          <ul><li *ngFor="let label of charts.categoryDistributionChart.labels; let i = index">{{ label }}: {{ charts.categoryDistributionChart.datasets[0].data[i] }}</li></ul>
+        </div>
+      </article>
+
+      <article class="chart-card" *ngIf="hasChartData(charts.contractStatusChart)">
+        <h4>{{ charts.contractStatusChart.title }}</h4>
+        <div class="split">
+          <div class="pie doughnut" [style.background]="'conic-gradient(' + doughnut(charts.contractStatusChart.datasets[0].data, chartColors(charts.contractStatusChart.datasets[0].backgroundColor)) + ')' "></div>
+          <ul><li *ngFor="let label of charts.contractStatusChart.labels; let i = index">{{ label }}: {{ charts.contractStatusChart.datasets[0].data[i] }}</li></ul>
+        </div>
+      </article>
     </div>
   </section>
 
@@ -37,31 +72,20 @@
   </section>
 
   <div class="section-heading">
-    <div>
-      <span class="eyebrow">Your workspace</span>
-      <h3>Module shortcuts</h3>
-    </div>
+    <div><span class="eyebrow">Your workspace</span><h3>Module shortcuts</h3></div>
     <span class="section-note">Choose a module to continue</span>
   </div>
 
   <div class="module-grid">
     <article class="stat-card" *ngFor="let card of view.cards" [class]="'stat-card tone-' + card.tone">
-      <div class="card-topline">
-        <span class="module-icon" aria-hidden="true">{{ card.icon }}</span>
-        <span class="module-badge">{{ card.badge }}</span>
-      </div>
-      <div>
-        <h4 class="stat-label">{{ card.title }}</h4>
-        <p class="stat-description">{{ card.description }}</p>
-      </div>
-      <a class="module-action" [routerLink]="card.path">{{ card.actionLabel }} <span aria-hidden="true">→</span></a>
+      <div class="card-topline"><span class="module-icon" aria-hidden="true">{{ card.icon }}</span><span class="module-badge">{{ card.badge }}</span></div>
+      <div><h4 class="stat-label">{{ card.title }}</h4><p class="stat-description">{{ card.description }}</p></div>
+      <a class="module-action" [routerLink]="card.path">{{ card.actionLabel }} <span aria-hidden="true">&rarr;</span></a>
     </article>
   </div>
 
   <div class="panel">
-    <div class="panel-heading"><span class="panel-icon" aria-hidden="true">✦</span><h4 class="panel-title">Operational highlights</h4></div>
-    <ul class="highlights-list mb-0">
-      <li *ngFor="let item of view.highlights">{{ item }}</li>
-    </ul>
+    <div class="panel-heading"><span class="panel-icon" aria-hidden="true">&#10022;</span><h4 class="panel-title">Operational highlights</h4></div>
+    <ul class="highlights-list mb-0"><li *ngFor="let item of view.highlights">{{ item }}</li></ul>
   </div>
 </section>

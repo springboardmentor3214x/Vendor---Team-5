@@ -14,6 +14,7 @@
       <article class="detail-card"><h3>Item and budget</h3><dl><div><dt>Product</dt><dd>{{ item.item_product_name || '—' }}</dd></div><div><dt>Category</dt><dd>{{ item.product_category || '—' }}</dd></div><div><dt>Quantity</dt><dd>{{ item.quantity_required ?? '—' }} {{ item.unit_of_measurement || '' }}</dd></div><div><dt>Estimated budget</dt><dd>{{ item.estimated_budget === null ? '—' : (item.estimated_budget | currency:'INR':'symbol':'1.0-0') }}</dd></div></dl></article>
       <article class="detail-card full-width"><h3>Request description</h3><p>{{ item.item_description || 'No description provided.' }}</p><h4>Business justification</h4><p>{{ item.business_justification || 'No justification provided.' }}</p><div *ngIf="item.additional_remarks"><h4>Additional remarks</h4><p>{{ item.additional_remarks }}</p></div></article>
       <article class="detail-card full-width"><h3>Approval metadata</h3><dl class="meta-grid"><div><dt>Approval remarks</dt><dd>{{ item.approval_remarks || 'No remarks recorded.' }}</dd></div><div><dt>Approved by</dt><dd>{{ item.approved_by ?? 'Not yet approved' }}</dd></div><div><dt>Approval date</dt><dd>{{ item.approved_date ? (item.approved_date | date:'medium') : 'Not yet approved' }}</dd></div><div><dt>Last updated</dt><dd>{{ item.updated_at | date:'medium' }}</dd></div></dl></article>
+      <article class="detail-card full-width"><app-document-panel owner="request" [entityId]="item.id" title="Request documents"></app-document-panel></article>
     </div>
   </ng-container>
 </section>

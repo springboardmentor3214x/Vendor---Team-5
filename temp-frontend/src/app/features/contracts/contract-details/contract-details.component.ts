@@ -5,11 +5,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Contract, ContractService } from '../../../core/services/contract.service';
 import { DirectMessageService } from '../../../core/services/direct-message.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { DocumentPanelComponent } from '../../../shared/document-panel.component';
 
 @Component({
   selector: 'app-contract-details',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, DatePipe, CurrencyPipe],
+  imports: [CommonModule, FormsModule, RouterLink, DatePipe, CurrencyPipe, DocumentPanelComponent],
   template: `
     <section class="page-card">
       <a routerLink="/contracts">Back to contracts</a>
@@ -26,7 +27,7 @@ import { AuthService } from '../../../core/services/auth.service';
         <dl><div><dt>Vendor</dt><dd>{{ contract.vendorId }}</dd></div><div><dt>End date</dt><dd>{{ contract.endDate | date:'mediumDate' }}</dd></div><div><dt>Value</dt><dd>{{ contract.contractValue | currency:'INR' }}</dd></div></dl>
         <div class="actions" *ngIf="canManage"><label>Status<select class="form-select" [(ngModel)]="status"><option>Active</option><option>Expired</option><option>Terminated</option></select></label><button class="btn btn-primary" (click)="updateStatus()">Update status</button><button class="btn btn-primary" (click)="renew()">Renew</button><button *ngIf="canDelete" class="btn btn-danger" (click)="remove()">Delete</button></div>
         <form class="renewal" *ngIf="canManage"><label>New end date<input class="form-control" type="date" [(ngModel)]="newEndDate" name="end"></label><label>Renewal value<input class="form-control" type="number" [(ngModel)]="renewalValue" name="value"></label><label>Remarks<input class="form-control" [(ngModel)]="remarks" name="remarks"></label></form>
-        <p class="alert alert-info">Document actions are managed in Vendor Documentation. File replacement is not supported.</p>
+        <app-document-panel [entityId]="contract.id" owner="contract" title="Contract documents"></app-document-panel>
       </article>
     </section>`,
   styles: [`section{color:var(--vr-navy)}header,.actions{display:flex;gap:1rem;justify-content:space-between;align-items:end;margin:1rem 0}.header-actions{display:flex;gap:.6rem;flex-wrap:wrap}dl,.renewal{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}dl div{padding:1rem;border:1px solid var(--vr-border);border-radius:12px}dt{color:var(--vr-muted)}dd{margin:.3rem 0;font-weight:700}.actions label{min-width:160px}.btn-danger{background:#b91c1c;color:#fff}@media(max-width:600px){dl,.renewal{grid-template-columns:1fr}.actions,header{align-items:stretch;flex-wrap:wrap}}`]

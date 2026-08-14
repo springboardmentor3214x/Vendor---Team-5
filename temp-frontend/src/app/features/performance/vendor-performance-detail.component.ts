@@ -12,8 +12,9 @@ import {
   ServiceRatingRecord,
   VendorPerformanceRecord
 } from '../../core/services/performance.service';
+import { IssuePanelComponent } from '../../shared/issue-panel.component';
 
-@Component({ selector: 'app-vendor-performance-detail', standalone: true, imports: [CommonModule, RouterLink], templateUrl: './vendor-performance-detail.component.html', styleUrl: './vendor-performance-detail.component.css' })
+@Component({ selector: 'app-vendor-performance-detail', standalone: true, imports: [CommonModule, RouterLink, IssuePanelComponent], templateUrl: './vendor-performance-detail.component.html', styleUrl: './vendor-performance-detail.component.css' })
 export class VendorPerformanceDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly performanceService = inject(PerformanceService);

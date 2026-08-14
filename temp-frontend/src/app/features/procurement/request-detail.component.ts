@@ -3,11 +3,12 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ProcurementRequest, ProcurementService } from '../../core/services/procurement.service';
+import { DocumentPanelComponent } from '../../shared/document-panel.component';
 
 @Component({
   selector: 'app-request-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, DocumentPanelComponent],
   templateUrl: './request-detail.component.html',
   styleUrl: './request-detail.component.css'
 })

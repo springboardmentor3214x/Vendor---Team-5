@@ -4,9 +4,10 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { Invoice, PAYMENT_STATUSES, ProcurementService } from '../../core/services/procurement.service';
+import { DocumentPanelComponent } from '../../shared/document-panel.component';
 
 type InvoiceAction = 'verify' | 'reject' | 'payment';
-@Component({ selector: 'app-invoice-detail', standalone: true, imports: [CommonModule, ReactiveFormsModule, RouterLink], templateUrl: './invoice-detail.component.html', styleUrl: './invoice-detail.component.css' })
+@Component({ selector: 'app-invoice-detail', standalone: true, imports: [CommonModule, ReactiveFormsModule, RouterLink, DocumentPanelComponent], templateUrl: './invoice-detail.component.html', styleUrl: './invoice-detail.component.css' })
 export class InvoiceDetailComponent {
   private readonly route = inject(ActivatedRoute); private readonly fb = inject(FormBuilder); private readonly procurementService = inject(ProcurementService); private readonly authService = inject(AuthService);
   readonly invoice = signal<Invoice | null>(null); readonly loading = signal(true); readonly acting = signal<InvoiceAction | null>(null); readonly errorMessage = signal(''); readonly successMessage = signal(''); readonly remarksForm = this.fb.nonNullable.group({ remarks: [''] }); readonly paymentForm = this.fb.nonNullable.group({ paymentStatus: ['Approved'] });

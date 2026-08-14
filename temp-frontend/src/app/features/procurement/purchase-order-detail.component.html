@@ -9,6 +9,7 @@
       <a [routerLink]="['/procurement/purchase-orders', item.id, 'tracking']" class="btn btn-outline-primary">View order tracking</a>
       <a *ngIf="canManage" [routerLink]="['/procurement/invoices/new']" [queryParams]="{ purchaseOrderId: item.id }" class="btn btn-outline-primary">Create invoice</a>
       <button type="button" class="btn btn-outline-primary" (click)="messageContact('vendor')">Message vendor</button>
+      <button type="button" class="btn btn-outline-primary" (click)="print()">Download / print PO</button>
       <button type="button" class="btn btn-outline-primary" *ngIf="canManage" (click)="messageContact('manager')">Message manager</button>
     </div>
     <section *ngIf="canManage && (item.po_status === 'Draft' || item.po_status === 'Issued')" class="actions-panel">

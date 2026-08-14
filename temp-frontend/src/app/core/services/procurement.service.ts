@@ -254,6 +254,10 @@ export class ProcurementService {
     return this.updatePurchaseOrderAction(poId, 'cancel');
   }
 
+  downloadPurchaseOrderPdf(poId: number): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/purchase-orders/${poId}/print`, { responseType: 'blob' });
+  }
+
   getOrderTracking(poId: number): Observable<OrderTracking> {
     return this.http.get<ApiRecord>(`${this.baseUrl}/order-tracking/${poId}`).pipe(map((record) => this.mapOrderTracking(record)));
   }

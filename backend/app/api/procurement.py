@@ -1,6 +1,9 @@
+import os
 from datetime import date, datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -11,6 +14,8 @@ from app.models.procurement_approval import ProcurementApproval
 from app.models.procurement_request import ProcurementRequest
 from app.models.procurement_status_history import ProcurementStatusHistory
 from app.models.purchase_order import PurchaseOrder
+from app.models.procurement_request_document import ProcurementRequestDocument
+from app.models.invoice_document import InvoiceDocument
 from app.models.user import User
 from app.models.vendor import Vendor
 
@@ -31,8 +36,11 @@ from app.schemas.procurement import (
     PaymentStatusUpdate,
     ApprovedVendorOut,
 )
+from app.schemas.document_lifecycle import LifecycleDocumentOut
 
 from app.api.reliability_refresh import refresh_after_procurement_update
+from app.api.file_storage import store_document_upload
+from app.services import procurement_document_service
 from app.services.procurement_service import (
     approve_procurement_request,
     reject_procurement_request,
@@ -52,6 +60,7 @@ from app.services.purchase_order_service import (
     cancel_purchase_order,
     is_delivery_delayed,
     can_complete_procurement,
+    render_purchase_order_pdf,
 )
 
 router = APIRouter(prefix="/procurement", tags=["Procurement"])
@@ -92,6 +101,65 @@ def _require_vendor_purchase_order_access(db: Session, purchase_order: PurchaseO
 def _require_request_owner(request: ProcurementRequest, current_user: User) -> None:
     if normalize_user_role(current_user) == DEPARTMENT_USER and request.requested_by != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this procurement request")
+
+
+def _document_response(document: ProcurementRequestDocument | InvoiceDocument) -> dict:
+    """Keep lifecycle-document output consistent across request and invoice APIs."""
+    return {
+        "id": document.id,
+        "document_type": document.document_type,
+        "file_name": document.file_name,
+        "file_size": document.file_size,
+        "content_type": document.content_type,
+        "uploaded_by": document.uploaded_by,
+        "uploaded_at": document.uploaded_at,
+        "version": document.version or 1,
+        "is_current": bool(document.is_current),
+        "replaced_document_id": document.replaced_document_id,
+        "replaced_at": document.replaced_at,
+        "replaced_by": document.replaced_by,
+    }
+
+
+def _request_document_access(
+    db: Session, request_id: int, current_user: User, *, write: bool
+) -> ProcurementRequest:
+    role = _require_procurement_role(
+        current_user,
+        ADMINISTRATOR,
+        PROCUREMENT_MANAGER,
+        SUPPLY_CHAIN_MANAGER,
+        DEPARTMENT_USER,
+    )
+    request = db.query(ProcurementRequest).filter(ProcurementRequest.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Procurement request not found")
+    _require_request_owner(request, current_user)
+    if write and role not in {ADMINISTRATOR, PROCUREMENT_MANAGER, DEPARTMENT_USER}:
+        raise HTTPException(status_code=403, detail="You do not have permission to modify request documents")
+    return request
+
+
+def _invoice_document_access(
+    db: Session, invoice_id: int, current_user: User, *, write: bool
+) -> Invoice:
+    role = _require_procurement_role(
+        current_user,
+        ADMINISTRATOR,
+        PROCUREMENT_MANAGER,
+        FINANCE_OFFICER,
+        VENDOR_ROLE,
+    )
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == invoice.purchase_order_id).first()
+    if not purchase_order:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, purchase_order, current_user)
+    if write and role not in {ADMINISTRATOR, FINANCE_OFFICER, VENDOR_ROLE}:
+        raise HTTPException(status_code=403, detail="You do not have permission to modify invoice documents")
+    return invoice
 
 
 def log_status_change(db: Session, request_id: int, old_status: str, new_status: str, changed_by: int | None, remarks: str | None = None):
@@ -194,6 +262,107 @@ def get_request(
         raise HTTPException(status_code=404, detail="Request not found")
     _require_request_owner(request, current_user)
     return request
+
+
+@router.get(
+    "/procurement-requests/{request_id}/documents",
+    response_model=list[LifecycleDocumentOut],
+)
+def list_request_documents(
+    request_id: int,
+    include_replaced: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List current request supporting documents, with optional version history."""
+    _request_document_access(db, request_id, current_user, write=False)
+    documents = procurement_document_service.list_procurement_request_documents(
+        db, request_id, include_replaced=include_replaced
+    )
+    return [_document_response(document) for document in documents]
+
+
+@router.post(
+    "/procurement-requests/{request_id}/documents",
+    response_model=LifecycleDocumentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_request_document(
+    request_id: int,
+    document_type: str = Form("Supporting Document"),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload supporting evidence for a procurement request."""
+    _request_document_access(db, request_id, current_user, write=True)
+    if not document_type.strip():
+        raise HTTPException(status_code=400, detail="Document type is required")
+    upload = await store_document_upload(file, area="procurement_request_documents")
+    document = procurement_document_service.create_procurement_request_document(
+        db,
+        request_id=request_id,
+        document_type=document_type.strip(),
+        file_name=upload.file_name,
+        file_path=upload.file_path,
+        file_size=upload.file_size,
+        content_type=upload.content_type,
+        uploaded_by=current_user.id,
+    )
+    return _document_response(document)
+
+
+@router.get("/procurement-requests/{request_id}/documents/{document_id}/download")
+def download_request_document(
+    request_id: int,
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _request_document_access(db, request_id, current_user, write=False)
+    document = procurement_document_service.get_procurement_request_document(db, document_id)
+    if not document or document.request_id != request_id:
+        raise HTTPException(status_code=404, detail="Request document not found")
+    if not document.file_path or not os.path.isfile(document.file_path):
+        raise HTTPException(status_code=404, detail="Physical file not found on disk")
+    return FileResponse(document.file_path, filename=document.file_name, media_type=document.content_type)
+
+
+@router.post(
+    "/procurement-requests/{request_id}/documents/{document_id}/replace",
+    response_model=LifecycleDocumentOut,
+)
+async def replace_request_document(
+    request_id: int,
+    document_id: int,
+    document_type: str = Form("Supporting Document"),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _request_document_access(db, request_id, current_user, write=True)
+    existing = procurement_document_service.get_procurement_request_document(db, document_id)
+    if not existing or existing.request_id != request_id:
+        raise HTTPException(status_code=404, detail="Request document not found")
+    upload = await store_document_upload(file, area="procurement_request_documents")
+    try:
+        replacement = procurement_document_service.replace_procurement_request_document(
+            db,
+            document_id,
+            file_name=upload.file_name,
+            file_path=upload.file_path,
+            file_size=upload.file_size,
+            content_type=upload.content_type,
+            document_type=document_type.strip() or None,
+            uploaded_by=current_user.id,
+        )
+    except ValueError as error:
+        Path(upload.file_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if not replacement:
+        Path(upload.file_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=404, detail="Request document not found")
+    return _document_response(replacement)
 
 
 @router.patch("/procurement-requests/{request_id}", response_model=ProcurementRequestOut)
@@ -540,6 +709,44 @@ def get_purchase_order(
     return po
 
 
+@router.get("/purchase-orders/{po_id}/print")
+def print_purchase_order(
+    po_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return a print-ready PDF rendered from the persisted PO, request, and vendor."""
+    _require_procurement_role(
+        current_user,
+        ADMINISTRATOR,
+        PROCUREMENT_MANAGER,
+        SUPPLY_CHAIN_MANAGER,
+        VENDOR_ROLE,
+    )
+    purchase_order = db.query(PurchaseOrder).filter(PurchaseOrder.id == po_id).first()
+    if not purchase_order:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    _require_vendor_purchase_order_access(db, purchase_order, current_user)
+    request = (
+        db.query(ProcurementRequest)
+        .filter(ProcurementRequest.id == purchase_order.procurement_request_id)
+        .first()
+    )
+    vendor = db.query(Vendor).filter(Vendor.id == purchase_order.vendor_id).first()
+    if not request or not vendor:
+        raise HTTPException(
+            status_code=409,
+            detail="Purchase order is missing its procurement request or vendor reference",
+        )
+    pdf = render_purchase_order_pdf(purchase_order, request, vendor)
+    safe_number = (purchase_order.po_number or f"purchase-order-{po_id}").replace("/", "-")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_number}.pdf"'},
+    )
+
+
 @router.patch("/purchase-orders/{po_id}/status", response_model=PurchaseOrderOut)
 def update_purchase_order_status(
     po_id: int,
@@ -796,6 +1003,100 @@ def list_invoices(
     if payment_status:
         query = query.filter(Invoice.payment_status == payment_status)
     return query.order_by(Invoice.invoice_date.desc()).all()
+
+
+@router.get("/invoices/{invoice_id}/documents", response_model=list[LifecycleDocumentOut])
+def list_invoice_documents(
+    invoice_id: int,
+    include_replaced: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _invoice_document_access(db, invoice_id, current_user, write=False)
+    documents = procurement_document_service.list_invoice_documents(
+        db, invoice_id, include_replaced=include_replaced
+    )
+    return [_document_response(document) for document in documents]
+
+
+@router.post(
+    "/invoices/{invoice_id}/documents",
+    response_model=LifecycleDocumentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_invoice_document(
+    invoice_id: int,
+    document_type: str = Form("Invoice Document"),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a real invoice supporting document and keep the legacy URL synced."""
+    _invoice_document_access(db, invoice_id, current_user, write=True)
+    if not document_type.strip():
+        raise HTTPException(status_code=400, detail="Document type is required")
+    upload = await store_document_upload(file, area="invoice_documents")
+    document = procurement_document_service.create_invoice_document(
+        db,
+        invoice_id=invoice_id,
+        document_type=document_type.strip(),
+        file_name=upload.file_name,
+        file_path=upload.file_path,
+        file_size=upload.file_size,
+        content_type=upload.content_type,
+        uploaded_by=current_user.id,
+    )
+    return _document_response(document)
+
+
+@router.get("/invoices/{invoice_id}/documents/{document_id}/download")
+def download_invoice_document(
+    invoice_id: int,
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _invoice_document_access(db, invoice_id, current_user, write=False)
+    document = procurement_document_service.get_invoice_document(db, document_id)
+    if not document or document.invoice_id != invoice_id:
+        raise HTTPException(status_code=404, detail="Invoice document not found")
+    if not document.file_path or not os.path.isfile(document.file_path):
+        raise HTTPException(status_code=404, detail="Physical file not found on disk")
+    return FileResponse(document.file_path, filename=document.file_name, media_type=document.content_type)
+
+
+@router.post("/invoices/{invoice_id}/documents/{document_id}/replace", response_model=LifecycleDocumentOut)
+async def replace_invoice_document(
+    invoice_id: int,
+    document_id: int,
+    document_type: str = Form("Invoice Document"),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _invoice_document_access(db, invoice_id, current_user, write=True)
+    existing = procurement_document_service.get_invoice_document(db, document_id)
+    if not existing or existing.invoice_id != invoice_id:
+        raise HTTPException(status_code=404, detail="Invoice document not found")
+    upload = await store_document_upload(file, area="invoice_documents")
+    try:
+        replacement = procurement_document_service.replace_invoice_document(
+            db,
+            document_id,
+            file_name=upload.file_name,
+            file_path=upload.file_path,
+            file_size=upload.file_size,
+            content_type=upload.content_type,
+            document_type=document_type.strip() or None,
+            uploaded_by=current_user.id,
+        )
+    except ValueError as error:
+        Path(upload.file_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if not replacement:
+        Path(upload.file_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=404, detail="Invoice document not found")
+    return _document_response(replacement)
 
 
 @router.get("/invoices/{invoice_id}", response_model=InvoiceOut, dependencies=[Depends(get_current_user)])

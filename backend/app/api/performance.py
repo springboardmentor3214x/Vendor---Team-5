@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -27,8 +27,16 @@ from app.schemas.performance import (
     PerformanceDashboardOut,
     PerformanceRecordOut,
     VendorRankingOut,
+    PerformanceHistoryWithIssuesOut,
+)
+from app.schemas.document_lifecycle import (
+    VendorIssueCreate,
+    VendorIssueOut,
+    VendorIssueResolve,
+    VendorIssueUpdate,
 )
 from app.api.reliability_refresh import refresh_after_performance_write
+from app.services import vendor_issue_service
 from app.services.performance_service import (
     calculate_delivery_delay,
     get_delivery_status,
@@ -86,6 +94,27 @@ def _require_vendor_performance_access(
         if vendor and vendor.id == vendor_id:
             return
     raise HTTPException(status_code=403, detail="Access denied")
+
+
+def _issue_response(issue) -> dict:
+    """Map the persistence field `issue_category` to the UI's `category`."""
+    return {
+        "id": issue.id,
+        "vendor_id": issue.vendor_id,
+        "purchase_order_id": issue.purchase_order_id,
+        "category": issue.issue_category,
+        "severity": issue.severity,
+        "description": issue.description,
+        "status": issue.status,
+        "reported_by": issue.reported_by,
+        "reported_date": issue.reported_date,
+        "assigned_to": issue.assigned_to,
+        "resolution_notes": issue.resolution_notes,
+        "resolved_by": issue.resolved_by,
+        "resolved_date": issue.resolved_date,
+        "created_at": issue.created_at,
+        "updated_at": issue.updated_at,
+    }
 
 
 def get_or_create_record(db: Session, vendor_id: int) -> PerformanceRecord:
@@ -509,12 +538,121 @@ def list_service_ratings(
     )
 
 
-@router.get("/history/{vendor_id}", response_model=list[PerformanceRecordOut])
-def performance_history(
+@router.get("/vendors/{vendor_id}/issues", response_model=list[VendorIssueOut])
+def list_vendor_issues(
     vendor_id: int,
+    include_closed: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Read the persisted issue/complaint history for one vendor."""
+    _require_vendor_performance_access(vendor_id, current_user, db)
+    return [
+        _issue_response(issue)
+        for issue in vendor_issue_service.list_vendor_issues(
+            db, vendor_id, include_closed=include_closed
+        )
+    ]
+
+
+@router.post("/vendors/{vendor_id}/issues", response_model=VendorIssueOut, status_code=201)
+def create_issue(
+    vendor_id: int,
+    payload: VendorIssueCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Log an operational issue or complaint without manufacturing performance data."""
+    _require_performance_write_access(current_user)
+    if not db.query(Vendor).filter(Vendor.id == vendor_id).first():
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    try:
+        issue = vendor_issue_service.create_vendor_issue(
+            db,
+            vendor_id=vendor_id,
+            purchase_order_id=payload.purchase_order_id,
+            issue_category=payload.category.strip(),
+            severity=payload.severity,
+            description=payload.description.strip(),
+            status="Open",
+            reported_by=current_user.id,
+            assigned_to=payload.assigned_to,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return _issue_response(issue)
+
+
+@router.patch("/vendors/{vendor_id}/issues/{issue_id}", response_model=VendorIssueOut)
+def update_issue(
+    vendor_id: int,
+    issue_id: int,
+    payload: VendorIssueUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update issue workflow metadata; resolving requires resolution notes."""
+    _require_performance_write_access(current_user)
+    issue = vendor_issue_service.get_vendor_issue(db, issue_id)
+    if not issue or issue.vendor_id != vendor_id:
+        raise HTTPException(status_code=404, detail="Vendor issue not found")
+    changes = payload.model_dump(exclude_unset=True)
+    if "category" in changes:
+        changes["issue_category"] = changes.pop("category")
+    try:
+        updated = vendor_issue_service.update_vendor_issue(
+            db, issue_id, updated_by=current_user.id, **changes
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if not updated:
+        raise HTTPException(status_code=404, detail="Vendor issue not found")
+    return _issue_response(updated)
+
+
+@router.post("/vendors/{vendor_id}/issues/{issue_id}/resolve", response_model=VendorIssueOut)
+def resolve_issue(
+    vendor_id: int,
+    issue_id: int,
+    payload: VendorIssueResolve,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Provide an explicit resolve action for clients that do not use PATCH."""
+    _require_performance_write_access(current_user)
+    issue = vendor_issue_service.get_vendor_issue(db, issue_id)
+    if not issue or issue.vendor_id != vendor_id:
+        raise HTTPException(status_code=404, detail="Vendor issue not found")
+    try:
+        resolved = vendor_issue_service.resolve_vendor_issue(
+            db,
+            issue_id,
+            resolution_notes=payload.resolution_notes,
+            resolved_by=current_user.id,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if not resolved:
+        raise HTTPException(status_code=404, detail="Vendor issue not found")
+    return _issue_response(resolved)
+
+
+@router.get(
+    "/history/{vendor_id}",
+    response_model=list[PerformanceRecordOut] | PerformanceHistoryWithIssuesOut,
+)
+def performance_history(
+    vendor_id: int,
+    include_issues: bool = Query(False, alias="includeIssues"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return legacy record history, or a record-and-issue history envelope.
+
+    Leaving ``includeIssues`` false preserves Module 4 consumers which expect a
+    list.  New issue-aware screens can opt into the enriched response without a
+    second round trip.
+    """
     _require_vendor_performance_access(vendor_id, current_user, db)
     records = (
         db.query(PerformanceRecord)
@@ -522,7 +660,13 @@ def performance_history(
         .order_by(PerformanceRecord.evaluation_date.desc())
         .all()
     )
-    return [performance_record_response(record) for record in records]
+    performance_records = [performance_record_response(record) for record in records]
+    if include_issues:
+        return {
+            "performance_history": performance_records,
+            "issue_history": vendor_issue_service.vendor_issue_performance_history(db, vendor_id),
+        }
+    return performance_records
 
 
 @router.get("/rankings", response_model=VendorRankingOut)

@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.document_lifecycle import VendorIssueHistoryOut
+
 
 RATING_MIN = 0.0
 RATING_MAX = 5.0
@@ -210,6 +212,15 @@ class PerformanceRecordOut(BaseModel):
     notes: Optional[str] = None
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
+
+
+class PerformanceHistoryWithIssuesOut(BaseModel):
+    """Optional enriched history response for issue-aware performance screens."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    performance_history: list[PerformanceRecordOut]
+    issue_history: list[VendorIssueHistoryOut]
 
 
 class RankingItem(BaseModel):

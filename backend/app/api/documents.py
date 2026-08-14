@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
@@ -10,6 +11,7 @@ from app.models.vendor_document import VendorDocument
 from app.api.auth import get_current_user, normalize_user_role
 from app.schemas.document import VendorDocumentOut, VendorDocumentUpdate
 from app.services import document_service
+from app.api.file_storage import store_document_upload
 from app.api.reliability_refresh import refresh_after_compliance_update
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -69,6 +71,51 @@ def get_vendor_documents(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     return document_service.get_vendor_documents(db, vendor_id)
+
+
+@router.post("/{document_id}/replace", response_model=VendorDocumentOut)
+async def replace_vendor_document(
+    document_id: int,
+    document_type: str = Form(""),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new current vendor-document version without deleting the prior one."""
+    previous = document_service.get_document_by_id(db, document_id)
+    if not previous:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    role = normalize_user_role(current_user)
+    if role == "Vendor":
+        from app.models.vendor import Vendor
+
+        vendor = db.query(Vendor).filter(Vendor.email == current_user.email).first()
+        if not vendor or vendor.id != previous.vendor_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    elif role not in ["Administrator", "Procurement Manager"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    upload = await store_document_upload(file, area="vendor_documents")
+    try:
+        replacement = document_service.replace_vendor_document(
+            db,
+            document_id,
+            file_name=upload.file_name,
+            file_path=upload.file_path,
+            file_size=upload.file_size,
+            content_type=upload.content_type,
+            document_type=document_type.strip() or None,
+            uploaded_by=current_user.id,
+        )
+    except ValueError as error:
+        Path(upload.file_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if not replacement:
+        Path(upload.file_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=404, detail="Document not found")
+    refresh_after_compliance_update(replacement.vendor_id, db)
+    return replacement
 
 
 @router.get("/{document_id}", response_model=VendorDocumentOut)

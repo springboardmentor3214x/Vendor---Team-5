@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+psycopg2-binary
+alembic
+pydantic-settings
+email-validator
+python-jose[cryptography]
+# passlib 1.7.4 is incompatible with bcrypt 5.x during its backend self-test.
+# Pin the compatible bcrypt release so demo-account seeding and login work in Docker.
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-multipart
+openpyxl
+reportlab
+APScheduler>=3.10,<4

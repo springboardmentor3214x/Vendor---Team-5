@@ -1,0 +1,23 @@
+<section class="form-page">
+  <header><p class="eyebrow">Procurement</p><h2>Create procurement request</h2><p>Fields marked <span class="required-mark">*</span> are required. The system generates the request number after submission.</p></header>
+  <div *ngIf="errorMessage()" class="error-message" role="alert">{{ errorMessage() }}</div>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <section class="form-card"><h3>Request information</h3><div class="form-grid">
+      <label class="full-width">Request title <span class="required-mark">*</span><input formControlName="requestTitle" [class.invalid]="hasError('requestTitle', 'required') || hasError('requestTitle', 'minlength')" maxlength="255"><small *ngIf="hasError('requestTitle', 'required')">Enter a request title.</small><small *ngIf="hasError('requestTitle', 'minlength')">Use at least 3 characters.</small></label>
+      <label>Department <span class="required-mark">*</span><input formControlName="departmentName"><small *ngIf="hasError('departmentName', 'required')">Enter the department name.</small></label>
+      <label>Priority <span class="required-mark">*</span><select formControlName="priority"><option *ngFor="let priority of priorities" [value]="priority">{{ priority }}</option></select></label>
+      <label>Required delivery date <span class="required-mark">*</span><input type="date" formControlName="requiredDeliveryDate"><small *ngIf="hasError('requiredDeliveryDate', 'required')">Choose a delivery date.</small></label>
+      <label>Requested by ID <span class="optional">(optional)</span><input type="number" min="1" formControlName="requestedBy" placeholder="User ID if known"></label>
+    </div></section>
+    <section class="form-card"><h3>Item and budget</h3><div class="form-grid">
+      <label>Product name <span class="required-mark">*</span><input formControlName="itemProductName" maxlength="255"><small *ngIf="hasError('itemProductName', 'required') || hasError('itemProductName', 'minlength')">Use at least 2 characters.</small></label>
+      <label>Product category <span class="required-mark">*</span><input formControlName="productCategory"><small *ngIf="hasError('productCategory', 'required')">Enter a product category.</small></label>
+      <label>Quantity required <span class="required-mark">*</span><input type="number" min="1" formControlName="quantityRequired"><small *ngIf="hasError('quantityRequired', 'min')">Quantity must be at least 1.</small></label>
+      <label>Unit of measurement <span class="optional">(optional)</span><input formControlName="unitOfMeasurement" placeholder="e.g. units, boxes, kg"></label>
+      <label class="full-width">Estimated budget <span class="required-mark">*</span><input type="number" min="0" step="0.01" formControlName="estimatedBudget"><small *ngIf="hasError('estimatedBudget', 'min')">Budget cannot be negative.</small></label>
+      <label class="full-width">Item description <span class="required-mark">*</span><textarea formControlName="itemDescription" rows="4" maxlength="500"></textarea><small *ngIf="hasError('itemDescription', 'required') || hasError('itemDescription', 'minlength')">Use at least 3 characters.</small></label>
+    </div></section>
+    <section class="form-card"><h3>Business need</h3><div class="form-grid"><label class="full-width">Business justification <span class="required-mark">*</span><textarea formControlName="businessJustification" rows="4" maxlength="1000"></textarea><small *ngIf="hasError('businessJustification', 'required') || hasError('businessJustification', 'minlength')">Use at least 3 characters.</small></label><label class="full-width">Additional remarks <span class="optional">(optional)</span><textarea formControlName="additionalRemarks" rows="3"></textarea></label></div></section>
+    <footer class="form-actions"><a routerLink="/procurement/requests" class="btn btn-outline-secondary" [class.disabled]="submitting()">Cancel</a><button type="submit" class="btn btn-primary" [disabled]="submitting()">{{ submitting() ? 'Submitting…' : 'Submit request' }}</button></footer>
+  </form>
+</section>

@@ -1,0 +1,3 @@
+import { Component, Input } from '@angular/core';
+@Component({ selector: 'app-unavailable-contract-page', standalone: true, template: `<section class="page-card unavailable"><p>Contract & compliance</p><h2>{{ title }}</h2><div class="alert alert-info"><strong>Unavailable</strong><br>{{ detail }}</div><p>This page is ready for backend integration when its API route is registered.</p></section>`, styles: [`.unavailable{color:var(--vr-navy);max-width:760px}.unavailable>p:first-child{color:var(--vr-teal);font-size:.75rem;font-weight:700;text-transform:uppercase}.unavailable h2{margin-top:0}`] })
+export class UnavailableContractPageComponent { @Input({ required: true }) title = ''; @Input({ required: true }) detail = ''; }

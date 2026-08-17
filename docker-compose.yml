@@ -20,6 +20,13 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-vendor_db}
       SECRET_KEY: ${SECRET_KEY:-change_this_for_local_docker_only}
       ALLOWED_ORIGINS: '["http://localhost:4200","http://127.0.0.1:4200"]'
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       NOTIFICATION_SCHEDULER_ENABLED: ${NOTIFICATION_SCHEDULER_ENABLED:-true}
       NOTIFICATION_SCHEDULER_INTERVAL_MINUTES: ${NOTIFICATION_SCHEDULER_INTERVAL_MINUTES:-60}
     depends_on:

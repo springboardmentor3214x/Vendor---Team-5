@@ -1,4 +1,6 @@
+import logging
 from datetime import timedelta
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -6,6 +8,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     ALGORITHM,
@@ -15,6 +18,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User
+from app.services.notification_service import send_email_notification
 from app.schemas.auth import (
     ForgotPasswordRequest,
     MessageResponse,
@@ -29,6 +33,7 @@ from app.schemas.auth import (
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+logger = logging.getLogger(__name__)
 
 ALLOWED_ROLES = {
     "Administrator", "Procurement Manager", "Supply Chain Manager",
@@ -205,17 +210,40 @@ def update_profile(payload: UserUpdate, db: Session = Depends(get_db), current_u
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
-        return {"message": "If the email is registered, a password reset link/token has been generated"}
+        # Keep the public response neutral so callers cannot enumerate accounts.
+        return {"message": "If the email is registered, a password reset link has been sent."}
+
     reset_token = create_access_token(
         data={"sub": user.email, "purpose": "password_reset"},
         expires_delta=timedelta(minutes=30),
     )
+    reset_url = (
+        f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?"
+        f"{urlencode({'token': reset_token})}"
+    )
+    result = send_email_notification(
+        to_email=user.email,
+        subject="Reset your Vendor Reliability System password",
+        body=(
+            f"Hello {user.full_name},\n\n"
+            "Use the link below to reset your password. It expires in 30 minutes:\n\n"
+            f"{reset_url}\n\n"
+            "If you did not request this, you can safely ignore this email."
+        ),
+        user_id=user.id,
+    )
+    if result.get("status") != "sent":
+        logger.error("Password-reset email failed for user_id=%s: %s", user.id, result)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Password reset email is temporarily unavailable. Please try again later.",
+        )
     if hasattr(user, "reset_token"):
         user.reset_token = reset_token
     if hasattr(user, "reset_token_expiry"):
         user.reset_token_expiry = None
     db.commit()
-    return {"message": "Password reset token generated successfully", "reset_token": reset_token}
+    return {"message": "If the email is registered, a password reset link has been sent."}
 
 
 @router.post("/reset-password", response_model=MessageResponse)

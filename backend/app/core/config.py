@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change_this_secret_key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    # Public Angular address used when the API creates password-reset links.
+    # Override this in deployment with the public site URL (no trailing slash).
+    FRONTEND_URL: str = "http://localhost:4200"
 
     # Module 9: background scans create in-app reminders for expiring
     # contracts/certifications and delayed deliveries.  The interval is kept
